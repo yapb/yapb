@@ -3,8 +3,96 @@ root = true
 
 [*]
 indent_style = space
-indent_size = 3
+indent_size = 2
 end_of_line = lf
 charset = utf-8
 trim_trailing_whitespace = true
 insert_final_newline = true
+
+# C/C++ source and header files
+[*.{c,cc,cpp,cxx,h,hpp,hxx,inl}]
+indent_style = space
+indent_size = 2
+max_line_length = 160
+
+# Configuration files
+[*.cfg]
+indent_style = space
+indent_size = 2
+
+# Linker scripts
+[*.lds]
+indent_style = space
+indent_size = 2
+
+# Python build/utility scripts
+[*.py]
+indent_style = space
+indent_size = 4
+
+# CMake files and templates
+[{CMakeLists.txt,*.cmake,*.in}]
+indent_style = space
+indent_size = 2
+
+# Visual Studio project files
+[*.{sln,vcxproj,vcxproj.filters}]
+indent_style = space
+indent_size = 2
+
+# Windows resource files
+[*.rc]
+indent_style = space
+indent_size = 2
+
+# YAML files (CI/CD)
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+# Markdown documentation
+[*.md]
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = false
+
+# Text files
+[*.txt]
+indent_style = space
+indent_size = 2
+
+# Shell scripts
+[*.sh]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+
+# Batch/PowerShell scripts
+[*.{bat,cmd,ps1}]
+indent_style = space
+indent_size = 2
+end_of_line = crlf
+
+# Makefiles require tabs
+[{Makefile,*.mk}]
+indent_style = tab
+indent_size = 4
+
+# Git configuration files
+[{.gitignore,.gitattributes,.gitmodules}]
+indent_style = space
+indent_size = 2
+
+# Build scripts
+[*.build]
+indent_style = space
+indent_size = 2
+
+# Formatter configuration files
+[{.clang-format,.clang-tidy,uncrustify.cfg}]
+indent_style = space
+indent_size = 2
+
+# Patch and diff files
+[*.{patch,diff}]
+trim_trailing_whitespace = false

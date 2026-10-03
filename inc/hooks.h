@@ -1,194 +1,184 @@
 //
-// YaPB, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright © YaPB Project Developers <yapb@jeefo.net>.
+// YaPB, started from PODBot by Count Floyd
+// Maintained by YaPB Team <yapb@jeefo.net>
 //
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Unlicense
 //
 
 #pragma once
 
 // simple handler for parsing and rewriting queries (fake queries)
+namespace bot {
+
 class QueryBuffer {
-   SmallArray <uint8_t> m_buffer {};
-   size_t m_cursor {};
+  ystl::SmallArray<uint8_t> buffer_ {};
+  size_t cursor_ {};
 
 public:
-   QueryBuffer (const uint8_t *msg, size_t length, size_t shift) : m_cursor (0) {
-      m_buffer.insert (0, msg, length);
-      m_cursor += shift;
-   }
+  QueryBuffer (const uint8_t *msg, size_t length, size_t shift) : cursor_ (0) {
+    buffer_.insert (0, msg, length);
+    cursor_ += shift;
+  }
 
 public:
-   template <typename T> T read () {
-      T result {};
-      constexpr auto size = sizeof (T);
+  template <typename T> T Read () {
+    T result {};
+    constexpr auto size = sizeof (T);
 
-      if (m_cursor + size > m_buffer.length ()) {
-         return 0;
-      }
+    if (cursor_ + size > buffer_.size ()) {
+      return 0;
+    }
 
-      memcpy (&result, m_buffer.data () + m_cursor, size);
-      m_cursor += size;
+    memcpy (&result, buffer_.data () + cursor_, size);
+    cursor_ += size;
 
-      return result;
-   }
+    return result;
+  }
 
-   // must be called right after read
-   template <typename T> void write (T value) {
-      constexpr auto size = sizeof (value);
-      memcpy (m_buffer.data () + m_cursor - size, &value, size);
-   }
+  // must be called right after read
+  template <typename T> void Write (T value) {
+    constexpr auto size = sizeof (value);
+    memcpy (buffer_.data () + cursor_ - size, &value, size);
+  }
 
-   template <typename T> void skip () {
-      constexpr auto size = sizeof (T);
+  template <typename T> void Skip () {
+    constexpr auto size = sizeof (T);
 
-      if (m_cursor + size > m_buffer.length ()) {
-         return;
-      }
-      m_cursor += size;
-   }
+    if (cursor_ + size > buffer_.size ()) {
+      return;
+    }
+    cursor_ += size;
+  }
 
-   void skipString () {
-      if (m_buffer.length () < m_cursor) {
-         return;
-      }
-      for (; m_cursor < m_buffer.length () && m_buffer[m_cursor] != kNullChar; ++m_cursor) {}
-      ++m_cursor;
-   }
+  void SkipString () {
+    if (buffer_.size () < cursor_) {
+      return;
+    }
+    for (; cursor_ < buffer_.size () && buffer_[cursor_] != ystl::kNullChar; ++cursor_) {
+    }
+    ++cursor_;
+  }
 
+  ystl::String ReadString () {
+    if (buffer_.size () < cursor_) {
+      return "";
+    }
+    ystl::String out;
 
-   String readString () {
-      if (m_buffer.length () < m_cursor) {
-         return "";
-      }
-      String out;
+    for (; cursor_ < buffer_.size () && buffer_[cursor_] != ystl::kNullChar; ++cursor_) {
+      out += buffer_[cursor_];
+    }
+    ++cursor_;
 
-      for (; m_cursor < m_buffer.length () && m_buffer[m_cursor] != kNullChar; ++m_cursor) {
-         out += m_buffer[m_cursor];
-      }
-      ++m_cursor;
+    return out;
+  }
 
-      return out;
-   }
-
-   void shiftToEnd () {
-      m_cursor = m_buffer.length ();
-   }
+  void ShiftToEnd () {
+    cursor_ = buffer_.size ();
+  }
 
 public:
-   Twin <const uint8_t *, size_t> data () {
-      return { m_buffer.data (), m_buffer.length () };
-   }
+  ystl::Twin<const uint8_t *, size_t> Data () {
+    return { buffer_.data (), buffer_.size () };
+  }
 };
 
 // used for response with fake timestamps and bots count in server responses
-class ServerQueryHook : public Singleton <ServerQueryHook> {
+class ServerQueryHook : public ystl::Singleton<ServerQueryHook> {
 private:
-   using SendToProto = decltype (sendto);
+  using SendToProto = decltype (sendto);
 
 private:
-   Detour <SendToProto> m_sendToDetour {}, m_sendToDetourSys {};
+  ystl::Detour<SendToProto> send_to_detour_ {}, send_to_detour_sys_ {};
 
 public:
-   ServerQueryHook () = default;
-   ~ServerQueryHook () = default;
+  ServerQueryHook () = default;
+  ~ServerQueryHook () = default;
 
 public:
-   // initialzie and install hook
-   void init ();
+  // initialzie and install hook
+  void Init ();
 
 public:
-   // disables send hook
-   bool disable () {
-      m_sendToDetourSys.restore ();
-      return m_sendToDetour.restore ();
-   }
+  // disables send hook
+  bool Disable () {
+    send_to_detour_sys_.restore ();
+    return send_to_detour_.restore ();
+  }
 
 public:
-   CR_FORCE_STACK_ALIGN static int32_t CR_STDCALL sendTo (int socket, const void *message, size_t length, int flags, const struct sockaddr *dest, int destLength);
+  YSTL_FORCE_STACK_ALIGN static int32_t YSTL_STDCALL SendTo (
+    int socket, const void *message, size_t length, int flags, const struct sockaddr *dest, int dest_length);
 };
 
 // used for transit calls between game dll and engine without all needed functions on bot side
-class EntityLinkHook : public Singleton <EntityLinkHook> {
+class EntityLinkHook : public ystl::Singleton<EntityLinkHook> {
 private:
-#if defined(CR_WINDOWS)
-#  define DLSYM_FUNCTION GetProcAddress
-#  define DLCLOSE_FUNCTION FreeLibrary
-#elif defined(CR_PSVITA) // just a shim
-#  define DLSYM_FUNCTION vrtld_dlsym
-#  define DLCLOSE_FUNCTION vrtld_dlclose
-#else
-#  define DLSYM_FUNCTION dlsym
-#  define DLCLOSE_FUNCTION dlclose
-#endif
+  bool paused_ { false };
 
-private:
-   using DlsymProto = decltype (DLSYM_FUNCTION);
-   using DlcloseProto = decltype (DLCLOSE_FUNCTION);
+  ystl::Detour<ystl::PlatformDynlink::DlsymType> dlsym_ {};
+  ystl::Detour<ystl::PlatformDynlink::DlcloseType> dlclose_ {};
 
-private:
-   bool m_paused { false };
+  ystl::HashMap<ystl::StringRef, ystl::SharedLibrary::Func> exports_ {};
 
-   Detour <DlsymProto> m_dlsym {};
-   Detour <DlcloseProto> m_dlclose {};
-   HashMap <StringRef, SharedLibrary::Func> m_exports {};
-
-   SharedLibrary m_self {};
+  ystl::SharedLibrary self_ {};
 
 public:
-   EntityLinkHook () = default;
-   ~EntityLinkHook () = default;
+  EntityLinkHook () = default;
+  ~EntityLinkHook () = default;
 
 public:
-   void initialize ();
-   bool needsBypass () const;
+  void Initialize ();
+  bool NeedsBypass () const;
 
-   SharedLibrary::Func lookupSymbol (SharedLibrary::Handle module, const char *function);
+  ystl::SharedLibrary::Func LookupSymbol (ystl::SharedLibrary::Handle module, const char *function);
 
-   decltype (auto) freeLibrary (SharedLibrary::Handle module) {
-      if (m_self.handle () == module) {
-         disable ();
-         return m_dlclose (module);
-      }
-      return m_dlclose (module);
-   }
-
-public:
-   bool callPlayerFunction (edict_t *ent);
+  decltype (auto) FreeLibrary (ystl::SharedLibrary::Handle module) {
+    if (self_.handle () == module) {
+      Disable ();
+      return dlclose_ (module);
+    }
+    return dlclose_ (module);
+  }
 
 public:
-   void enable () {
-      if (m_dlsym.detoured ()) {
-         return;
-      }
-      m_dlsym.detour ();
-   }
-
-   void disable () {
-      if (!m_dlsym.detoured ()) {
-         return;
-      }
-      m_dlsym.restore ();
-   }
-
-   void setPaused (bool what) {
-      m_paused = what;
-   }
-
-   bool isPaused () const {
-      return m_paused;
-   }
+  bool CallPlayerFunction (edict_t *ent);
 
 public:
-   CR_FORCE_STACK_ALIGN static SharedLibrary::Func CR_STDCALL lookupHandler (SharedLibrary::Handle handle, const char *function) {
-      return instance ().lookupSymbol (handle, function);
-   }
+  void Enable () {
+    if (dlsym_.detoured ()) {
+      return;
+    }
+    dlsym_.detour ();
+  }
 
-   CR_FORCE_STACK_ALIGN static int CR_STDCALL closeHandler (SharedLibrary::Handle handle) {
-      return instance ().freeLibrary (handle);
-   }
+  void Disable () {
+    if (!dlsym_.detoured ()) {
+      return;
+    }
+    dlsym_.restore ();
+  }
+
+  void SetPaused (bool what) {
+    paused_ = what;
+  }
+
+  bool IsPaused () const {
+    return paused_;
+  }
+
+public:
+  YSTL_FORCE_STACK_ALIGN static ystl::SharedLibrary::Func YSTL_STDCALL LookupHandler (ystl::SharedLibrary::Handle handle, const char *function) {
+    return instance ().LookupSymbol (handle, function);
+  }
+
+  YSTL_FORCE_STACK_ALIGN static int YSTL_STDCALL CloseHandler (ystl::SharedLibrary::Handle handle) {
+    return instance ().FreeLibrary (handle);
+  }
 };
 
 // expose global
-CR_EXPOSE_GLOBAL_SINGLETON (EntityLinkHook, entlink);
-CR_EXPOSE_GLOBAL_SINGLETON (ServerQueryHook, fakequeries);
+YSTL_EXPOSE_GLOBAL_SINGLETON (EntityLinkHook, entlink);
+YSTL_EXPOSE_GLOBAL_SINGLETON (ServerQueryHook, fakequeries);
+
+} // namespace bot

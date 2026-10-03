@@ -1,0 +1,81 @@
+---
+Language: Cpp
+BasedOnStyle: LLVM
+
+# Keep existing include order/grouping.
+SortIncludes: Never
+IncludeBlocks: Preserve
+
+# Core indentation/spacing style in this codebase.
+UseTab: Never
+IndentWidth: 2
+ContinuationIndentWidth: 2
+TabWidth: 2
+NamespaceIndentation: None
+FixNamespaceComments: false
+
+# Keep attach style generally, but put `else` on a new line.
+BreakTemplateDeclarations: MultiLine
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass: false
+  AfterControlStatement: Never
+  AfterEnum: false
+  AfterFunction: false
+  AfterNamespace: false
+  AfterStruct: false
+  AfterUnion: false
+  AfterExternBlock: false
+  BeforeCatch: false
+  BeforeElse: true
+  BeforeLambdaBody: false
+  BeforeWhile: false
+  IndentBraces: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+
+# Access labels (public/private/protected) are aligned to class scope.
+AccessModifierOffset: -2
+
+# Project uses a space before parentheses almost everywhere:
+#   foo (), if (), while (), switch (), sizeof (...)
+SpaceBeforeParens: Always
+
+# Template spacing style: HashMap<String, int>, arg<T>(...)
+SpacesInAngles: false
+SpaceAfterTemplateKeyword: true
+
+# Pointer/reference style seen in code.
+PointerAlignment: Right
+
+# Keep formatting stable; this codebase intentionally has long lines.
+ColumnLimit: 145
+ReflowComments: true
+AlignTrailingComments: false
+
+# Avoid collapsing blocks/statements into one line.
+AllowShortBlocksOnASingleLine: Never
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortLambdasOnASingleLine: Empty
+AllowShortEnumsOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+
+SkipMacroDefinitionBody: true
+
+# Keep initializer and constructor formatting close to current style.
+Cpp11BracedListStyle: false
+SpaceBeforeCpp11BracedList: true
+BreakConstructorInitializers: AfterColon
+ConstructorInitializerIndentWidth: 2
+
+BinPackArguments: true
+AllowAllArgumentsOnNextLine: true
+AlignAfterOpenBracket: DontAlign
+
+# Macro-heavy code and custom declarative macros.
+IndentPPDirectives: BeforeHash
+AlignArrayOfStructures: Left
+...

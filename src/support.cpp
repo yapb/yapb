@@ -1,488 +1,300 @@
 //
-// YaPB, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright © YaPB Project Developers <yapb@jeefo.net>.
+// YaPB, started from PODBot by Count Floyd
+// Maintained by YaPB Team <yapb@jeefo.net>
 //
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Unlicense
 //
 
 #include <yapb.h>
 
-ConVar cv_display_welcome_text ("display_welcome_text", "1", "Enables or disables showing a welcome message to the host entity on game start.");
-ConVar cv_enable_query_hook ("enable_query_hook", "0", "Enables or disables fake server query responses, which show bots as real players in the server browser.");
-ConVar cv_enable_fake_steamids ("enable_fake_steamids", "0", "Allows or disallows bots to return a fake Steam ID.");
+namespace bot {
 
-ConVar cv_smoke_grenade_checks ("smoke_grenade_checks", "2", "Affects the bot's vision by smoke clouds.", true, 0.0f, 2.0f);
-ConVar cv_smoke_grenade_radius ("smoke_grenade_radius", "240", "Radius to check for smoke clouds around a detonated grenade.", true, 32.0f, 320.0f);
+Support::Support () {
+  need_to_send_welcome_ = false;
+  welcome_timer_.invalidate ();
 
-BotSupport::BotSupport () {
-   m_needToSendWelcome = false;
-   m_welcomeReceiveTime = 0.0f;
-
-   // add default messages
-   m_sentences = {
-      "hello user,communication is acquired",
-      "your presence is acknowledged",
-      "high man, your in command now",
-      "blast your hostile for good",
-      "high man, kill some idiot here",
-      "is there a doctor in the area",
-      "warning, experimental materials detected",
-      "high amigo, shoot some but",
-      "time for some bad ass explosion",
-      "bad ass son of a breach device activated",
-      "high, do not question this great service",
-      "engine is operative, hello and goodbye",
-      "high amigo, your administration has been great last day",
-      "attention, expect experimental armed hostile presence",
-      "warning, medical attention required",
-      "high man, at your command",
-      "check check, test, mike check, talk device is activated",
-      "hello pal, at your service",
-      "good, day mister, your administration is now acknowledged",
-      "attention, anomalous agent activity, detected",
-      "mister, you are going down",
-      "all command access granted, over and out",
-      "buzwarn hostile presence detected nearest to your sector. over and out. doop"
-      "hostile resistance detected"
-   };
-
-   // register weapon aliases
-   m_weaponAliases = {
-      { Weapon::USP, AliasInfo { "usp", "HK USP .45 Tactical" } },
-      { Weapon::Glock18, AliasInfo { "glock", "Glock18 Select Fire" } },
-      { Weapon::Deagle, AliasInfo { "deagle", "Desert Eagle .50AE" } },
-      { Weapon::P228, AliasInfo { "p228", "SIG P228" } },
-      { Weapon::Elite, AliasInfo { "elite", "Dual Beretta 96G Elite" } },
-      { Weapon::FiveSeven, AliasInfo { "fn57", "FN Five-Seven" } },
-      { Weapon::M3, AliasInfo { "m3", "Benelli M3 Super90" } },
-      { Weapon::XM1014, AliasInfo { "xm1014", "Benelli XM1014" } },
-      { Weapon::MP5, AliasInfo { "mp5", "HK MP5-Navy" } },
-      { Weapon::TMP, AliasInfo { "tmp", "Steyr Tactical Machine Pistol" } },
-      { Weapon::P90, AliasInfo { "p90", "FN P90" } },
-      { Weapon::MAC10, AliasInfo { "mac10", "Ingram MAC-10" } },
-      { Weapon::UMP45, AliasInfo { "ump45", "HK UMP45" } },
-      { Weapon::AK47, AliasInfo { "ak47", "Automat Kalashnikov AK-47" } },
-      { Weapon::Galil, AliasInfo { "galil", "IMI Galil" } },
-      { Weapon::Famas, AliasInfo { "famas", "GIAT FAMAS" } },
-      { Weapon::SG552, AliasInfo { "sg552", "Sig SG-552 Commando" } },
-      { Weapon::M4A1, AliasInfo { "m4a1", "Colt M4A1 Carbine" } },
-      { Weapon::AUG, AliasInfo { "aug", "Steyr Aug" } },
-      { Weapon::Scout, AliasInfo { "scout", "Steyr Scout" } },
-      { Weapon::AWP, AliasInfo { "awp", "AI Arctic Warfare/Magnum" } },
-      { Weapon::G3SG1, AliasInfo { "g3sg1", "HK G3/SG-1 Sniper Rifle" } },
-      { Weapon::SG550, AliasInfo { "sg550", "Sig SG-550 Sniper" } },
-      { Weapon::M249, AliasInfo { "m249", "FN M249 Para" } },
-      { Weapon::Flashbang, AliasInfo { "flash", "Concussion Grenade" } },
-      { Weapon::Explosive, AliasInfo { "hegren", "High-Explosive Grenade" } },
-      { Weapon::Smoke, AliasInfo { "sgren", "Smoke Grenade" } },
-      { Weapon::Armor, AliasInfo { "vest", "Kevlar Vest" } },
-      { Weapon::ArmorHelm, AliasInfo { "vesthelm", "Kevlar Vest and Helmet" } },
-      { Weapon::Defuser, AliasInfo { "defuser", "Defuser Kit" } },
-      { Weapon::Shield, AliasInfo { "shield", "Tactical Shield" } },
-      { Weapon::Knife, AliasInfo { "knife", "Knife" } }
-   };
-   m_clients.resize (kGameMaxPlayers + 1);
+  // add default welcome sentences; replaced by gamedef.cfg sentences section when present
+  sentences_ = { "hello user,communication is acquired", "your presence is acknowledged", "high man, your in command now",
+    "blast your hostile for good", "high man, kill some idiot here", "is there a doctor in the area", "warning, experimental materials detected",
+    "high amigo, shoot some but", "time for some bad ass explosion", "bad ass son of a breach device activated",
+    "high, do not question this great service", "engine is operative, hello and goodbye",
+    "high amigo, your administration has been great last day", "attention, expect experimental armed hostile presence",
+    "warning, medical attention required", "high man, at your command", "check check, test, mike check, talk device is activated",
+    "hello pal, at your service", "good, day mister, your administration is now acknowledged", "attention, anomalous agent activity, detected",
+    "mister, you are going down", "all command access granted, over and out",
+    "buzwarn hostile presence detected nearest to your sector. over and out. doop", "hostile resistance detected" };
 }
 
-bool BotSupport::isVisible (const Vector &origin, edict_t *ent) {
-   if (game.isNullEntity (ent)) {
-      return false;
-   }
-   TraceResult tr {};
-   game.testLine (ent->v.origin + ent->v.view_ofs, origin, TraceIgnore::Everything, ent, &tr);
+bool Support::IsVisible (const ystl::Vector &origin, edict_t *ent) {
+  if (game.IsNullEntity (ent)) {
+    return false;
+  }
+  Trace::Result tr {};
+  trace.Line (ent->v.origin + ent->v.view_ofs, origin, TraceIgnore::Everything, ent, &tr);
 
-   if (!cr::fequal (tr.flFraction, 1.0f)) {
-      return false;
-   }
-   return true;
+  if (!ystl::fequal (tr.fraction, 1.0f)) {
+    return false;
+  }
+  return trace.IsEndpointClear (tr);
 }
 
-void BotSupport::decalTrace (TraceResult *trace, int decalIndex) {
-   // this function draw spraypaint depending on the tracing results.
+void Support::DecalTrace (Trace::Result *result, int decal_index) {
+  // this function draw spraypaint depending on the tracing results
 
-   if (cr::fequal (trace->flFraction, 1.0f) || decalIndex <= 0) {
+  if (ystl::fequal (result->fraction, 1.0f) || decal_index <= 0) {
+    return;
+  }
+  int entity_index = -1, message = TE_DECAL;
+
+  if (!game.IsNullEntity (result->hit)) {
+    if (result->hit->v.solid == SOLID_BSP || result->hit->v.movetype == MOVETYPE_PUSHSTEP) {
+      entity_index = game.IndexOfEntity (result->hit);
+    }
+    else {
       return;
-   }
-   int entityIndex = -1, message = TE_DECAL;
+    }
+  }
+  else {
+    entity_index = 0;
+  }
 
-   if (!game.isNullEntity (trace->pHit)) {
-      if (trace->pHit->v.solid == SOLID_BSP || trace->pHit->v.movetype == MOVETYPE_PUSHSTEP) {
-         entityIndex = game.indexOfEntity (trace->pHit);
-      }
-      else {
-         return;
-      }
-   }
-   else {
-      entityIndex = 0;
-   }
+  if (entity_index != 0) {
+    if (decal_index > 255) {
+      message = TE_DECALHIGH;
+      decal_index -= 256;
+    }
+  }
+  else {
+    message = TE_WORLDDECAL;
 
-   if (entityIndex != 0) {
-      if (decalIndex > 255) {
-         message = TE_DECALHIGH;
-         decalIndex -= 256;
-      }
-   }
-   else {
-      message = TE_WORLDDECAL;
+    if (decal_index > 255) {
+      message = TE_WORLDDECALHIGH;
+      decal_index -= 256;
+    }
+  }
+  MessageWriter msg {};
 
-      if (decalIndex > 255) {
-         message = TE_WORLDDECALHIGH;
-         decalIndex -= 256;
-      }
-   }
-   MessageWriter msg {};
+  msg.Start (MSG_BROADCAST, SVC_TEMPENTITY)
+    .WriteByte (message)
+    .WriteCoord (result->end_pos.x)
+    .WriteCoord (result->end_pos.y)
+    .WriteCoord (result->end_pos.z)
+    .WriteByte (decal_index);
 
-   msg.start (MSG_BROADCAST, SVC_TEMPENTITY)
-      .writeByte (message)
-      .writeCoord (trace->vecEndPos.x)
-      .writeCoord (trace->vecEndPos.y)
-      .writeCoord (trace->vecEndPos.z)
-      .writeByte (decalIndex);
-
-   if (entityIndex) {
-      msg.writeShort (entityIndex);
-   }
-   msg.end ();
+  if (entity_index) {
+    msg.WriteShort (entity_index);
+  }
+  msg.end ();
 }
 
-void BotSupport::checkWelcome () {
-   // the purpose of this function, is  to send quick welcome message, to the listenserver entity.
+void Support::CheckWelcome () {
+  // the purpose of this function, is  to send quick welcome message, to the listenserver entity
 
-   if (game.isDedicated () || !cv_display_welcome_text || !m_needToSendWelcome) {
-      return;
-   }
+  if (game.IsDedicatedServer () || !cv_display_welcome_text || !need_to_send_welcome_) {
+    return;
+  }
 
-   const bool needToSendMsg = (graph.length () > 0 ? m_needToSendWelcome : true);
-   auto receiveEnt = game.getLocalEntity ();
+  const bool need_to_send_msg = (graph.Length () > 0 ? need_to_send_welcome_ : true);
+  auto receive_ent = game.GetLocalEntity ();
 
-   if (game.isAliveEntity (receiveEnt) && m_welcomeReceiveTime < 1.0f && needToSendMsg) {
-      m_welcomeReceiveTime = game.time () + 2.0f + mp_freezetime.as <float> (); // receive welcome message in four seconds after game has commencing
-   }
+  if (game.IsAliveEntity (receive_ent) && !welcome_timer_.started () && need_to_send_msg) {
+    welcome_timer_.start (2.0f + mp_freezetime.As<float> ()); // receive welcome message in four seconds after game has commencing
+  }
 
-   if (m_welcomeReceiveTime > 0.0f && m_welcomeReceiveTime < game.time () && needToSendMsg) {
-      game.serverCommand ("speak \"%s\"", m_sentences.random ());
-      String authorStr = "Official Navigation Graph";
+  if (welcome_timer_.started () && welcome_timer_.elapsed () && need_to_send_msg) {
+    game.ServerCommand ("speak \"%s\"", sentences_.random ());
+    ystl::String author_str = "Official Navigation Graph";
 
-      auto graphAuthor = graph.getAuthor ();
-      auto graphModified = graph.getModifiedBy ();
+    auto graph_author = graph.GetAuthor ();
+    auto graph_modified = graph.GetModifiedBy ();
 
-      // legacy welcome message, to respect the original code
-      constexpr StringRef kLegacyWelcomeMessage = "Welcome to POD-Bot V2.5 by Count Floyd\n"
-         "Visit http://www.nuclearbox.com/podbot/ or\n"
-         "      http://www.botepidemic.com/podbot for Updates\n";
+    // legacy welcome message, to respect the original code
+    constexpr ystl::StringRef kLegacyWelcomeMessage = "Welcome to POD-Bot V2.5 by Count Floyd\n"
+                                                      "Visit http://www.nuclearbox.com/podbot/ or\n"
+                                                      "      http://www.botepidemic.com/podbot for Updates\n";
 
-      // it's should be send in very rare cases
-      const bool sendLegacyWelcome = rg.chance (game.is (GameFlags::Legacy) ? 25 : 2);
+    // it's should be send in very rare cases
+    const bool send_legacy_welcome = ystl::rg.chance (game.Is (GameFlags::Legacy) ? 25 : 2);
 
-      if (!graphAuthor.startsWith (product.name)) {
-         authorStr.assignf ("Navigation Graph by: %s", graphAuthor);
+    if (!graph_author.starts_with (product.name)) {
+      author_str.assignf ("Navigation Graph by: %s", graph_author);
 
-         if (!graphModified.empty ()) {
-            authorStr.appendf (" (Modified by: %s)", graphModified);
-         }
+      if (!graph_modified.empty ()) {
+        author_str.appendf (" (Modified by: %s)", graph_modified);
       }
-      StringRef modernWelcomeMessage = strings.format ("\nHello! You are playing with %s v%s\nDevised by %s\n\n%s", product.name, product.version, product.author, authorStr);
-      StringRef modernChatWelcomeMessage = strings.format ("----- %s v%s {%s}, (c) %s, by %s (%s)-----", product.name, product.version, product.date, product.year, product.author, product.url);
+    }
+    ystl::StringRef modern_welcome_message = ystl::strings.format (
+      "\nHello! You are playing with %s v%s\nDevised by %s\n\n%s", product.name, product.version, product.author, author_str);
+    ystl::StringRef modern_chat_welcome_message =
+      ystl::strings.format ("----- %s v%s {%s}, by %s (%s)-----", product.name, product.version, product.date, product.author, product.url);
 
-      // send a chat-position message
-      MessageWriter (MSG_ONE, msgs.id (NetMsg::TextMsg), nullptr, receiveEnt)
-         .writeByte (HUD_PRINTTALK)
-         .writeString (modernChatWelcomeMessage.chars ());
+    // send a chat-position message
+    MessageWriter (MSG_ONE, msgs.Id (NetMsg::TextMsg), nullptr, receive_ent)
+      .WriteByte (HUD_PRINTTALK)
+      .WriteString (modern_chat_welcome_message.chars ());
 
-      static hudtextparms_t textParams {};
+    hudtextparms_t text_params {
+      .x = -1.0f,
+      .y = send_legacy_welcome ? 0.0f : -1.0f,
+      .effect = ystl::rg (1, 2),
+      .r1 = static_cast<uint8_t> (send_legacy_welcome ? 255 : ystl::rg (33, 255)),
+      .g1 = static_cast<uint8_t> (send_legacy_welcome ? 0 : ystl::rg (33, 255)),
+      .b1 = static_cast<uint8_t> (send_legacy_welcome ? 0 : ystl::rg (33, 255)),
+      .a1 = static_cast<uint8_t> (0),
+      .r2 = static_cast<uint8_t> (send_legacy_welcome ? 255 : ystl::rg (230, 255)),
+      .g2 = static_cast<uint8_t> (send_legacy_welcome ? 255 : ystl::rg (230, 255)),
+      .b2 = static_cast<uint8_t> (send_legacy_welcome ? 255 : ystl::rg (230, 255)),
+      .a2 = static_cast<uint8_t> (200),
+      .fadeinTime = 0.0078125f,
+      .fadeoutTime = 2.0f,
+      .holdTime = 6.0f,
+      .fxTime = 0.25f,
+      .channel = 1,
+    };
 
-      textParams.channel = 1;
-      textParams.x = -1.0f;
-      textParams.y = sendLegacyWelcome ? 0.0f : -1.0f;
-      textParams.effect = rg (1, 2);
+    // send the hud message
+    game.SendHudMessage (receive_ent, text_params, send_legacy_welcome ? kLegacyWelcomeMessage.chars () : modern_welcome_message.chars ());
 
-      textParams.r1 = static_cast <uint8_t> (sendLegacyWelcome ? 255 : rg (33, 255));
-      textParams.g1 = static_cast <uint8_t> (sendLegacyWelcome ? 0 : rg (33, 255));
-      textParams.b1 = static_cast <uint8_t> (sendLegacyWelcome ? 0 : rg (33, 255));
-      textParams.a1 = static_cast <uint8_t> (0);
-
-      textParams.r2 = static_cast <uint8_t> (sendLegacyWelcome ? 255 : rg (230, 255));
-      textParams.g2 = static_cast <uint8_t> (sendLegacyWelcome ? 255 : rg (230, 255));
-      textParams.b2 = static_cast <uint8_t> (sendLegacyWelcome ? 255 : rg (230, 255));
-      textParams.a2 = static_cast <uint8_t> (200);
-
-      textParams.fadeinTime = 0.0078125f;
-      textParams.fadeoutTime = 2.0f;
-      textParams.holdTime = 6.0f;
-      textParams.fxTime = 0.25f;
-
-      // send the hud message
-      game.sendHudMessage (receiveEnt, textParams,
-         sendLegacyWelcome ? kLegacyWelcomeMessage.chars () : modernWelcomeMessage.chars ());
-
-      m_welcomeReceiveTime = 0.0f;
-      m_needToSendWelcome = false;
-   }
+    welcome_timer_.invalidate ();
+    need_to_send_welcome_ = false;
+  }
 }
 
-bool BotSupport::findNearestPlayer (void **pvHolder, edict_t *to, float searchDistance, bool sameTeam, bool needBot,
-   bool needAlive, bool needDrawn, bool needBotWithC4) {
+edict_t *Support::FindNearest (const NearestPlayerQuery &query, bool bots_only) {
+  // find the nearest player matching the given team and state filters
 
-   // this function finds nearest to to, player with set of parameters, like his
-   // team, live status, search distance etc. if needBot is true, then pvHolder, will
-   // be filled with bot pointer, else with edict pointer(!).
+  if (query.origin == nullptr) [[unlikely]] {
+    return nullptr;
+  }
+  const float max_distance_sq = ystl::sqrf (query.distance);
+  float nearest_player_distance_sq = ystl::sqrf (4096.0f); // nearest player
 
-   searchDistance = cr::sqrf (searchDistance);
-   float nearestPlayerDistanceSq = cr::sqrf (4096.0f); // nearest player
+  edict_t *best = nullptr;
 
-   for (const auto &client : m_clients) {
-      if (!(client.flags & ClientFlags::Used) || client.ent == to) {
-         continue;
-      }
+  for (const auto &client : clients) {
+    if (!client.IsUsedAndNot (query.origin) || (bots_only && !client.IsBot ())) {
+      continue;
+    }
 
-      if ((sameTeam && client.team != game.getPlayerTeam (to))
-         || (needAlive && !(client.flags & ClientFlags::Alive))
-         || (needBot && !bots[client.ent])
-         || (needDrawn && (client.ent->v.effects & EF_NODRAW))
-         || (needBotWithC4 && (client.ent->v.weapons & Weapon::C4))) {
+    if ((query.same_team && client.team != game.GetPlayerTeam (query.origin)) || (query.alive && !client.IsUsedAndAlive ()) ||
+        (query.visible && (client.ent->v.effects & EF_NODRAW)) || (query.skip_c4 && has_flag (client.ent->v.weapons, Weapon::C4))) {
 
-         continue; // filter players with parameters
-      }
-      const float distanceSq = client.ent->v.origin.distanceSq (to->v.origin);
+      continue; // filter players with parameters
+    }
+    const float distance_sq = client.ent->v.origin.distance_sq (query.origin->v.origin);
 
-      if (distanceSq < nearestPlayerDistanceSq && distanceSq < searchDistance) {
-         nearestPlayerDistanceSq = distanceSq;
-         *pvHolder = needBot ? reinterpret_cast <void *> (bots[client.ent]) : reinterpret_cast <void *> (client.ent);
-      }
-   }
-   return !!*pvHolder;
+    if (distance_sq < nearest_player_distance_sq && distance_sq < max_distance_sq) {
+      nearest_player_distance_sq = distance_sq;
+      best = client.ent;
+    }
+  }
+  return best;
 }
 
-void BotSupport::updateClients () {
-
-   // record some stats of all players on the server
-   for (int i = 0; i < game.maxClients (); ++i) {
-      edict_t *player = game.playerOfIndex (i);
-      Client &client = m_clients[i];
-
-      if (!game.isNullEntity (player) && (player->v.flags & FL_CLIENT) && !(player->v.flags & FL_DORMANT)) {
-         client.ent = player;
-         client.flags |= ClientFlags::Used;
-
-         if (game.isAliveEntity (player)) {
-            client.flags |= ClientFlags::Alive;
-         }
-         else {
-            client.flags &= ~ClientFlags::Alive;
-         }
-
-         if (client.flags & ClientFlags::Alive) {
-            client.origin = player->v.origin;
-            sounds.simulateNoise (i);
-         }
-      }
-      else {
-         client.flags &= ~(ClientFlags::Used | ClientFlags::Alive);
-         client.ent = nullptr;
-      }
-   }
+ystl::Optional<edict_t *> Support::FindNearestPlayer (const NearestPlayerQuery &query) {
+  if (const auto best = FindNearest (query, false)) {
+    return best;
+  }
+  return {};
 }
 
-String BotSupport::getCurrentDateTime () {
-   time_t ticks = time (&ticks);
-   tm timeinfo {};
-
-   plat.loctime (&timeinfo, &ticks);
-
-   auto timebuf = strings.chars ();
-   strftime (timebuf, Strings::StaticBufferSize, "%d-%m-%Y %H:%M:%S", &timeinfo);
-
-   return String (timebuf);
+ystl::Optional<Bot *> Support::FindNearestBot (const NearestPlayerQuery &query) {
+  // fake clients never qualify: they have no bot object behind the edict
+  if (const auto best = FindNearest (query, true)) {
+    if (const auto found = bots[best]) {
+      return found;
+    }
+  }
+  return {};
 }
 
-StringRef BotSupport::getFakeSteamId (edict_t *ent) {
-   if (!cv_enable_fake_steamids || !game.isPlayerEntity (ent)) {
-      return "BOT";
-   }
-   auto botNameHash = StringRef::fnv1a32 (ent->v.netname.chars ());
+ystl::String Support::GetCurrentDateTime () {
+  time_t ticks = time (&ticks);
+  tm timeinfo {};
 
-   // just fake steam id a d return it with get player authid function
-   return strings.format ("STEAM_0:1:%d", cr::abs (static_cast <int32_t> (botNameHash) & 0xffff00));
+  ystl::plat.loctime (&timeinfo, &ticks);
+
+  auto timebuf = ystl::strings.chars ();
+  strftime (timebuf, ystl::Strings::StaticBufferSize, "%d-%m-%Y %H:%M:%S", &timeinfo);
+
+  return ystl::String (timebuf);
 }
 
-StringRef BotSupport::weaponIdToAlias (int32_t id) {
-   StringRef none = "none";
+ystl::StringRef Support::GetFakeSteamId (edict_t *ent) {
+  if (!cv_enable_fake_steamids || !game.IsPlayerEntity (ent)) {
+    return "BOT";
+  }
+  auto bot_name_hash = ystl::StringRef::fnv1a32 (ent->v.netname.chars ());
 
-   if (m_weaponAliases.exists (id)) {
-      return m_weaponAliases[id].first;
-   }
-   return none;
+  // just fake steam id a d return it with get player authid function
+  return ystl::strings.format ("STEAM_0:1:%d", ystl::abs (static_cast<int32_t> (bot_name_hash) & 0xffff00));
 }
 
-float BotSupport::getWaveFileDuration (StringRef filename) {
-   constexpr auto kZeroLength = 0.0f;
+ystl::StringRef Support::WeaponIdToAlias (Weapon id) {
+  // weapons from the table carry their own alias (see gamedef.cfg alias key)
+  if (auto *weapon = conf.GetWeapon (id)) {
+    if (!weapon->alias.empty ()) {
+      return weapon->alias;
+    }
+  }
 
-   using WaveHeader = WaveHelper <>::Header;
-   auto filePath = strings.joinPath (cv_chatter_path.as <StringRef> (), strings.format ("%s.wav", filename));
-
-   MemFile fp (filePath);
-
-   // we're got valid handle?
-   if (!fp) {
-      return kZeroLength;
-   }
-
-   WaveHeader hdr {};
-   static WaveHelper wh {};
-
-   if (fp.read (&hdr, sizeof (WaveHeader)) == 0) {
-      logger.error ("WAVE %s - has wrong or unsupported format.", filePath);
-      return kZeroLength;
-   }
-   fp.close ();
-
-   if (!wh.isWave (hdr.wave)) {
-      logger.error ("WAVE %s - has wrong wave chunk id.", filePath);
-      return kZeroLength;
-   }
-
-   if (wh.read32 <uint32_t> (hdr.dataChunkLength) == 0) {
-      logger.error ("WAVE %s - has zero length!.", filePath);
-      return kZeroLength;
-   }
-
-   const auto length = wh.read32  <float> (hdr.dataChunkLength);
-   const auto bps = wh.read16 <float> (hdr.bitsPerSample) / 8.0f;
-   const auto channels = wh.read16 <float> (hdr.numChannels);
-   const auto rate = wh.read32 <float> (hdr.sampleRate);
-
-   return length / bps / channels / rate;
+  // equipment is not a part of the weapon table
+  for (const auto &entry : kEquipmentAliases) {
+    if (entry.id == id) {
+      return entry.alias;
+    }
+  }
+  return "none";
 }
 
-void BotSupport::setCustomCvarDescriptions () {
-   // set the cvars custom descriptions here if needed
+float Support::GetWaveFileDuration (ystl::StringRef filename) {
+  ystl::MemFile fp (ystl::strings.join_path (cv_chatter_path.As<ystl::StringRef> (), ystl::strings.format ("%s.wav", filename)));
 
-   String restrictInfo = "Specifies a semicolon separated list of weapons that are not allowed to be bought/picked up.\n";
-   restrictInfo += "The list of weapons for Counter-Strike 1.6:\n";
+  if (!fp) {
+    return 0.0f;
+  }
+  static ystl::WaveHelper wh {};
 
-   // fill the restrict information
-   for (const auto &[_, alias] : m_weaponAliases) {
-      restrictInfo.appendf ("%s - %s\n", alias.first, alias.second);
-   }
-   game.setCvarDescription (cv_restricted_weapons, restrictInfo);
+  return wh.get_duration (&fp);
 }
 
-bool BotSupport::isLineBlockedBySmoke (const Vector &from, const Vector &to) {
-   if (!gameState.hasActiveGrenades ()) {
-      return false;
-   }
+void Support::SetCustomCvarDescriptions () {
+  // set the cvars custom descriptions here if needed
 
-   // distance along line of sight covered by smoke
-   float totalSmokedLength = 0.0f;
+  ystl::String restrict_info = "Specifies a semicolon separated list of weapons that are not allowed to be bought/picked up.\n";
+  restrict_info += "The list of weapons for Counter-Strike 1.6:\n";
 
-   Vector sightDir = to - from;
-   const float sightLength = sightDir.normalizeInPlace ();
+  // weapons from the table, in stable order
+  for (const auto &weapon : conf.GetWeapons ()) {
+    if (!weapon.alias.empty () && !weapon.full_name.empty ()) {
+      restrict_info.appendf ("%s - %s\n", weapon.alias.chars (), weapon.full_name.chars ());
+    }
+  }
 
-   for (auto pent : gameState.getActiveGrenades ()) {
-      if (game.isNullEntity (pent)) {
-         continue;
-      }
-
-      // check if sgtracked
-      if (!sgtrack.has (pent)) {
-         continue;
-      }
-
-      // need drawn models
-      if (pent->v.effects & EF_NODRAW) {
-         continue;
-      }
-
-      // smoke must be on a ground
-      if (!(pent->v.flags & FL_ONGROUND)) {
-         continue;
-      }
-
-      // must be a smoke grenade
-      if (!game.isEntityModelMatches (pent, kSmokeModelName)) {
-         continue;
-      }
-
-      const float smokeRadiusSq = cr::sqrf (cv_smoke_grenade_radius.as <float> ());
-      const auto &smokeOrigin = sgtrack.find (pent);
-
-      Vector toGrenade = smokeOrigin - from;
-      float alongDist = toGrenade | sightDir;
-
-      // compute closest point to grenade along line of sight ray
-      Vector close {};
-
-      // constrain closest point to line segment
-      if (alongDist < 0.0f) {
-         close = from;
-      }
-      else if (alongDist >= sightLength) {
-         close = to;
-      }
-      else {
-         close = from + sightDir * alongDist;
-      }
-
-      // if closest point is within smoke radius, the line overlaps the smoke cloud
-      Vector toClose = close - smokeOrigin;
-      float lengthSq = toClose.lengthSq ();
-
-      if (lengthSq < smokeRadiusSq) {
-         // some portion of the ray intersects the cloud
-
-         const float fromSq = toGrenade.lengthSq ();
-         const float toSq = (smokeOrigin - to).lengthSq ();
-
-         if (fromSq < smokeRadiusSq) {
-            if (toSq < smokeRadiusSq) {
-               // both 'from' and 'to' lie within the cloud
-               // entire length is smoked
-               totalSmokedLength += (to - from).length ();
-            }
-            else {
-               // 'from' is inside the cloud, 'to' is outside
-               // compute half of total smoked length as if ray crosses entire cloud chord
-               float halfSmokedLength = cr::sqrtf (smokeRadiusSq - lengthSq);
-
-               if (alongDist > 0.0f) {
-                  // ray goes thru 'close'
-                  totalSmokedLength += halfSmokedLength + (close - from).length ();
-               }
-               else {
-                  // ray starts after 'close'
-                  totalSmokedLength += halfSmokedLength - (close - from).length ();
-               }
-
-            }
-         }
-         else if (toSq < smokeRadiusSq) {
-            // 'from' is outside the cloud, 'to' is inside
-            // compute half of total smoked length as if ray crosses entire cloud chord
-            const float halfSmokedLength = cr::sqrtf (smokeRadiusSq - lengthSq);
-            Vector v = to - smokeOrigin;
-
-            if ((v | sightDir) > 0.0f) {
-               // ray goes thru 'close'
-               totalSmokedLength += halfSmokedLength + (close - to).length ();
-            }
-            else {
-               // ray ends before 'close'
-               totalSmokedLength += halfSmokedLength - (close - to).length ();
-            }
-         }
-         else {
-            // 'from' and 'to' lie outside of the cloud - the line of sight completely crosses it
-            // determine the length of the chord that crosses the cloud
-            const float smokedLength = 2.0f * cr::sqrtf (smokeRadiusSq - lengthSq);
-            totalSmokedLength += smokedLength;
-         }
-      }
-   }
-
-   // define how much smoke a bot can see thru
-   const float maxSmokedLength = 0.7f * cv_smoke_grenade_radius.as <float> ();
-
-   // return true if the total length of smoke-covered line-of-sight is too much
-   return totalSmokedLength > maxSmokedLength;
+  // equipment
+  for (const auto &entry : kEquipmentAliases) {
+    restrict_info.appendf ("%s - %s\n", entry.alias.chars (), entry.full_name.chars ());
+  }
+  game.SetCvarDescription (cv_restricted_weapons, restrict_info);
 }
+
+void Support::ApplySentenceDefs (const ystl::ConfNode *root) {
+  if (!root) {
+    return; // no sentences section - keep built-in defaults
+  }
+  ystl::Array<ystl::String> sentences {};
+
+  // bare list items, one sentence per line
+  for (const auto &node : root->children ()) {
+    if (node->is_scalar () && !node->value ().empty ()) {
+      sentences.push (ystl::String (node->value ()));
+    }
+  }
+
+  // replace built-in defaults only when the section has valid entries
+  if (!sentences.empty ()) {
+    sentences_ = ystl::move (sentences);
+  }
+}
+
+} // namespace bot

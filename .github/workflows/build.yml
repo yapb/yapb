@@ -2,228 +2,240 @@ name: build
 
 on:
   push:
-    branches: [master]
+    branches: [master, main, dev]
     paths-ignore:
       - '**.md'
-
   pull_request:
     types: [opened, reopened, synchronize]
   release:
     types: [published]
 
 jobs:
-  bot-build:
+  amxx-include:
+    name: amxx include
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/yapb/builder:latest
-      options: --hostname github-actions
-
-    strategy:
-      matrix:
-        arch: ['linux-x86', 'linux-amd64', 'linux-x86-gcc', 'linux-x86-nosimd', 'linux-arm64', 'linux-riscv64', 'apple-x86', 'windows-x86-clang', 'windows-amd64', 'windows-x86-gcc']
-      fail-fast: false
-    
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          submodules: true
-      - name: Configure meson
-        shell: bash
-        run: |
-            if [[ ${{matrix.arch}} == linux-x86 ]]; then
-              CXX=clang CXX_LD=lld meson setup ${{matrix.arch}}
-            elif [[ ${{matrix.arch}} == linux-x86-gcc ]]; then
-              CXX=gcc CXX_LD=gold meson setup ${{matrix.arch}}
-            elif [[ ${{matrix.arch}} == linux-x86-nosimd ]]; then
-              CXX=gcc CXX_LD=gold meson setup ${{matrix.arch}} -Dnosimd=true
-            elif [[ ${{matrix.arch}} == linux-amd64 ]]; then
-              CXX=clang CXX_LD=lld meson setup ${{matrix.arch}} -D64bit=true
-            elif [[ ${{matrix.arch}} == windows-amd64 ]]; then
-              meson setup ${{matrix.arch}} --cross-file ${{matrix.arch}} -D64bit=true
-            elif [[ ${{matrix.arch}} == apple-x86 ]]; then
-              meson setup ${{matrix.arch}} --cross-file ${{matrix.arch}} -Db_lto=false
-            else
-              meson setup ${{matrix.arch}} --cross-file ${{matrix.arch}}
-            fi
-      - name: Build sources
-        shell: bash
-        run: |
-          meson compile -C ${{matrix.arch}} -v
-          echo "artifcat=${{matrix.arch}}/`ls ${{matrix.arch}}/ | egrep '^yapb*.*(so|dylib|dll)$' | head -1`" >> $GITHUB_ENV
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{matrix.arch}}
-          path: ${{env.artifcat}}
-          
-  bot-msvc:
-    env:
-      name: windows-x86-msvc
+        uses: actions/checkout@v6
 
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+
+      - name: Check yapb.inc is up to date
+        run: python3 tools/gen_amxx_inc.py --check
+
+  build:
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.arch }}
     strategy:
-      matrix:
-        arch: ['windows-x86', 'windows-x86-msvc-xp']
       fail-fast: false
-
-    runs-on: windows-latest
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: linux-x86
+          - os: ubuntu-latest
+            arch: linux-amd64
+          - os: ubuntu-latest
+            arch: linux-x86-nosimd
+          - os: ubuntu-latest
+            arch: linux-arm64
+          - os: ubuntu-latest
+            arch: linux-riscv64
+          - os: ubuntu-latest
+            arch: apple-amd64
+          - os: ubuntu-latest
+            arch: windows-x86-clang
+          - os: ubuntu-latest
+            arch: windows-amd64
+          - os: macos-latest
+            arch: apple-arm64
+          - os: windows-2025-vs2026
+            arch: windows-x86
+          - os: windows-2025-vs2026
+            arch: windows-x86-clang-cl
+          - os: windows-2025-vs2026
+            arch: windows-x86-msvc-xp
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          submodules: true
-      - name: Setup msbuild
-        uses: ilammy/msvc-dev-cmd@v1
+          submodules: recursive
+
+      - name: Setup MSVC
+        if: runner.os == 'Windows'
+        uses: TheMrMilchmann/setup-msvc-dev@v4
         with:
           arch: amd64_x86
-      - name: Install meson
+
+      - name: Setup clang-cl
+        # only the clang-cl job needs it; VS-bundled or plain runners are used
+        # as-is. no JS action involved (they are all still Node 20).
+        if: matrix.arch == 'windows-x86-clang-cl'
         run: |
-          python -m pip install --upgrade meson ninja
-      - name: Configure meson
+          if (!(Get-Command clang-cl -ErrorAction SilentlyContinue)) {
+            choco install llvm --version=21.1.0 -y --no-progress
+            echo "C:\Program Files\LLVM\bin" >> $env:GITHUB_PATH
+            $env:PATH = "C:\Program Files\LLVM\bin;$env:PATH"
+          }
+          clang-cl --version
+
+      - name: Setup Zig
+        if: runner.os == 'Linux'
+        shell: bash
+        # NOTE: deliberately not mlugg/setup-zig (still Node 20): a pinned
+        # upstream tarball + PATH is all this project needs, with zero
+        # third-party JS.
+        run: |
+          ZIG_VERSION=0.16.0
+          ZIG_DIR="$HOME/.local/zig"
+          mkdir -p "$ZIG_DIR"
+          curl -fsSL --retry 3 -o /tmp/zig.tar.xz \
+            "https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz"
+          tar -xJ -f /tmp/zig.tar.xz -C "$ZIG_DIR" --strip-components=1
+          echo "$ZIG_DIR" >> $GITHUB_PATH
+          "$ZIG_DIR/zig" version
+
+      - name: Restore Zig cache
+        # One cache per arch: without the arch in the key all matrix jobs
+        # share (and clobber) a single entry, so every job rebuilds the
+        # bundled libc++ from source every time. that rebuild is also where
+        # the -Wnullability-completeness log spam comes from (zig-internal
+        # compile, our flags can't reach it), so a warm cache keeps logs clean.
+        if: runner.os == 'Linux'
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/zig
+          key: zig-cache-0.16.0-${{ matrix.arch }}
+
+      - name: Configure
+        # NOTE: default shell on purpose. Git Bash prepends its own usr/bin
+        # (with a GNU link.EXE) ahead of the MSVC toolchain in PATH,
+        # breaking compiler detection on Windows.
+        run: cmake --preset ci-${{ matrix.arch }}
+
+      - name: Build
+        # NOTE: default shell on purpose, see above.
+        run: cmake --build --preset ci-${{ matrix.arch }}
+
+      - name: Check DLL ABI (windows, cross)
+        if: startsWith(matrix.arch, 'windows-') && runner.os == 'Linux'
+        shell: bash
+        run: |
+          so=$(ls build/${{ matrix.arch }}/ | grep -E '^yapb.*\.dll$' | grep -v 'amxx' | head -1)
+          arch=i386; [[ "${{ matrix.arch }}" == *amd64* ]] && arch=amd64
+          python3 tools/check_dll.py "build/${{ matrix.arch }}/$so" --arch $arch
+
+      - name: Check DLL ABI (windows, msvc)
+        if: startsWith(matrix.arch, 'windows-') && runner.os == 'Windows'
         shell: pwsh
         run: |
-            if ('${{matrix.arch}}' -eq 'windows-x86-msvc-xp') {
-              meson setup ${{matrix.arch}} -Dwinxp=true
-            }
-            else {
-              meson setup ${{matrix.arch}}
-            }
-      - name: Build sources
+          $arch = if ('${{ matrix.arch }}' -like '*amd64*') { 'amd64' } else { 'i386' }
+          python tools/check_dll.py 'build/${{ matrix.arch }}' --arch $arch
+
+      - name: Check ABI (i386)
+        # full binary ABI contract, read from ext/ldscripts/version.lds.
+        # i386 is the shipped server target, so it gets the strict check;
+        # the other linux arches keep the glibc baseline check below.
+        if: matrix.arch == 'linux-x86' || matrix.arch == 'linux-x86-nosimd'
+        shell: bash
         run: |
-          meson compile -C ${{matrix.arch}} -v
+          so=$(ls build/${{ matrix.arch }}/ | grep -E '^yapb.*\.so$' | grep -v 'amxx' | head -1)
+          python3 tools/check_abi.py "build/${{ matrix.arch }}/$so" --arch i386 --max-glibc 2.17
+
+      - name: Check glibc baseline (linux)
+        if: startsWith(matrix.arch, 'linux-') && matrix.arch != 'linux-x86' && matrix.arch != 'linux-x86-nosimd'
+        shell: bash
+        run: |
+          so=$(ls build/${{ matrix.arch }}/ | grep -E '^yapb.*\.so$' | grep -v 'amxx' | head -1)
+          echo "Checking build/${{ matrix.arch }}/$so"
+          max=$(objdump -T "build/${{ matrix.arch }}/$so" | grep -oE 'GLIBC_2\.[0-9]+' | sort -Vu | tail -1)
+          echo "Max GLIBC: $max"
+          if [[ "${{ matrix.arch }}" == "linux-riscv64" ]]; then limit=GLIBC_2.27; else limit=GLIBC_2.17; fi
+          top=$(printf '%s\n%s\n' "$limit" "$max" | sort -Vu | tail -1)
+          if [[ "$top" != "$limit" ]]; then
+            echo "::error::glibc baseline $max exceeds $limit"
+            exit 1
+          fi
+
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: ${{matrix.arch}}
+          name: ${{ matrix.arch }}
           path: |
-            ${{matrix.arch}}/yapb.dll
-            
-  bot-apple:
-    env:
-      name: apple-arm64
+            build/${{ matrix.arch }}/yapb*.so
+            build/${{ matrix.arch }}/yapb*.dll
+            build/${{ matrix.arch }}/yapb*.dylib
+          if-no-files-found: error
 
-    strategy:
-      matrix:
-        arch: ['apple-arm64']
-      fail-fast: false
-
-    runs-on: macos-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Upload PDB (Windows MSVC)
+        if: runner.os == 'Windows' && startsWith(matrix.arch, 'windows-x86')
+        uses: actions/upload-artifact@v7
         with:
-          fetch-depth: 0
-          submodules: true
-      - name: Install meson
-        run: |
-          python -m pip install --upgrade meson ninja
-      - name: Configure meson
-        run: |
-          meson setup ${{matrix.arch}}
-      - name: Build sources
-        run: |
-          meson compile -C ${{matrix.arch}} -v
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{matrix.arch}}
-          path: |
-            ${{matrix.arch}}/yapb*.dylib
-            
-  bot-continuous-release:
-    if: github.event_name == 'push'
+          name: ${{ matrix.arch }}-pdb
+          path: build/${{ matrix.arch }}/yapb.pdb
 
-    name: bot-continuous-release
+  release:
+    if: github.event_name == 'push' || (github.event_name == 'release' && github.event.action == 'published')
+    name: ${{ github.event_name == 'release' && 'release' || 'release-continuous' }}
     runs-on: ubuntu-latest
-    needs: [bot-build, bot-msvc, bot-apple]
+    needs: [build]
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          submodules: true
-      - name: Install signing tools
+          submodules: recursive
+
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends osslsigncode
-      - name: Get artifacts
-        uses: actions/download-artifact@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
-      - name: Setup python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-      - name: Configure meson
-        run: |
-          python -m pip install --upgrade meson ninja requests
-      - name: Create packages
-        run: |
-          meson setup dist
-          ninja -C dist package
-        env:
-          CS_CERTIFICATE: ${{secrets.CS_CERTIFICATE}}
-          CS_CERTIFICATE_PASSWORD: ${{secrets.CS_CERTIFICATE_PASSWORD}}
-      - name: Purge old build
-        continue-on-error: true
-        run: gh release delete continuous --cleanup-tag
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Very important stage
-        continue-on-error: true
-        run: |
-          sleep 20s
-      - name: Push new build
-        run: gh release create continuous --generate-notes --prerelease --title "Continuous Build" ./pkg/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  bot-release:
-    if: |
-      github.event_name == 'release' &&
-      github.event.action == 'published'
-
-    name: bot-release
-    runs-on: ubuntu-latest
-    needs: [bot-build, bot-msvc]
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          submodules: true
-      - name: Install signing tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends osslsigncode
-      - name: Get artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
-          python-version: '3.x'
-      - name: Configure meson
-        run: |
-          python -m pip install --upgrade meson ninja requests
+          python-version: "3.x"
+
+      - name: Install Python dependencies
+        run: python -m pip install --upgrade requests
+
       - name: Create packages
         run: |
-          meson setup dist
-          ninja -C dist package
+          cmake --preset dist
+          cmake --build dist --target package
         env:
-          CS_CERTIFICATE: ${{secrets.CS_CERTIFICATE}}
-          CS_CERTIFICATE_PASSWORD: ${{secrets.CS_CERTIFICATE_PASSWORD}}
+          CS_CERTIFICATE: ${{ secrets.CS_CERTIFICATE }}
+          CS_CERTIFICATE_PASSWORD: ${{ secrets.CS_CERTIFICATE_PASSWORD }}
+
+      - name: Purge old continuous build
+        if: github.event_name == 'push'
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release delete continuous --cleanup-tag
+
+      - name: Wait for tag cleanup
+        if: github.event_name == 'push'
+        run: sleep 20s
+
+      - name: Push continuous build
+        if: github.event_name == 'push'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create continuous --generate-notes --prerelease --title "Continuous Build" ./pkg/*
+
       - name: Publish release
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: pkg/*
+        if: github.event_name == 'release' && startsWith(github.ref, 'refs/tags/')
         env:
-          GITHUB_TOKEN: ${{secrets.API_TOKEN}}
+          GITHUB_TOKEN: ${{ secrets.API_TOKEN }}
+        run: gh release upload ${{ github.ref_name }} ./pkg/*

@@ -1,8 +1,8 @@
 //
-// YaPB, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright © YaPB Project Developers <yapb@jeefo.net>.
+// YaPB, started from PODBot by Count Floyd
+// Maintained by YaPB Team <yapb@jeefo.net>
 //
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Unlicense
 //
 
 #include <yapb.h>
@@ -10,25 +10,27 @@
 // on other than win32/linux platforms i.e. arm we're using xash3d engine to run which exposes
 // nice interface to handle with linkents. if ever rehlds or hlds engine will ever run on ARM or
 // other platforms, and you want to run bot on it without metamod, consider enabling LINKENT_STATIC
-// when compiling the bot, to get it supported.
+// when compiling the bot, to get it supported
 #if defined(LINKENT_STATIC)
-void forwardEntity_helper (EntityProto &addr, const char *name, entvars_t *pev) {
-   if (!addr) {
-      addr = game.lib ().resolve <EntityProto> (name);
-   }
-   if (!addr) {
-      return;
-   }
-   addr (pev);
+namespace bot {
+
+void ForwardEntityHelper (EntityProto &addr, const char *name, entvars_t *pev) {
+  if (!addr) {
+    addr = game.Lib ().resolve<EntityProto> (name);
+  }
+  if (!addr) {
+    return;
+  }
+  addr (pev);
 }
 
-#define LINK_ENTITY(entityName)                        \
-   CR_EXPORT void entityName (entvars_t *pev) {        \
-      static EntityProto addr;                      \
-      forwardEntity_helper (addr, __FUNCTION__, pev);  \
+  #define LINK_ENTITY(entityName)                            \
+   YSTL_EXPORT void entityName (entvars_t *pev) {            \
+      static EntityProto addr;                               \
+      ForwardEntityHelper (addr, __func__, pev);             \
    }
 
-// entities in counter-strike...
+// entities in counter-strike
 LINK_ENTITY (DelayedUse)
 LINK_ENTITY (ambient_generic)
 LINK_ENTITY (ammo_338magnum)
@@ -234,5 +236,7 @@ LINK_ENTITY (weapon_xm1014)
 LINK_ENTITY (weaponbox)
 LINK_ENTITY (world_items)
 LINK_ENTITY (worldspawn)
+
+} // namespace bot
 
 #endif

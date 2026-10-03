@@ -1,6 +1,7 @@
-[submodule "ext/crlib"]
-	path = ext/crlib
-	url = https://github.com/yapb/crlib
 [submodule "ext/linkage"]
 	path = ext/linkage
 	url = https://github.com/yapb/linkage
+[submodule "ext/ystl"]
+	path = ext/ystl
+	url = https://github.com/yapb/ystl.git
+	branch = master

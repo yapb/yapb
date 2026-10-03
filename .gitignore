@@ -1,17 +1,44 @@
+# Compiled binaries
 *.dll
 *.so
+*.dylib
+*.exe
+*.out
+*.app
+*.pdb
+*.idb
+*.ilk
+
+# IDE and editor files
 *.user
-*.json
+*.suo
+*.sln.docstates
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
-vc/x64
-vc/release
-vc/debug
-vc/.vs
-vc/enc_temp_folder
+# Visual Studio specific
+vc/x64/
+vc/release/
+vc/debug/
+vc/.vs/
+vc/enc_temp_folder/
 
+# Build directories
 build/
+bin/
+obj/
+out/
+.cache/
 
-**/cmake-build-debug
+# CMake preset build dirs (see CMakePresets.json, all under build/)
+/build/
+
+# CMake generated files
+**/cmake-build-*/
 **/CMakeCache.txt
 **/cmake_install.cmake
 **/install_manifest.txt
@@ -21,3 +48,12 @@ build/
 **/*.cbp
 **/CMakeScripts
 **/compile_commands.json
+
+# OS specific
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Package manager
+node_modules/
+*.log

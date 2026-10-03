@@ -1,0 +1,5 @@
+# zig toolchain for windows 64-bit (mingw abi)
+set(CMAKE_SYSTEM_NAME Windows)
+set(CMAKE_SYSTEM_PROCESSOR x86_64)
+set(ZIG_TARGET "x86_64-windows-gnu")
+include("${CMAKE_CURRENT_LIST_DIR}/zig-common.cmake")

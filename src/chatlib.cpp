@@ -1,512 +1,686 @@
 //
-// YaPB, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright © YaPB Project Developers <yapb@jeefo.net>.
+// YaPB, started from PODBot by Count Floyd
+// Maintained by YaPB Team <yapb@jeefo.net>
 //
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Unlicense
 //
 
 #include <yapb.h>
 
-ConVar cv_chat ("chat", "1", "Enables or disables bot chat functionality.");
-ConVar cv_chat_percent ("chat_percent", "30", "Bot's chance to send random dead chat when killed.", true, 0.0f, 100.0f);
+namespace bot {
 
-BotChatManager::BotChatManager () {
-   m_clanTags = {
-      { "[[", "]]" }, { "-=", "=-" }, { "-[", "]-" }, { "-]", "[-" },
-      { "-}", "{-" }, { "-{", "}-" }, { "<[", "]>" }, { "<]", "[>" },
-      { "[-", "-]" }, { "]-", "-[" }, { "{-", "-}" }, { "}-", "-{" },
+ChatManager::ChatManager () {
+  clan_tags_ = {
+    { "[[", "]]" },
+    { "-=", "=-" },
+    { "-[", "]-" },
+    { "-]", "[-" },
+    { "-}", "{-" },
+    { "-{", "}-" },
+    { "<[", "]>" },
+    { "<]", "[>" },
+    { "[-", "-]" },
+    { "]-", "-[" },
+    { "{-", "-}" },
+    { "}-", "-{" },
 
-      { "[", "]" }, { "{", "}" }, { "<", "[" }, { ">", "<" }, { ")", "(" },
-      { "-", "-" }, { "|", "|" }, { "=", "=" }, { "+", "+" }, { "(", ")" },
-   };
+    { "[",  "]"  },
+    { "{",  "}"  },
+    { "<",  "["  },
+    { ">",  "<"  },
+    { ")",  "("  },
+    { "-",  "-"  },
+    { "|",  "|"  },
+    { "=",  "="  },
+    { "+",  "+"  },
+    { "(",  ")"  },
+  };
 }
 
-void BotChatManager::stripTags (String &line) {
-   if (line.empty ()) {
-      return;
-   }
+void ChatManager::StripTags (ystl::String &line) {
+  if (line.empty ()) {
+    return;
+  }
 
-   for (const auto &tag : m_clanTags) {
-      const size_t start = line.find (tag.first, 0);
+  for (const auto &tag : clan_tags_) {
+    const size_t start = line.find (tag.first, 0);
 
-      if (start != String::InvalidIndex) {
-         const size_t end = line.find (tag.second, start);
-         const size_t diff = end - start;
+    if (start != ystl::String::InvalidIndex) {
+      const size_t end = line.find (tag.second, start);
 
-         if (end != String::InvalidIndex && end > start && diff < 32 && diff > 1) {
-            line.erase (start, diff + tag.second.length ());
-            continue;
-         }
+      if (end != ystl::String::InvalidIndex && end > start) {
+        const size_t diff = end - start;
+
+        if (diff < 32 && diff > 1) {
+          line.erase (start, diff + tag.second.size ());
+          continue;
+        }
       }
-   }
+    }
+  }
 }
 
-void BotChatManager::humanizePlayerName (String &playerName) {
-   if (playerName.empty ()) {
-      return;
-   }
+void ChatManager::HumanizePlayerName (ystl::String &player_name) {
+  if (player_name.empty ()) {
+    return;
+  }
 
-   // drop tag marks, 80 percent of time
-   if (rg.chance (80)) {
-      stripTags (playerName);
-   }
-   else {
-      playerName.trim ();
-   }
+  // drop tag marks, 80 percent of time
+  if (ystl::rg.chance (80)) {
+    StripTags (player_name);
+  }
+  else {
+    player_name.trim ();
+  }
 
-   // sometimes switch name to lower characters, only valid for the english languge
-   if (rg.chance (8) && cv_language.as <StringRef> () == "en") {
-      playerName.lowercase ();
-   }
+  // sometimes switch name to lower characters, only valid for the english languge
+  if (ystl::rg.chance (8) && cv_language.As<ystl::StringRef> () == "en") {
+    player_name.lowercase ();
+  }
 }
 
-void BotChatManager::addChatErrors (String &line) {
-   // sometimes switch name to lower characters, only valid for the english languge
-   if (rg.chance (8) && cv_language.as <StringRef> () == "en") {
-      line.lowercase ();
-   }
-   const auto length = static_cast <int32_t> (line.length ());
+void ChatManager::AddChatErrors (ystl::String &line) {
+  // sometimes switch name to lower characters, only valid for the english languge
+  if (ystl::rg.chance (8) && cv_language.As<ystl::StringRef> () == "en") {
+    line.lowercase ();
+  }
+  const auto length = static_cast<int32_t> (line.size ());
 
-   if (length > 15) {
-     const auto percentile = length / 2;
-     // prevent garbled text in Chinese chat messages
-      if (cv_language.as <StringRef>() == "chs" || cv_language.as <StringRef>() == "cht") {
-         // "length / 2" percent of time drop a character
-         if (rg.chance(percentile)) {
-            for (int i = 0; i < 6; ++i) { // try several times
-               auto pos = rg(length / 8, length - length / 8);
-               auto c = static_cast<unsigned char>(line[pos]);
-               if (c < 0x80 && isalnum(c)) { // apply for alphas and nums only
-                  line.erase(static_cast <size_t>(pos));
-                  break;
-               }
-            }
-         }
+  if (length > 15) {
+    const auto percentile = length / 2;
 
-         // "length" / 4 precent of time swap character
-         if (rg.chance(percentile / 2)) {
-            for (int i = 0; i < 6; ++i) { // try several times
-               auto pos = static_cast <size_t>(rg(length / 8, 3 * length / 8)); // choose random position in string
-               auto c1 = static_cast<unsigned char>(line[pos]);
-               auto c2 = static_cast<unsigned char>(line[pos + 1]);
-               if (c1 < 0x80 && c2 < 0x80 && isalnum(c1) && isalnum(c2)) {
-                  cr::swap(line[pos], line[pos + 1]);
-                  break;
-               }
-            }
-         }
+    // prevent garbled text in chinese chat messages
+    if (cv_language.As<ystl::StringRef> () == "chs" || cv_language.As<ystl::StringRef> () == "cht") {
+
+      // "length / 2" percent of time drop a character
+      if (ystl::rg.chance (percentile)) {
+
+        // try several times
+        for (int i = 0; i < 6; ++i) {
+          auto pos = ystl::rg (length / 8, length - length / 8);
+          auto ch = static_cast<uint8_t> (line[static_cast<size_t> (pos)]);
+
+          if (ch < 0x80 && isalnum (ch)) { // apply for alphas and nums only
+            line.erase (static_cast<size_t> (pos));
+            break;
+          }
+        }
       }
-      else {
-         // "length / 2" percent of time drop a character
-         if (rg.chance(percentile)) {
-            auto pos = rg(length / 8, length - length / 8);
-            line.erase(static_cast <size_t> (pos));
-         }
 
-         // "length" / 4 precent of time swap character
-         if (rg.chance(percentile / 2)) {
-            auto pos = static_cast <size_t> (rg(length / 8, 3 * length / 8)); // choose random position in string
-            cr::swap(line[pos], line[pos + 1]);
-         }
+      // "length" / 4 precent of time swap character
+      const auto swap_length = static_cast<int32_t> (line.size ());
+
+      if (swap_length > 3 && ystl::rg.chance (percentile / 2)) {
+
+        // try several times
+        for (int i = 0; i < 6; ++i) {
+
+          // choose random position in string
+          auto pos = static_cast<size_t> (ystl::rg (swap_length / 8, 3 * swap_length / 8));
+
+          auto ch1 = static_cast<uint8_t> (line[pos]);
+          auto ch2 = static_cast<uint8_t> (line[pos + 1]);
+
+          if (ch1 < 0x80 && ch2 < 0x80 && isalnum (ch1) && isalnum (ch2)) {
+            ystl::swap (line[pos], line[pos + 1]);
+            break;
+          }
+        }
       }
-   }
+    }
+    else {
+      // "length / 2" percent of time drop a character
+      if (ystl::rg.chance (percentile)) {
+        auto pos = ystl::rg (length / 8, length - length / 8);
+        line.erase (static_cast<size_t> (pos));
+      }
+
+      // "length" / 4 precent of time swap character
+      const auto swap_length = static_cast<int32_t> (line.size ());
+
+      if (swap_length > 3 && ystl::rg.chance (percentile / 2)) {
+        auto pos = static_cast<size_t> (ystl::rg (swap_length / 8, 3 * swap_length / 8)); // choose random position in string
+        ystl::swap (line[pos], line[pos + 1]);
+      }
+    }
+  }
 }
 
-bool BotChatManager::checkKeywords (StringRef line, String &reply) {
-   // this function checks is string contain keyword, and generates reply to it
+bool ChatManager::CheckKeywords (ystl::StringRef line, ystl::String &reply, bool allow_generic) {
+  // this function checks if string contains keyword, and generates reply to it
 
-   if (!cv_chat || line.empty ()) {
+  if (!cv_chat || line.empty ()) {
+    return false;
+  }
+
+  auto &keyword_index = conf.GetKeywordIndex ();
+  auto &replies = conf.GetReplies ();
+
+  // helper to select a reply from a factory
+  auto select_reply = [] (ChatKeywords &factory, ystl::String &output) -> bool {
+    if (factory.replies.empty ()) {
       return false;
-   }
+    }
 
-   for (auto &factory : conf.getReplies ()) {
-      for (const auto &keyword : factory.keywords) {
+    // reset only after full cycle, so replies don't repeat early
+    if (factory.UsedReplyCount () >= factory.replies.size ()) {
+      factory.ClearUsedReplies ();
+    }
 
-         // check is keyword has occurred in message
-         if (line.find (keyword) != String::InvalidIndex) {
-            auto &usedReplies = factory.usedReplies;
+    // try to find an unused reply
+    ystl::StringRef choosen_reply {};
+    bool found_unused = false;
 
-            if (usedReplies.length () >= factory.replies.length () / 4) {
-               usedReplies.clear ();
-            }
+    // try multiple times to find an unused reply
+    for (size_t attempts = 0; attempts < factory.replies.size () * 2; ++attempts) {
+      choosen_reply = factory.replies.random ();
 
-            if (!factory.replies.empty ()) {
-               bool replyUsed = false;
-               StringRef choosenReply = factory.replies.random ();
-
-               // don't say this twice
-               for (auto &used : usedReplies) {
-                  if (used.contains (choosenReply)) {
-                     replyUsed = true;
-                     break;
-                  }
-               }
-
-               // reply not used, so use it
-               if (!replyUsed) {
-                  reply.assign (choosenReply); // update final buffer
-                  usedReplies.push (choosenReply); // add to ignore list
-
-                  return true;
-               }
-            }
-         }
+      if (!factory.IsReplyUsed (choosen_reply)) {
+        found_unused = true;
+        break;
       }
-   }
-   // didn't find a keyword? 70% of the time use some universal reply
-   if (rg.chance (70) && conf.hasChatBank (Chat::NoKeyword)) {
-      reply.assign (conf.pickRandomFromChatBank (Chat::NoKeyword));
+    }
+
+    // if we couldn't find an unused reply, just use a random one anyway
+    if (!found_unused) {
+      choosen_reply = factory.replies.random ();
+    }
+
+    // assign straight from the view
+    output.assign (choosen_reply.chars (), choosen_reply.size ());
+    factory.MarkReplyUsed (choosen_reply);
+
+    return true;
+  };
+
+  // fast exact word matching using hashmap index
+  if (!keyword_index.empty ()) {
+    const auto view = ystl::StringRef (line.chars (), line.size ());
+    size_t start = 0;
+
+    while (start <= view.size ()) {
+      auto end = view.find (' ', start);
+
+      if (end == ystl::String::InvalidIndex) {
+        end = view.size ();
+      }
+
+      // trim the word bounds in place
+      while (start < end && ystl::Tokenizer::is_space (view[start])) {
+        ++start;
+      }
+      while (end > start && ystl::Tokenizer::is_space (view[end - 1])) {
+        --end;
+      }
+
+      // strip punctuation, so "noob!" matches "NOOB"
+      while (end > start) {
+        const auto lead = static_cast<uint8_t> (view[start]);
+        const auto trail = static_cast<uint8_t> (view[end - 1]);
+
+        if (lead < 0x80 && !isalnum (lead)) {
+          ++start;
+          continue;
+        }
+
+        if (trail < 0x80 && !isalnum (trail)) {
+          --end;
+          continue;
+        }
+        break;
+      }
+
+      if (end > start) {
+        const auto word = ystl::StringRef (view.chars () + start, end - start);
+
+        // check if this word matches any indexed keyword
+        const auto word_hash = ystl::detail::fnv1a32_n (word.chars (), word.size ());
+
+        if (keyword_index.exists (word_hash)) {
+          const auto &indices = keyword_index[word_hash];
+
+          // try each reply factory that has this keyword
+          for (const auto index : indices) {
+            if (index < replies.size ()) {
+              if (select_reply (replies[index], reply)) {
+                return true;
+              }
+            }
+          }
+        }
+      }
+
+      if (end == view.size ()) {
+        break;
+      }
+      start = end + 1;
+    }
+  }
+
+  // fallback to substring matching for patterns like "aimbot" in "aimbotting"
+  for (auto &factory : replies) {
+    for (const auto &keyword : factory.keywords) {
+
+      // check if keyword occurs as substring in message
+      if (line.find (keyword) != ystl::String::InvalidIndex) {
+        if (select_reply (factory, reply)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  // didn't find a keyword? 70% of the time use some universal reply
+  if (allow_generic && ystl::rg.chance (70) && conf.HasChatBank (Chat::NoKeyword)) {
+    reply.assign (conf.PickRandomFromChatBank (Chat::NoKeyword));
+    return true;
+  }
+  return false;
+}
+
+void Bot::PrepareChatMessage (ystl::StringRef message) {
+  // this function parses messages from the botchat, replaces keywords and converts names into a more human style
+
+  if (!cv_chat || message.empty ()) {
+    return;
+  }
+
+  size_t pos = message.find ('%');
+
+  // nothing found, bail out
+  if (pos == ystl::String::InvalidIndex || pos >= message.size ()) {
+    chat_buffer_.assign (message.chars (), message.size ());
+
+    if (!chat_buffer_.empty ()) {
+      chatlib.AddChatErrors (chat_buffer_);
+    }
+    return;
+  }
+
+  // get the humanized name out of client
+  auto humanized_name = [] (int index) -> ystl::String {
+    auto ent = game.PlayerOfIndex (index);
+
+    if (!game.IsPlayerEntity (ent)) {
+      return "unknown";
+    }
+    ystl::String player_name = ent->v.netname.chars ();
+    chatlib.HumanizePlayerName (player_name);
+
+    return player_name;
+  };
+
+  // find highfrag player
+  auto get_highfrag_player = [&] () -> ystl::String {
+    int highest_frags = -1;
+    int index = 0;
+
+    for (int i = 0; i < game.MaxClients (); ++i) {
+      const auto &client = clients[i];
+
+      if (!client.IsUsedAndNot (Ent ())) {
+        continue;
+      }
+      const auto frags = static_cast<int> (client.ent->v.frags);
+
+      if (frags > highest_frags) {
+        highest_frags = frags;
+        index = i;
+      }
+    }
+    return humanized_name (index);
+  };
+
+  // get roundtime
+  auto get_round_time = [] () -> ystl::String {
+    const auto round_time_secs = static_cast<int> (game_state.GetRoundEndTime () - game.Time ());
+
+    ystl::String round_time {};
+    round_time.assignf ("%02d:%02d", ystl::clamp (round_time_secs / 60, 0, 59), ystl::clamp (ystl::abs (round_time_secs % 60), 0, 59));
+
+    return round_time;
+  };
+
+  // get bot's victim (may be missing before the first kill)
+  auto get_my_victim = [&] () -> ystl::String {
+    if (game.IsNullEntity (last_victim_)) {
+      return "unknown";
+    }
+    return humanized_name (game.IndexOfPlayer (last_victim_));
+  };
+
+  // get the game name alias
+  auto get_game_name = [] () -> ystl::String {
+    ystl::String game_name {};
+
+    if (game.Is (GameFlags::ConditionZero)) {
+      if (ystl::rg.chance (30)) {
+        game_name = "CZ";
+      }
+      else {
+        game_name = "Condition Zero";
+      }
+    }
+    else if (game.Is (GameFlags::Modern) || game.Is (GameFlags::Legacy)) {
+      if (ystl::rg.chance (30)) {
+        game_name = "CS";
+      }
+      else {
+        game_name = "Counter-Strike";
+      }
+    }
+    return game_name;
+  };
+
+  // get enemy or teammate alive
+  auto get_player_alive = [&] (bool needs_enemy) -> ystl::String {
+    for (const auto &client : clients) {
+      if (!client.IsUsedAndAlive () || client.ent == Ent ()) {
+        continue;
+      }
+      const auto player_index = game.IndexOfPlayer (client.ent);
+
+      if (needs_enemy && team_ != client.team) {
+        return humanized_name (player_index);
+      }
+      else if (!needs_enemy && team_ == client.team) {
+        if (game.IsPlayerEntity (pev->dmg_inflictor) && game.GetRealPlayerTeam (pev->dmg_inflictor) == team_) {
+
+          return humanized_name (game.IndexOfPlayer (pev->dmg_inflictor));
+        }
+        return humanized_name (player_index);
+      }
+    }
+    return get_highfrag_player ();
+  };
+
+  // scan original message and build result directly
+  chat_buffer_.clear ();
+
+  size_t read_pos = 0;
+  size_t replace_counter = 0;
+
+  while (replace_counter < 6 && (pos = message.find ('%', read_pos)) != ystl::String::InvalidIndex) {
+    const auto replace_position = pos + 1;
+
+    if (replace_position >= message.size ()) {
+      break;
+    }
+
+    // copy literal text before this marker
+    if (pos > read_pos) {
+      chat_buffer_.append (message.chars () + read_pos, pos - read_pos);
+    }
+
+    // resolve and append replacement
+    switch (message[replace_position]) {
+
+      // the highest frag player
+    case 'f':
+      chat_buffer_.append (get_highfrag_player ());
+      break;
+
+      // current map name
+    case 'm':
+      chat_buffer_.append (game.GetMapName ());
+      break;
+      // round time
+    case 'r':
+      chat_buffer_.append (get_round_time ());
+      break;
+
+      // chat reply
+    case 's': {
+      ystl::String name = say_text_buffer_.entity_index != -1 ? humanized_name (say_text_buffer_.entity_index) : get_highfrag_player ();
+      chat_buffer_.append (name);
+      break;
+    }
+      // last bot victim
+    case 'v':
+      chat_buffer_.append (get_my_victim ());
+      break;
+
+      // game name
+    case 'd':
+      chat_buffer_.append (get_game_name ());
+      break;
+
+      // teammate alive
+    case 't':
+      chat_buffer_.append (get_player_alive (false));
+      break;
+
+      // enemy alive
+    case 'e':
+      chat_buffer_.append (get_player_alive (true));
+      break;
+
+    case 'g': {
+      auto author = graph.GetAuthor ();
+      chat_buffer_.append (author.chars (), author.size ());
+      break;
+    }
+    default:
+      // unrecognized marker, keep as-is
+      chat_buffer_.append (message.chars () + pos, 2);
+      break;
+    }
+    read_pos = replace_position + 1;
+    ++replace_counter;
+  }
+
+  // append remaining text after last marker
+  if (read_pos < message.size ()) {
+    chat_buffer_.append (message.chars () + read_pos, message.size () - read_pos);
+  }
+
+  if (!chat_buffer_.empty ()) {
+    chatlib.AddChatErrors (chat_buffer_);
+  }
+}
+
+bool Bot::CheckChatKeywords (ystl::StringRef chat_text, ystl::String &reply) {
+  // this function parse chat buffer, and prepare buffer to keyword searching
+
+  return chatlib.CheckKeywordsUpper (chat_text, reply);
+}
+
+bool Bot::IsReplyingToChat () {
+  // this function sends reply to a player
+
+  if (say_text_buffer_.entity_index == -1) {
+    return false;
+  }
+
+  // resolve chat text from sender bot (if bot) or stored copy (if human)
+  ystl::StringRef chat_text {};
+  auto sender = bots[say_text_buffer_.entity_index];
+
+  if (sender != nullptr) {
+    chat_text = sender->chat_buffer_;
+  }
+  else {
+    chat_text = say_text_buffer_.say_text;
+  }
+
+  if (chat_text.empty ()) {
+    say_text_buffer_.entity_index = -1;
+    say_text_buffer_.say_text.clear ();
+    return false;
+  }
+
+  // check is time to chat is good
+  if (say_text_buffer_.time_next_chat < game.Time () + rg (say_text_buffer_.chat_delay / 2, say_text_buffer_.chat_delay)) {
+    // reuse the persistent reply buffer, so picking a reply doesn't allocate per message
+    auto &reply_text = reply_buffer_;
+
+    // keywords react almost always, generic chatter stays rare
+    bool want_reply = false;
+
+    if (chatlib.CheckKeywordsUpper (chat_text, reply_text, false)) {
+      want_reply = rg.chance (say_text_buffer_.chat_probability + 60);
+    }
+    else if (rg.chance (25) && conf.HasChatBank (Chat::NoKeyword)) {
+      reply_text.assign (conf.PickRandomFromChatBank (Chat::NoKeyword));
+      want_reply = true;
+    }
+
+    if (want_reply) {
+      PrepareChatMessage (reply_text);
+      PushMsgQueue (Msg::Say);
+
+      say_text_buffer_.entity_index = -1;
+      say_text_buffer_.time_next_chat = game.Time () + say_text_buffer_.chat_delay;
+      say_text_buffer_.say_text.clear ();
+
       return true;
-   }
-   return false;
+    }
+    say_text_buffer_.entity_index = -1;
+    say_text_buffer_.say_text.clear ();
+  }
+  return false;
 }
 
-void Bot::prepareChatMessage (StringRef message) {
-   // this function parses messages from the botchat, replaces keywords and converts names into a more human style
+void Bot::PushChatMessage (Chat type, bool is_team_say) {
+  if (!conf.HasChatBank (type) || !cv_chat) {
+    return;
+  }
 
-   if (!cv_chat || message.empty ()) {
-      return;
-   }
-   m_chatBuffer = message;
-
-   // must be called before return or on the end
-   auto addChatErrors = [&] () {
-      if (!m_chatBuffer.empty ()) {
-         chatlib.addChatErrors (m_chatBuffer);
-      }
-   };
-
-   // need to check if we're have special symbols
-   size_t pos = message.find ('%');
-
-   // nothing found, bail out
-   if (pos == String::InvalidIndex || pos >= message.length ()) {
-      addChatErrors ();
-      return;
-   }
-
-   // get the humanized name out of client
-   auto humanizedName = [] (int index) -> String {
-      auto ent = game.playerOfIndex (index);
-
-      if (!game.isPlayerEntity (ent)) {
-         return "unknown";
-      }
-      String playerName = ent->v.netname.chars ();
-      chatlib.humanizePlayerName (playerName);
-
-      return playerName;
-   };
-
-   // find highfrag player
-   auto getHighfragPlayer = [&] () -> String {
-      int highestFrags = -1;
-      int index = 0;
-
-      for (int i = 0; i < game.maxClients (); ++i) {
-         const Client &client = util.getClient (i);
-
-         if (!(client.flags & ClientFlags::Used) || client.ent == ent ()) {
-            continue;
-         }
-         const auto frags = static_cast <int> (client.ent->v.frags);
-
-         if (frags > highestFrags) {
-            highestFrags = frags;
-            index = i;
-         }
-      }
-      return humanizedName (index);
-   };
-
-   // get roundtime
-   auto getRoundTime = [] () -> String {
-      const auto roundTimeSecs = static_cast <int> (gameState.getRoundEndTime () - game.time ());
-
-      String roundTime {};
-      roundTime.assignf ("%02d:%02d", cr::clamp (roundTimeSecs / 60, 0, 59), cr::clamp (cr::abs (roundTimeSecs % 60), 0, 59));
-
-      return roundTime;
-   };
-
-   // get bot's victim
-   auto getMyVictim = [&] () -> String {
-      return humanizedName (game.indexOfPlayer (m_lastVictim));
-   };
-
-   // get the game name alias
-   auto getGameName = [] () -> String {
-      String gameName {};
-
-      if (game.is (GameFlags::ConditionZero)) {
-         if (::rg.chance (30)) {
-            gameName = "CZ";
-         }
-         else {
-            gameName = "Condition Zero";
-         }
-      }
-      else if (game.is (GameFlags::Modern) || game.is (GameFlags::Legacy)) {
-         if (::rg.chance (30)) {
-            gameName = "CS";
-         }
-         else {
-            gameName = "Counter-Strike";
-         }
-      }
-      return gameName;
-   };
-
-   // get enemy or teammate alive
-   auto getPlayerAlive = [&] (bool needsEnemy) -> String {
-      for (const auto &client : util.getClients ()) {
-         if (!(client.flags & ClientFlags::Used) || !(client.flags & ClientFlags::Alive) || client.ent == ent ()) {
-            continue;
-         }
-         const auto playerIndex = game.indexOfPlayer (client.ent);
-
-         if (needsEnemy && m_team != client.team) {
-            return humanizedName (playerIndex);
-         }
-         else if (!needsEnemy && m_team == client.team) {
-            if (game.isPlayerEntity (pev->dmg_inflictor)
-               && game.getRealPlayerTeam (pev->dmg_inflictor) == m_team) {
-
-               return humanizedName (game.indexOfPlayer (pev->dmg_inflictor));
-            }
-            return humanizedName (playerIndex);
-         }
-      }
-      return getHighfragPlayer ();
-   };
-   size_t replaceCounter = 0;
-
-   while (replaceCounter < 6 && (pos = m_chatBuffer.find ('%')) != String::InvalidIndex) {
-      const auto replacePosition = pos + 1;
-
-      if (replacePosition > m_chatBuffer.length ()) {
-         continue;
-      }
-
-      // found one, let's do replace
-      switch (m_chatBuffer[replacePosition]) {
-
-         // the highest frag player
-      case 'f':
-         m_chatBuffer.replace ("%f", getHighfragPlayer ());
-         break;
-
-         // current map name
-      case 'm':
-         m_chatBuffer.replace ("%m", game.getMapName ());
-         break;
-
-         // round time
-      case 'r':
-         m_chatBuffer.replace ("%r", getRoundTime ());
-         break;
-
-         // chat reply
-      case 's':
-         m_chatBuffer.replace ("%s", m_sayTextBuffer.entityIndex != -1 ? humanizedName (m_sayTextBuffer.entityIndex) : getHighfragPlayer ());
-         break;
-
-         // last bot victim
-      case 'v':
-         m_chatBuffer.replace ("%v", getMyVictim ());
-         break;
-
-         // game name
-      case 'd':
-         m_chatBuffer.replace ("%d", getGameName ());
-         break;
-
-         // teammate alive
-      case 't':
-         m_chatBuffer.replace ("%t", getPlayerAlive (false));
-         break;
-
-         // enemy alive
-      case 'e':
-         m_chatBuffer.replace ("%e", getPlayerAlive (true));
-         break;
-
-      case 'g':
-         m_chatBuffer.replace ("%g", graph.getAuthor ());
-         break;
-      };
-      ++replaceCounter;
-   }
-   addChatErrors ();
+  PrepareChatMessage (conf.PickRandomFromChatBank (type));
+  PushMsgQueue (is_team_say ? Msg::SayTeam : Msg::Say);
 }
 
-bool Bot::checkChatKeywords (String &reply) {
-   // this function parse chat buffer, and prepare buffer to keyword searching
+void Bot::CheckForChat () {
+  // say a text every now and then
 
-   return chatlib.checkKeywords (utf8tools.strToUpper (m_sayTextBuffer.sayText), reply);
+  if (is_alive_ || !cv_chat || game.Is (GameFlags::CSDM)) {
+    return;
+  }
+
+  // bot chatting turned on?
+  if (rg.chance (cv_chat_percent.As<int> ()) && last_chat_timer_.greater_than (rg (6.0f, 10.0f)) &&
+      bots.GetLastChatElapsedTime () > rg (2.5f, 5.0f) && !IsReplyingToChat ()) {
+
+    if (conf.HasChatBank (Chat::Dead)) {
+      ystl::StringRef phrase = conf.PickRandomFromChatBank (Chat::Dead);
+      bool say_buffer_exists = false;
+
+      // search for last messages, sayed
+      for (auto &sentence : say_text_buffer_.last_used_sentences) {
+        if (phrase.starts_with (sentence)) {
+          say_buffer_exists = true;
+          break;
+        }
+      }
+
+      if (!say_buffer_exists) {
+        PrepareChatMessage (phrase);
+        PushMsgQueue (Msg::Say);
+
+        last_chat_timer_.start ();
+        bots.MarkLastChatTime ();
+
+        // add to ignore list
+        say_text_buffer_.last_used_sentences.push (phrase);
+      }
+    }
+
+    // clear the used line buffer every now and then
+    if (static_cast<int> (say_text_buffer_.last_used_sentences.size ()) > rg (4, 6)) {
+      say_text_buffer_.last_used_sentences.clear ();
+    }
+  }
 }
 
-bool Bot::isReplyingToChat () {
-   // this function sends reply to a player
+void Bot::SendToChat (ystl::StringRef message, bool team_only) {
+  // this function prints saytext message to all players
 
-   if (m_sayTextBuffer.entityIndex != -1 && !m_sayTextBuffer.sayText.empty ()) {
-      // check is time to chat is good
-      if (m_sayTextBuffer.timeNextChat < game.time () + rg (m_sayTextBuffer.chatDelay / 2, m_sayTextBuffer.chatDelay)) {
-         String replyText {};
+  if (is_creature_ || message.empty () || !cv_chat) {
+    return;
+  }
 
-         if (rg.chance (m_sayTextBuffer.chatProbability + rg (40, 70)) && checkChatKeywords (replyText)) {
-            prepareChatMessage (replyText);
-            pushMsgQueue (BotMsg::Say);
-
-            m_sayTextBuffer.entityIndex = -1;
-            m_sayTextBuffer.timeNextChat = game.time () + m_sayTextBuffer.chatDelay;
-            m_sayTextBuffer.sayText.clear ();
-
-            return true;
-         }
-         m_sayTextBuffer.entityIndex = -1;
-         m_sayTextBuffer.sayText.clear ();
-      }
-   }
-   return false;
+  // special handling for legacy games
+  if (game.Is (GameFlags::Legacy)) {
+    SendToChatLegacy (message, team_only);
+  }
+  else {
+    IssueCommand ("%s \"%s\"", team_only ? "say_team" : "say", message);
+  }
 }
 
-void Bot::checkForChat () {
-   // say a text every now and then
+void Bot::SendToChatLegacy (ystl::StringRef message, bool team_only) {
+  // this function prints saytext message to all players for legacy games (< cs 1.6)
 
-   if (m_isAlive || !cv_chat || game.is (GameFlags::CSDM)) {
-      return;
-   }
+  // regular say overruns legacy hlds, so mimic gamedll host_say here
 
-   // bot chatting turned on?
-   if (rg.chance (cv_chat_percent.as <int> ())
-      && m_lastChatTime + rg (6.0f, 10.0f) < game.time ()
-      && bots.getLastChatTimestamp () + rg (2.5f, 5.0f) < game.time ()
-      && !isReplyingToChat ()) {
+  bool dedicated_send = false;
 
-      if (conf.hasChatBank (Chat::Dead)) {
-         StringRef phrase = conf.pickRandomFromChatBank (Chat::Dead);
-         bool sayBufferExists = false;
+  auto send_chat_msg = [&] (const Client &client, ystl::StringRef chat_msg) {
+    if (game.IsDedicatedServer () && !dedicated_send) {
+      dedicated_send = true;
 
-         // search for last messages, sayed
-         for (auto &sentence : m_sayTextBuffer.lastUsedSentences) {
-            if (phrase.startsWith (sentence)) {
-               sayBufferExists = true;
-               break;
-            }
-         }
+      // trim the message bounds for the console output only, network messages keep the trailing newline
+      const auto trimmed = ystl::Tokenizer::trim (chat_msg, "\r\n\t ");
 
-         if (!sayBufferExists) {
-            prepareChatMessage (phrase);
-            pushMsgQueue (BotMsg::Say);
+      game.Print ("%.*s", static_cast<int> (trimmed.size ()), trimmed.chars ());
+    }
+    auto rcv = bots[client.ent];
 
-            m_lastChatTime = game.time ();
-            bots.setLastChatTimestamp (game.time ());
+    if (rcv != nullptr) {
+      rcv->say_text_buffer_.entity_index = index_;
 
-            // add to ignore list
-            m_sayTextBuffer.lastUsedSentences.push (phrase);
-         }
+      rcv->say_text_buffer_.say_text.assign (message.chars (), message.size ());
+      rcv->say_text_buffer_.time_next_chat = game.Time () + rcv->say_text_buffer_.chat_delay;
+    }
+
+    if (is_alive_ || !has_flag (client.flags, ClientFlags::Alive)) {
+      MessageWriter (MSG_ONE, msgs.Id (NetMsg::SayText), nullptr, client.ent).WriteByte (index_).WriteString (chat_msg.chars ());
+    }
+  };
+
+  // the chat message is identical for every recipient, so it's built only once, into the reused scratch buffer
+  ystl::String &chat_msg = chatlib.ChatScratch ();
+  chat_msg.clear ();
+
+  if (team_only) {
+    ystl::StringRef team_name {};
+
+    if (team_ == Team::Terrorist) {
+      team_name = "(Terrorist)";
+    }
+    else if (team_ == Team::CT) {
+      team_name = "(Counter-Terrorist)";
+    }
+
+    if (is_alive_) {
+      chat_msg.appendf ("%c%s %c%s%c :  %s\n", 0x01, team_name, 0x03, pev->netname.chars (), 0x01, message);
+    }
+    else {
+      chat_msg.appendf ("%c*DEAD*%s %c%s%c :  %s\n", 0x01, team_name, 0x03, pev->netname.chars (), 0x01, message);
+    }
+
+    for (const auto &client : clients) {
+      if (!client.IsTeammate2 (team_, Ent ())) {
+        continue;
       }
+      send_chat_msg (client, chat_msg);
+    }
+    return;
+  }
 
-      // clear the used line buffer every now and then
-      if (static_cast <int> (m_sayTextBuffer.lastUsedSentences.length ()) > rg (4, 6)) {
-         m_sayTextBuffer.lastUsedSentences.clear ();
-      }
-   }
+  if (is_alive_) {
+    chat_msg.appendf ("%c%s :  %s\n", 0x02, pev->netname.chars (), message);
+  }
+  else {
+    chat_msg.appendf ("%c*DEAD* %c%s%c :  %s\n", 0x01, 0x03, pev->netname.chars (), 0x01, message);
+  }
+
+  for (const auto &client : clients) {
+    if (!client.IsUsedAndNot (Ent ())) {
+      continue;
+    }
+    send_chat_msg (client, chat_msg);
+  }
 }
 
-void Bot::sendToChat (StringRef message, bool teamOnly) {
-   // this function prints saytext message to all players
-
-   if (m_isCreature || message.empty () || !cv_chat) {
-      return;
-   }
-
-   // special handling for legacy games
-   if (game.is (GameFlags::Legacy)) {
-      sendToChatLegacy (message, teamOnly);
-   }
-   else {
-      issueCommand ("%s \"%s\"", teamOnly ? "say_team" : "say", message);
-   }
-}
-
-void Bot::sendToChatLegacy (StringRef message, bool teamOnly) {
-   // this function prints saytext message to all players for legacy games (< cs 1.6)
-
-   // note: for some reason using regular say & say_team for sending chat messages on hlds on a legacy games
-   // causes buffer overruns somewhere in gamedll Host_Say function, thus crashing the game randomly.
-   // so this function mimics what legacy gamedll is doing in their Host_Say.
-
-   bool dedicatedSend = false;
-
-   auto sendChatMsg = [&] (const Client &client, String chatMsg) {
-      if (game.isDedicated () && !dedicatedSend) {
-         dedicatedSend = true;
-
-         game.print ("%s", chatMsg.trim ());
-      }
-      auto rcv = bots[client.ent];
-
-      if (rcv != nullptr) {
-         rcv->m_sayTextBuffer.entityIndex = m_index;
-
-         rcv->m_sayTextBuffer.sayText = message;
-         rcv->m_sayTextBuffer.timeNextChat = game.time () + rcv->m_sayTextBuffer.chatDelay;
-      }
-      else {
-         return; // do not send to controlled bots
-      }
-
-      if (((client.flags & ClientFlags::Alive) && m_isAlive)
-         || (!(client.flags & ClientFlags::Alive) && m_isAlive)
-         || (!(client.flags & ClientFlags::Alive) && !m_isAlive)) {
-
-         MessageWriter (MSG_ONE, msgs.id (NetMsg::SayText), nullptr, client.ent)
-            .writeByte (m_index)
-            .writeString (chatMsg.chars ());
-      }
-   };
-
-   if (teamOnly) {
-      StringRef teamName {};
-
-      if (m_team == Team::Terrorist) {
-         teamName = "(Terrorist)";
-      }
-      else if (m_team == Team::CT) {
-         teamName = "(Counter-Terrorist)";
-      }
-
-      for (const auto &client : util.getClients ()) {
-         if (!(client.flags & ClientFlags::Used) || client.team2 != m_team || client.ent == ent ()) {
-            continue;
-         }
-         String chatMsg {};
-
-         if (m_isAlive) {
-            chatMsg.appendf ("%c%s %c%s%c :  %s\n", 0x01, teamName, 0x03, pev->netname.chars (), 0x01, message);
-         }
-         else {
-            chatMsg.appendf ("%c*DEAD*%s %c%s%c :  %s\n", 0x01, teamName, 0x03, pev->netname.chars (), 0x01, message);
-         }
-         sendChatMsg (client, chatMsg);
-      }
-      return;
-   }
-
-   for (const auto &client : util.getClients ()) {
-      if (!(client.flags & ClientFlags::Used) || client.ent == ent ()) {
-         continue;
-      }
-      String chatMsg {};
-
-      if (m_isAlive) {
-         chatMsg.appendf ("%c%s :  %s\n", 0x02, pev->netname.chars (), message);
-      }
-      else {
-         chatMsg.appendf ("%c*DEAD* %c%s%c :  %s\n", 0x01, 0x03, pev->netname.chars (), 0x01, message);
-      }
-      sendChatMsg (client, chatMsg);
-   }
-}
+} // namespace bot

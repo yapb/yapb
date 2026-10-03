@@ -1,579 +1,1001 @@
 //
-// YaPB, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright © YaPB Project Developers <yapb@jeefo.net>.
+// YaPB, started from PODBot by Count Floyd
+// Maintained by YaPB Team <yapb@jeefo.net>
 //
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Unlicense
 //
 
 #include <yapb.h>
 
-ConVar cv_path_heuristic_mode ("path_heuristic_mode", "0", "Selects the heuristic function mode. For debug purposes only.", true, 0.0f, 4.0f);
-ConVar cv_path_floyd_memory_limit ("path_floyd_memory_limit", "6", "Limits the maximum Floyd-Warshall memory (megabytes). Uses Dijkstra if memory is exceeded.", true, 0.0, 32.0f);
-ConVar cv_path_dijkstra_simple_distance ("path_dijkstra_simple_distance", "1", "Uses simple distance path calculation instead of running a full Dijkstra path cycle. Used only when Floyd matrices are unavailable due to memory limits.");
-ConVar cv_path_astar_post_smooth ("path_astar_post_smooth", "0", "Enables post-smoothing for A*. Reduces zig-zags on paths at the cost of some CPU cycles.");
-ConVar cv_path_randomize_on_round_start ("path_randomize_on_round_start", "1", "Randomizes pathfinding on each round start.");
+namespace bot {
 
-float PlannerHeuristic::gfunctionKillsDist (int team, int currentIndex, int parentIndex) {
-   if (parentIndex == kInvalidNodeIndex) {
-      return 0.0f;
-   }
-   auto cost = practice.getDamageEx (team, currentIndex, currentIndex, true);
-   const auto &current = graph[currentIndex];
-
-   for (const auto &neighbour : current.links) {
-      if (neighbour.index != kInvalidNodeIndex) {
-         cost += practice.getDamageEx (team, neighbour.index, neighbour.index, false);
-      }
-   }
-
-   if (current.flags & NodeFlag::Crouch) {
-      cost *= 1.5f;
-   }
-   return cost;
+float PlannerHeuristicDiversity::G (Team, [[maybe_unused]] int current_index, int parent_index, int edge_distance) const {
+  if (parent_index == kInvalidNodeIndex) {
+    return 0.0f;
+  }
+  // random weight between 0.5 and 1.5 for variety, edge distance comes straight from the caller
+  return static_cast<float> (edge_distance) * ystl::rg (0.5f, 1.5f);
 }
 
-float PlannerHeuristic::gfunctionKillsDistCTWithHostage (int team, int currentIndex, int parentIndex) {
-   const auto &current = graph[currentIndex];
+float PlannerHeuristicDiversity::H (int index, int goal_index) const {
+  const auto &start = graph[index];
+  const auto &goal = graph[goal_index];
 
-   if (current.flags & NodeFlag::NoHostage) {
+  const float dx = start.origin.x - goal.origin.x;
+  const float dy = start.origin.y - goal.origin.y;
+  const float dz = start.origin.z - goal.origin.z;
+
+  // base euclidean distance with random weight between 0.3 and 1.0
+  const float base_dist = ystl::sqrtf (ystl::sqrf (dx) + ystl::sqrf (dy) + ystl::sqrf (dz));
+
+  return base_dist * ystl::rg (0.3f, 1.0f);
+}
+
+float PlannerHeuristicFast::G (Team, int current_index, int parent_index, int edge_distance) const {
+  if (parent_index == kInvalidNodeIndex) {
+    return 0.0f;
+  }
+  // we don't like ladder or crouch point
+  if (has_flag (graph[current_index].flags, NodeFlag::Crouch | NodeFlag::Ladder)) {
+    return static_cast<float> (edge_distance) * 1.5f;
+  }
+  return static_cast<float> (edge_distance);
+}
+
+float PlannerHeuristicFast::H (int index, int goal_index) const {
+  const auto &start = graph[index];
+  const auto &goal = graph[goal_index];
+
+  const float x = start.origin.x - goal.origin.x;
+  const float y = start.origin.y - goal.origin.y;
+  const float z = start.origin.z - goal.origin.z;
+
+  switch (cv_path_heuristic_mode.As<int> ()) {
+  case 0:
+    return ystl::max (ystl::max (ystl::abs (x), ystl::abs (y)), ystl::abs (z)); // chebyshev distance
+
+  case 1:
+    return ystl::abs (x) + ystl::abs (y) + ystl::abs (z); // manhattan distance
+
+  case 2:
+    return 0.0f; // no heuristic
+
+  case 3: {
+    const float dx = ystl::abs (x);
+    const float dy = ystl::abs (y);
+    const float dz = ystl::abs (z);
+
+    const float dmin = ystl::min (ystl::min (dx, dy), dz);
+    const float dmax = ystl::max (ystl::max (dx, dy), dz);
+    const float dmid = dx + dy + dz - dmin - dmax;
+
+    const float d1 = 1.0f;
+    const float d2 = ystl::sqrtf (2.0f);
+    const float d3 = ystl::sqrtf (3.0f);
+
+    return (d3 - d2) * dmin + (d2 - d1) * dmid + d1 * dmax; // diagonal distance
+  }
+
+  default:
+  case 4:
+    return ystl::sqrtf (ystl::sqrf (x) + ystl::sqrf (y) + ystl::sqrf (z)); // euclidean distance
+  }
+}
+
+float PlannerHeuristicFastHostage::G (Team, int current_index, int parent_index, int edge_distance) const {
+  if (parent_index == kInvalidNodeIndex) {
+    return 0.0f;
+  }
+  // hostages cannot use no-hostage nodes or jump links
+  if (graph.Exists (parent_index) && graph.Exists (current_index)) {
+    if (has_flag (graph[current_index].flags, NodeFlag::NoHostage)) {
       return kInfiniteHeuristic;
-   }
-   else if (current.flags & (NodeFlag::Crouch | NodeFlag::Ladder)) {
-      return gfunctionKillsDist (team, currentIndex, parentIndex) * 500.0f;
-   }
-   return gfunctionKillsDist (team, currentIndex, parentIndex);
-}
-
-float PlannerHeuristic::gfunctionKills (int team, int currentIndex, int) {
-   auto cost = practice.getDamageEx (team, currentIndex, currentIndex, false);
-   const auto &current = graph[currentIndex];
-
-   for (const auto &neighbour : current.links) {
-      if (neighbour.index != kInvalidNodeIndex) {
-         cost += practice.getDamageEx (team, neighbour.index, neighbour.index, false);
+    }
+    for (const auto &link : graph[parent_index].links) {
+      if (link.index == current_index && has_flag (link.flags, PathFlag::Jump)) {
+        return kInfiniteHeuristic;
       }
-   }
-
-   if (current.flags & NodeFlag::Crouch) {
-      cost *= 1.5f;
-   }
-   return cost;
+    }
+  }
+  if (has_flag (graph[current_index].flags, NodeFlag::Crouch | NodeFlag::Ladder)) {
+    return static_cast<float> (edge_distance) * 1.5f * 5.0f;
+  }
+  return static_cast<float> (edge_distance);
 }
 
-auto PlannerHeuristic::gfunctionKillsCTWithHostage (int team, int currentIndex, int parentIndex) -> float {
-   if (parentIndex == kInvalidNodeIndex) {
-      return 0.0f;
-   }
-   const auto &current = graph[currentIndex];
+float PlannerHeuristicFastHostage::H (int index, int goal_index) const {
+  if (has_flag (graph[index].flags, NodeFlag::NoHostage)) {
+    return kInfiniteHeuristic;
+  }
+  const auto &start = graph[index];
+  const auto &goal = graph[goal_index];
 
-   if (current.flags & NodeFlag::NoHostage) {
+  const float x = start.origin.x - goal.origin.x;
+  const float y = start.origin.y - goal.origin.y;
+  const float z = start.origin.z - goal.origin.z;
+
+  switch (cv_path_heuristic_mode.As<int> ()) {
+  case 0:
+    return ystl::max (ystl::max (ystl::abs (x), ystl::abs (y)), ystl::abs (z)); // chebyshev distance
+
+  case 1:
+    return ystl::abs (x) + ystl::abs (y) + ystl::abs (z); // manhattan distance
+
+  case 2:
+    return 0.0f; // no heuristic
+
+  case 3: {
+    const float dx = ystl::abs (x);
+    const float dy = ystl::abs (y);
+    const float dz = ystl::abs (z);
+
+    const float dmin = ystl::min (ystl::min (dx, dy), dz);
+    const float dmax = ystl::max (ystl::max (dx, dy), dz);
+    const float dmid = dx + dy + dz - dmin - dmax;
+
+    const float d1 = 1.0f;
+    const float d2 = ystl::sqrtf (2.0f);
+    const float d3 = ystl::sqrtf (3.0f);
+
+    return (d3 - d2) * dmin + (d2 - d1) * dmid + d1 * dmax; // diagonal distance
+  }
+
+  default:
+  case 4:
+    return ystl::sqrtf (ystl::sqrf (x) + ystl::sqrf (y) + ystl::sqrf (z)); // euclidean distance
+  }
+}
+
+float PlannerHeuristicOptimal::G (Team team, int current_index, int parent_index, int) const {
+  if (parent_index == kInvalidNodeIndex) {
+    return 0.0f;
+  }
+  // only cost of current node, not its neighbors (fixes a* optimality)
+  auto cost = practice.GetDamageEx (team, current_index, current_index, true);
+
+  if (has_flag (graph[current_index].flags, NodeFlag::Crouch)) {
+    cost *= 1.5f;
+  }
+  return cost;
+}
+
+float PlannerHeuristicOptimal::H (int index, int goal_index) const {
+  const auto &start = graph[index];
+  const auto &goal = graph[goal_index];
+
+  const float x = start.origin.x - goal.origin.x;
+  const float y = start.origin.y - goal.origin.y;
+  const float z = start.origin.z - goal.origin.z;
+
+  switch (cv_path_heuristic_mode.As<int> ()) {
+  case 0:
+    return ystl::max (ystl::max (ystl::abs (x), ystl::abs (y)), ystl::abs (z)); // chebyshev distance
+
+  case 1:
+    return ystl::abs (x) + ystl::abs (y) + ystl::abs (z); // manhattan distance
+
+  case 2:
+    return 0.0f; // no heuristic
+
+  case 3: {
+    const float dx = ystl::abs (x);
+    const float dy = ystl::abs (y);
+    const float dz = ystl::abs (z);
+
+    const float dmin = ystl::min (ystl::min (dx, dy), dz);
+    const float dmax = ystl::max (ystl::max (dx, dy), dz);
+    const float dmid = dx + dy + dz - dmin - dmax;
+
+    const float d1 = 1.0f;
+    const float d2 = ystl::sqrtf (2.0f);
+    const float d3 = ystl::sqrtf (3.0f);
+
+    return (d3 - d2) * dmin + (d2 - d1) * dmid + d1 * dmax; // diagonal distance
+  }
+
+  default:
+  case 4:
+    return ystl::sqrtf (ystl::sqrf (x) + ystl::sqrf (y) + ystl::sqrf (z)); // euclidean distance
+  }
+}
+
+float PlannerHeuristicOptimalHostage::G (Team team, int current_index, int parent_index, int) const {
+  if (parent_index == kInvalidNodeIndex) {
+    return 0.0f;
+  }
+  // hostages cannot use no-hostage nodes or jump links
+  if (graph.Exists (parent_index) && graph.Exists (current_index)) {
+    if (has_flag (graph[current_index].flags, NodeFlag::NoHostage)) {
       return kInfiniteHeuristic;
-   }
-   else if (current.flags & (NodeFlag::Crouch | NodeFlag::Ladder)) {
-      return gfunctionKills (team, currentIndex, parentIndex) * 500.0f;
-   }
-   return gfunctionKills (team, currentIndex, parentIndex);
-}
-
-float PlannerHeuristic::gfunctionPathDist (int, int currentIndex, int parentIndex) {
-   if (parentIndex == kInvalidNodeIndex) {
-      return 0.0f;
-   }
-
-   const auto &parent = graph[parentIndex];
-   const auto &current = graph[currentIndex];
-
-   for (const auto &link : parent.links) {
-      if (link.index == currentIndex) {
-         const auto distance = static_cast <float> (link.distance);
-
-         // we don't like ladder or crouch point
-         if (current.flags & (NodeFlag::Crouch | NodeFlag::Ladder)) {
-            return distance * 1.5f;
-         }
-         return distance;
+    }
+    for (const auto &link : graph[parent_index].links) {
+      if (link.index == current_index && has_flag (link.flags, PathFlag::Jump)) {
+        return kInfiniteHeuristic;
       }
-   }
-   return kInfiniteHeuristic;
+    }
+  }
+  auto cost = practice.GetDamageEx (team, current_index, current_index, true);
+
+  if (has_flag (graph[current_index].flags, NodeFlag::Crouch)) {
+    cost *= 1.5f;
+  }
+  if (has_flag (graph[current_index].flags, NodeFlag::Crouch | NodeFlag::Ladder)) {
+    return cost * 5.0f;
+  }
+  return cost;
 }
 
-float PlannerHeuristic::gfunctionPathDistWithHostage (int, int currentIndex, int parentIndex) {
-   const auto &current = graph[currentIndex];
+float PlannerHeuristicOptimalHostage::H (int index, int goal_index) const {
+  if (has_flag (graph[index].flags, NodeFlag::NoHostage)) {
+    return kInfiniteHeuristic;
+  }
+  const auto &start = graph[index];
+  const auto &goal = graph[goal_index];
 
-   if (current.flags & NodeFlag::NoHostage) {
+  const float x = start.origin.x - goal.origin.x;
+  const float y = start.origin.y - goal.origin.y;
+  const float z = start.origin.z - goal.origin.z;
+
+  switch (cv_path_heuristic_mode.As<int> ()) {
+  case 0:
+    return ystl::max (ystl::max (ystl::abs (x), ystl::abs (y)), ystl::abs (z)); // chebyshev distance
+
+  case 1:
+    return ystl::abs (x) + ystl::abs (y) + ystl::abs (z); // manhattan distance
+
+  case 2:
+    return 0.0f; // no heuristic
+
+  case 3: {
+    const float dx = ystl::abs (x);
+    const float dy = ystl::abs (y);
+    const float dz = ystl::abs (z);
+
+    const float dmin = ystl::min (ystl::min (dx, dy), dz);
+    const float dmax = ystl::max (ystl::max (dx, dy), dz);
+    const float dmid = dx + dy + dz - dmin - dmax;
+
+    const float d1 = 1.0f;
+    const float d2 = ystl::sqrtf (2.0f);
+    const float d3 = ystl::sqrtf (3.0f);
+
+    return (d3 - d2) * dmin + (d2 - d1) * dmid + d1 * dmax; // diagonal distance
+  }
+
+  default:
+  case 4:
+    return ystl::sqrtf (ystl::sqrf (x) + ystl::sqrf (y) + ystl::sqrf (z)); // euclidean distance
+  }
+}
+
+float PlannerHeuristicSafe::G (Team team, int current_index, int, int) const {
+  // only cost of current node, not its neighbors (fixes a* optimality)
+  auto cost = practice.GetDamageEx (team, current_index, current_index, false);
+
+  if (has_flag (graph[current_index].flags, NodeFlag::Crouch)) {
+    cost *= 1.5f;
+  }
+  return cost;
+}
+
+float PlannerHeuristicSafe::H (int index, int goal_index) const {
+  const auto &start = graph[index];
+  const auto &goal = graph[goal_index];
+
+  const float x = start.origin.x - goal.origin.x;
+  const float y = start.origin.y - goal.origin.y;
+  const float z = start.origin.z - goal.origin.z;
+  float base = 0.0f;
+
+  switch (cv_path_heuristic_mode.As<int> ()) {
+  case 0:
+    base = ystl::max (ystl::max (ystl::abs (x), ystl::abs (y)), ystl::abs (z)); // chebyshev distance
+    break;
+
+  case 1:
+    base = ystl::abs (x) + ystl::abs (y) + ystl::abs (z); // manhattan distance
+    break;
+
+  case 2:
+    return 0.0f; // no heuristic
+
+  case 3: {
+    const float dx = ystl::abs (x);
+    const float dy = ystl::abs (y);
+    const float dz = ystl::abs (z);
+
+    const float dmin = ystl::min (ystl::min (dx, dy), dz);
+    const float dmax = ystl::max (ystl::max (dx, dy), dz);
+    const float dmid = dx + dy + dz - dmin - dmax;
+
+    const float d1 = 1.0f;
+    const float d2 = ystl::sqrtf (2.0f);
+    const float d3 = ystl::sqrtf (3.0f);
+
+    base = (d3 - d2) * dmin + (d2 - d1) * dmid + d1 * dmax; // diagonal distance
+    break;
+  }
+
+  default:
+  case 4:
+    base = ystl::sqrtf (ystl::sqrf (x) + ystl::sqrf (y) + ystl::sqrf (z)); // euclidean distance
+    break;
+  }
+  return base / (128.0f * 10.0f);
+}
+
+float PlannerHeuristicSafeHostage::G (Team team, int current_index, int parent_index, int) const {
+  if (parent_index == kInvalidNodeIndex) {
+    return 0.0f;
+  }
+  // hostages cannot use no-hostage nodes or jump links
+  if (graph.Exists (parent_index) && graph.Exists (current_index)) {
+    if (has_flag (graph[current_index].flags, NodeFlag::NoHostage)) {
       return kInfiniteHeuristic;
-   }
-   else if (current.flags & (NodeFlag::Crouch | NodeFlag::Ladder)) {
-      return gfunctionPathDist (Team::Unassigned, currentIndex, parentIndex) * 500.0f;
-   }
-   return gfunctionPathDist (Team::Unassigned, currentIndex, parentIndex);
+    }
+    for (const auto &link : graph[parent_index].links) {
+      if (link.index == current_index && has_flag (link.flags, PathFlag::Jump)) {
+        return kInfiniteHeuristic;
+      }
+    }
+  }
+  auto cost = practice.GetDamageEx (team, current_index, current_index, false);
+
+  if (has_flag (graph[current_index].flags, NodeFlag::Crouch)) {
+    cost *= 1.5f;
+  }
+  if (has_flag (graph[current_index].flags, NodeFlag::Crouch | NodeFlag::Ladder)) {
+    return cost * 5.0f;
+  }
+  return cost;
 }
 
-float PlannerHeuristic::hfunctionPathDist (int index, int, int goalIndex) {
-   const auto &start = graph[index];
-   const auto &goal = graph[goalIndex];
+float PlannerHeuristicSafeHostage::H (int index, int goal_index) const {
+  const auto &start = graph[index];
+  const auto &goal = graph[goal_index];
 
-   const float x = start.origin.x - goal.origin.x;
-   const float y = start.origin.y - goal.origin.y;
-   const float z = start.origin.z - goal.origin.z;
+  const float x = start.origin.x - goal.origin.x;
+  const float y = start.origin.y - goal.origin.y;
+  const float z = start.origin.z - goal.origin.z;
+  float base = 0.0f;
 
-   switch (cv_path_heuristic_mode.as <int> ()) {
-   case 0:
-      return cr::max (cr::max (cr::abs (x), cr::abs (y)), cr::abs (z)); // chebyshev distance
+  switch (cv_path_heuristic_mode.As<int> ()) {
+  case 0:
+    base = ystl::max (ystl::max (ystl::abs (x), ystl::abs (y)), ystl::abs (z)); // chebyshev distance
+    break;
 
-   case 1:
-      return cr::abs (x) + cr::abs (y) + cr::abs (z); // manhattan distance
+  case 1:
+    base = ystl::abs (x) + ystl::abs (y) + ystl::abs (z); // manhattan distance
+    break;
 
-   case 2:
-      return 0.0f; // no heuristic
+  case 2:
+    return 0.0f; // no heuristic
 
-   case 3: {
-      const float dx = cr::abs (x);
-      const float dy = cr::abs (y);
-      const float dz = cr::abs (z);
+  case 3: {
+    const float dx = ystl::abs (x);
+    const float dy = ystl::abs (y);
+    const float dz = ystl::abs (z);
 
-      const float dmin = cr::min (cr::min (dx, dy), dz);
-      const float dmax = cr::max (cr::max (dx, dy), dz);
-      const float dmid = dx + dy + dz - dmin - dmax;
+    const float dmin = ystl::min (ystl::min (dx, dy), dz);
+    const float dmax = ystl::max (ystl::max (dx, dy), dz);
+    const float dmid = dx + dy + dz - dmin - dmax;
 
-      const float d1 = 1.0f;
-      const float d2 = cr::sqrtf (2.0f);
-      const float d3 = cr::sqrtf (3.0f);
+    const float d1 = 1.0f;
+    const float d2 = ystl::sqrtf (2.0f);
+    const float d3 = ystl::sqrtf (3.0f);
 
-      return (d3 - d2) * dmin + (d2 - d1) * dmid + d1 * dmax; // diagonal distance
-   }
+    base = (d3 - d2) * dmin + (d2 - d1) * dmid + d1 * dmax; // diagonal distance
+    break;
+  }
 
-   default:
-   case 4:
-      return 10.0f * cr::sqrtf (cr::sqrf (x) + cr::sqrf (y) + cr::sqrf (z)); // euclidean distance
-   }
+  default:
+  case 4:
+    base = ystl::sqrtf (ystl::sqrf (x) + ystl::sqrf (y) + ystl::sqrf (z)); // euclidean distance
+    break;
+  }
+  return base / (128.0f * 10.0f);
 }
 
-float PlannerHeuristic::hfunctionPathDistWithHostage (int index, int, int goalIndex) {
-   if (graph[index].flags & NodeFlag::NoHostage) {
-      return kInfiniteHeuristic;
-   }
-   return hfunctionPathDist (index, kInvalidNodeIndex, goalIndex);
+void AStarAlgo::ClearRoute () {
+  if (!routes_.resize (static_cast<size_t> (size_))) {
+    routes_.clear ();
+    return;
+  }
+
+  for (int i = 0; i < size_; ++i) {
+    auto route = &routes_[i];
+
+    route->g = route->f = 0.0f;
+    route->parent = kInvalidNodeIndex;
+    route->epoch = 0;
+    route->state = RouteState::New;
+  }
 }
 
-float PlannerHeuristic::hfunctionNone (int index, int, int goalIndex) {
-   return hfunctionPathDist (index, kInvalidNodeIndex, goalIndex) / (128.0f * 10.0f);
-}
+bool AStarAlgo::CantSkipNode (const int a, const int b, bool skip_vis_check) {
+  // never smooth a shortcut through a closed mode wall (vistable doesn't know about them)
+  if (mode_walls.HasWalls () && mode_walls.IsSegmentBlocked (graph[a].origin, graph[b].origin)) {
+    return true;
+  }
+  const auto &ag = graph[a];
+  const auto &bg = graph[b];
 
-void AStarAlgo::clearRoute () {
-   m_routes.resize (static_cast <size_t> (m_length));
+  const bool has_zero_radius = ystl::fzero (ag.radius) || ystl::fzero (bg.radius);
 
-   for (const auto &path : graph) {
-      auto route = &m_routes[path.number];
+  if (has_zero_radius) {
+    return true;
+  }
 
-      route->g = route->f = 0.0f;
-      route->parent = kInvalidNodeIndex;
-      route->state = RouteState::New;
-   }
-   m_routes.clear ();
-}
+  if (!skip_vis_check) {
+    const bool not_visible = !vistab.VisibleBothSides (ag.number, bg.number);
 
-bool AStarAlgo::cantSkipNode (const int a, const int b, bool skipVisCheck) {
-   const auto &ag = graph[a];
-   const auto &bg = graph[b];
-
-   const bool hasZeroRadius = cr::fzero (ag.radius) || cr::fzero (bg.radius);
-
-   if (hasZeroRadius) {
+    if (not_visible) {
       return true;
-   }
+    }
+  }
+  const bool too_high = ystl::abs (ag.origin.z - bg.origin.z) > 17.0f;
 
-   if (!skipVisCheck) {
-      const bool notVisible = !vistab.visibleBothSides (ag.number, bg.number);
+  if (too_high) {
+    return true;
+  }
+  const bool too_narrow = has_flag ((ag.flags | bg.flags), NodeFlag::Narrow);
 
-      if (notVisible) {
-         return true;
-      }
-   }
-   const bool tooHigh = cr::abs (ag.origin.z - bg.origin.z) > 17.0f;
+  if (too_narrow) {
+    return true;
+  }
+  const float distance_sq = ag.origin.distance_sq (bg.origin);
 
-   if (tooHigh) {
+  const bool too_far = distance_sq > ystl::sqrf (400.0f);
+  const bool too_close = distance_sq < ystl::sqrf (40.0f);
+
+  if (too_far || too_close) {
+    return true;
+  }
+  for (const auto &link : ag.links) {
+    if (link.index != kInvalidNodeIndex && has_flag (link.flags, PathFlag::Jump)) {
       return true;
-   }
-   const bool tooNarrow = (ag.flags | bg.flags) & NodeFlag::Narrow;
+    }
+  }
 
-   if (tooNarrow) {
+  for (const auto &link : bg.links) {
+    if (link.index != kInvalidNodeIndex && has_flag (link.flags, PathFlag::Jump)) {
       return true;
-   }
-   const float distanceSq = ag.origin.distanceSq (bg.origin);
-
-   const bool tooFar = distanceSq > cr::sqrf (400.0f);
-   const bool tooClose = distanceSq < cr::sqrtf (40.0f);
-
-   if (tooFar || tooClose) {
-      return true;
-   }
-   bool hasJumps = false;
-
-   for (int i = 0; i < kMaxNodeLinks; ++i) {
-      if ((ag.links[i].flags | bg.links[i].flags) & PathFlag::Jump) {
-         hasJumps = true;
-         break;
-      }
-   }
-   return hasJumps;
+    }
+  }
+  return false;
 }
 
-void AStarAlgo::postSmooth (NodeAdderFn onAddedNode) {
-   m_smoothedPath.clear ();
+void AStarAlgo::PostSmooth (NodeAdderFn on_added_node) {
+  smoothed_path_.clear ();
 
-   int index = 0;
-   m_smoothedPath.push (m_constructedPath.first ());
+  if (constructed_path_.size () <= 2) {
+    for (const auto &node : constructed_path_) {
+      smoothed_path_.push (node);
+    }
+  }
+  else {
+    int index = 0;
+    smoothed_path_.push (constructed_path_.first ());
 
-   for (size_t i = 1; i < m_constructedPath.length () - 1; ++i) {
-      if (cantSkipNode (m_smoothedPath[index], m_constructedPath[i + 1])) {
-         ++index;
-         m_smoothedPath.push (m_constructedPath[i]);
+    for (size_t i = 1; i < constructed_path_.size () - 1; ++i) {
+      if (CantSkipNode (smoothed_path_[index], constructed_path_[i + 1])) {
+        ++index;
+        smoothed_path_.push (constructed_path_[i]);
       }
-   }
-   m_smoothedPath.push (m_constructedPath.last ());
+    }
+    smoothed_path_.push (constructed_path_.last ());
+  }
 
-   // give nodes back to bot
-   for (const auto &spn : m_smoothedPath) {
-      onAddedNode (spn);
-   }
+  for (const auto &spn : smoothed_path_) {
+    on_added_node (spn);
+  }
 }
 
-AStarResult AStarAlgo::find (int botTeam, int srcIndex, int destIndex, NodeAdderFn onAddedNode) {
-   if (m_length < kMaxNodeLinks) {
-      return AStarResult::InternalError; // astar needs some nodes to work with
-   }
+AStarResult AStarAlgo::Find (Team bot_team, int src_index, int dest_index, NodeAdderFn on_added_node) {
+  if (size_ < kMaxNodeLinks) {
+    return AStarResult::InternalError; // astar needs some nodes to work with
+  }
 
-   clearRoute ();
-   auto srcRoute = &m_routes[srcIndex];
+  if (heuristic_ == nullptr) {
+    return AStarResult::InternalError;
+  }
 
-   // put start node into open list
-   srcRoute->g = m_gcalc (botTeam, srcIndex, kInvalidNodeIndex);
-   srcRoute->f = srcRoute->g + m_hcalc (srcIndex, kInvalidNodeIndex, destIndex);
-   srcRoute->state = RouteState::Open;
+  if (src_index < 0 || src_index >= size_ || dest_index < 0 || dest_index >= size_) {
+    return AStarResult::Failed;
+  }
 
-   m_routeQue.clear ();
-   m_routeQue.emplace (srcIndex, srcRoute->g);
+  if (!graph.Exists (src_index) || !graph.Exists (dest_index)) {
+    return AStarResult::Failed;
+  }
 
-   const bool postSmoothPath = cv_path_astar_post_smooth && vistab.isReady ();
+  if (routes_.size () != static_cast<size_t> (size_) && !routes_.resize (static_cast<size_t> (size_))) {
+    return AStarResult::InternalError;
+  }
 
-   // always clear constructed path
-   m_constructedPath.clear ();
+  // bump the search stamp, hard resetting everything only on counter wrap
+  if (++epoch_ == 0) {
+    ClearRoute ();
+    epoch_ = 1;
+  }
 
-   // round start randomizer offset
-   auto rsRandomizer = 1.0f;
+  if (src_index == dest_index) {
+    on_added_node (src_index);
+    return AStarResult::Success;
+  }
 
-   // randomize path on round start now and then
-   if (cv_path_randomize_on_round_start && gameState.getRoundStartTime () + 2.0f > game.time ()) {
-      rsRandomizer = rg (0.5f, static_cast <float> (botTeam) * 2.0f);
-   }
+  auto src_route = RouteAt (src_index);
+  const float src_h = heuristic_->H (src_index, dest_index);
 
-   while (!m_routeQue.empty ()) {
-      // remove the first node from the open list
-      int currentIndex = m_routeQue.pop ().index;
+  // put start node into open list
+  src_route->g = heuristic_->G (bot_team, src_index, kInvalidNodeIndex, 0);
+  src_route->f = src_route->g + src_h;
+  src_route->state = RouteState::Open;
 
-      // safes us from bad graph...
-      if (m_routeQue.length () >= getMaxLength () - 1) {
-         m_routeQue.clear ();
+  route_que_.clear ();
+  route_que_.emplace (src_index, src_route->f);
 
-         // infrom pathfinder to use floyds in that case
-         planner.setPathsCheckFailed (true);
+  const bool post_smooth_path = cv_path_astar_post_smooth && vistab.IsReady ();
 
-         return AStarResult::InternalError;
+  // always clear constructed path
+  constructed_path_.clear ();
+
+  size_t expanded_nodes = 0;
+
+  while (!route_que_.empty ()) {
+    // remove the first node from the open list
+    int current_index = route_que_.pop ().index;
+
+    // safety guard against corrupted graphs and runaway expansion loops
+    if (!graph.Exists (current_index) || ++expanded_nodes > static_cast<size_t> (size_ * kMaxNodeLinks)) {
+      route_que_.clear ();
+
+      // infrom pathfinder to use floyds in that case
+      planner.SetPathsCheckFailed (true);
+
+      return AStarResult::InternalError;
+    }
+    auto cur_route = RouteAt (current_index);
+
+    // skip if already processed (duplicate in queue from re-expansion)
+    if (cur_route->state == RouteState::Closed) {
+      continue;
+    }
+
+    // mark as closed immediately to prevent re-expansion
+    cur_route->state = RouteState::Closed;
+
+    // is the current node the goal node?
+    if (current_index == dest_index) {
+      // build the complete path
+      do {
+        if (post_smooth_path) {
+          constructed_path_.push (current_index);
+        }
+        else {
+          on_added_node (current_index);
+        }
+        current_index = routes_[current_index].parent;
+      } while (current_index != kInvalidNodeIndex);
+
+      // do a post-smooth if requested
+      if (post_smooth_path) {
+        PostSmooth (on_added_node);
+      }
+      return AStarResult::Success;
+    }
+
+    // now expand the current node
+    for (const auto &child : graph[current_index].links) {
+      if (child.index < 0 || child.index >= size_) {
+        continue;
       }
 
-      // is the current node the goal node?
-      if (currentIndex == destIndex) {
-         // build the complete path
-         do {
-            if (postSmoothPath) {
-               m_constructedPath.push (currentIndex);
-            }
-            else {
-               onAddedNode (currentIndex);
-            }
-            currentIndex = m_routes[currentIndex].parent;
-         } while (currentIndex != kInvalidNodeIndex);
-
-         // do a post-smooth if requested
-         if (postSmoothPath) {
-            postSmooth (onAddedNode);
-         }
-         return AStarResult::Success;
+      // skip links crossing a closed mode wall
+      if (mode_walls.IsSegmentBlocked (graph[current_index].origin, graph[child.index].origin)) {
+        continue;
       }
-      auto curRoute = &m_routes[currentIndex];
+      auto child_route = RouteAt (child.index);
 
-      if (curRoute->state != RouteState::Open) {
-         continue;
+      const float edge_cost = heuristic_->G (bot_team, child.index, current_index, child.distance);
+      float g = cur_route->g + edge_cost;
+
+      const float turn_penalty = cv_path_turn_penalty.As<float> ();
+
+      if (turn_penalty > 0.0f && edge_cost < kInfiniteHeuristic) {
+        const int grandparent_index = cur_route->parent;
+
+        if (grandparent_index != kInvalidNodeIndex) {
+          const auto &gp_origin = graph[grandparent_index].origin;
+          const auto &cur_origin = graph[current_index].origin;
+          const auto &child_origin = graph[child.index].origin;
+
+          const auto dir_prev = (cur_origin - gp_origin).normalize2d ();
+          const auto dir_next = (child_origin - cur_origin).normalize2d ();
+
+          const float dot = ystl::clamp (dir_prev.dot (dir_next), -1.0f, 1.0f);
+
+          if (dot < 0.0f) {
+            g += edge_cost * (1.0f - dot) * turn_penalty;
+          }
+        }
       }
+      const float h = heuristic_->H (child.index, dest_index);
+      const float f = g + h;
 
-      // put current node into CLOSED list
-      curRoute->state = RouteState::Closed;
+      if (child_route->state == RouteState::New || child_route->f > f) {
 
-      // now expand the current node
-      for (const auto &child : graph[currentIndex].links) {
-         if (child.index == kInvalidNodeIndex) {
-            continue;
-         }
-         auto childRoute = &m_routes[child.index];
+        // put the current child into open list
+        child_route->parent = current_index;
+        child_route->state = RouteState::Open;
 
-         // calculate the F value as F = G + H
-         const float g = curRoute->g + m_gcalc (botTeam, child.index, currentIndex) * rsRandomizer;
-         const float h = m_hcalc (child.index, kInvalidNodeIndex, destIndex);
-         const float f = plat.simd ? g + h : cr::ceilf (g + h + 0.5f);
+        child_route->g = g;
+        child_route->f = f;
 
-         if (childRoute->state == RouteState::New || childRoute->f > f) {
-            // put the current child into open list
-            childRoute->parent = currentIndex;
-            childRoute->state = RouteState::Open;
-
-            childRoute->g = g;
-            childRoute->f = f;
-
-            m_routeQue.emplace (child.index, g);
-         }
+        route_que_.emplace (child.index, f);
       }
-   }
-   return AStarResult::Failed;
+    }
+  }
+  return AStarResult::Failed;
 }
 
-void FloydWarshallAlgo::rebuild () {
-   m_length = graph.length ();
-   m_matrix.resize (static_cast <size_t> (cr::sqrf (m_length)));
+void FloydWarshallAlgo::Rebuild () {
+  size_ = graph.Length ();
+  matrix_.resize (static_cast<size_t> (ystl::sqrf (size_)));
 
-   worker.enqueue ([this] () {
-      syncRebuild ();
-   });
+  // matrix is unusable for reads until sync rebuild is done, main thread falls back to dijkstra
+  rebuilding_.store (true, ystl::MemoryOrder::release);
+
+  worker.Enqueue ([this] () {
+    SyncRebuild ();
+  });
 }
 
-void FloydWarshallAlgo::syncRebuild () {
-   auto matrix = m_matrix.data ();
+void FloydWarshallAlgo::SyncRebuild () {
+  auto matrix = matrix_.data ();
 
-   // re-initialize matrix every load
-   for (int i = 0; i < m_length; ++i) {
-      for (int j = 0; j < m_length; ++j) {
-         *(matrix + (i * m_length) + j) = { kInvalidNodeIndex, SHRT_MAX };
+  // re-initialize matrix every load
+  for (int i = 0; i < size_; ++i) {
+    for (int j = 0; j < size_; ++j) {
+      *(matrix + (i * size_) + j) = { kInvalidNodeIndex, kInfinity };
+    }
+  }
+
+  for (int i = 0; i < size_; ++i) {
+    for (const auto &link : graph[i].links) {
+      if (!graph.Exists (link.index)) {
+        continue;
       }
-   }
+      *(matrix + (i * size_) + link.index) = { link.index, ystl::min (link.distance, static_cast<int32_t> (kInfinity) - 1) };
+    }
+  }
 
-   for (int i = 0; i < m_length; ++i) {
-      for (const auto &link : graph[i].links) {
-         if (!graph.exists (link.index)) {
-            continue;
-         }
-         *(matrix + (i * m_length) + link.index) = { link.index, link.distance };
+  for (int i = 0; i < size_; ++i) {
+    (matrix + (i * size_) + i)->dist = 0;
+  }
+
+  for (int k = 0; k < size_; ++k) {
+    for (int i = 0; i < size_; ++i) {
+      for (int j = 0; j < size_; ++j) {
+        const int dist_ik = (matrix + (i * size_) + k)->dist;
+        const int dist_kj = (matrix + (k * size_) + j)->dist;
+
+        // skip if either distance is infinity
+        if (dist_ik >= kInfinity || dist_kj >= kInfinity) {
+          continue;
+        }
+
+        const int distance = dist_ik + dist_kj;
+
+        // only update if distance fits in int16_t and is better
+        if (distance < kInfinity && distance < (matrix + (i * size_) + j)->dist) {
+          *(matrix + (i * size_) + j) = { (matrix + (i * size_) + k)->index, static_cast<int16_t> (distance) };
+        }
       }
-   }
+    }
+  }
+  Save (); // save path matrix to file for faster access
 
-   for (int i = 0; i < m_length; ++i) {
-      (matrix + (i * m_length) + i)->dist = 0;
-   }
-
-   for (int k = 0; k < m_length; ++k) {
-      for (int i = 0; i < m_length; ++i) {
-         for (int j = 0; j < m_length; ++j) {
-            const auto distance = (matrix + (i * m_length) + k)->dist + (matrix + (k * m_length) + j)->dist;
-
-            if (distance < (matrix + (i * m_length) + j)->dist) {
-               *(matrix + (i * m_length) + j) = { (matrix + (i * m_length) + k)->index, distance };
-            }
-         }
-      }
-   }
-   save (); // save path matrix to file for faster access
+  // matrix rebuilt, main thread can read it again
+  rebuilding_.store (false, ystl::MemoryOrder::release);
 }
 
-bool FloydWarshallAlgo::load () {
-   m_length = graph.length ();
+bool FloydWarshallAlgo::Load () {
+  size_ = graph.Length ();
 
-   if (!m_length) {
+  if (!size_) {
+    return false;
+  }
+  const bool data_loaded = bstor.Load<Matrix> (matrix_);
+
+  // do not rebuild if loaded
+  if (data_loaded) {
+    return true;
+  }
+  Rebuild (); // rebuilds matrix
+
+  return true;
+}
+
+void FloydWarshallAlgo::Save () const {
+  if (!size_) {
+    return;
+  }
+  bstor.Save<Matrix> (matrix_);
+}
+
+bool FloydWarshallAlgo::Find (int src_index, int dest_index, NodeAdderFn on_added_node, int *path_distance) {
+  // validate input indices
+  if (src_index < 0 || src_index >= size_ || dest_index < 0 || dest_index >= size_) {
+    return false;
+  }
+
+  const int start_index = src_index;
+
+  on_added_node (src_index);
+
+  while (src_index != dest_index) {
+    src_index = Cell (src_index, dest_index).index;
+
+    // check for invalid index or out of bounds
+    if (src_index < 0 || src_index >= size_) {
       return false;
-   }
-   const bool dataLoaded = bstor.load <Matrix> (m_matrix);
+    }
 
-   // do not rebuild if loaded
-   if (dataLoaded) {
+    if (!on_added_node (src_index)) {
       return true;
-   }
-   rebuild (); // rebuilds matrix
+    }
+  }
 
-   return true;
+  // only fill path distance on full path
+  if (path_distance != nullptr) {
+    *path_distance = Dist (start_index, dest_index);
+  }
+  return true;
 }
 
-void FloydWarshallAlgo::save () const {
-   if (!m_length) {
-      return;
-   }
-   bstor.save <Matrix> (m_matrix);
+void DijkstraAlgo::Init (const int length) {
+  size_ = length;
+
+  const auto ulength = static_cast<size_t> (length);
+
+  // no shrink: it would reallocate + copy both buffers right after resize for zero benefit
+  distance_.resize (ulength);
+  parent_.resize (ulength);
+
+  // distAll output slots are sized once so hot-path distAll never allocates
+  distance_all0_.resize (ulength);
+  distance_all1_.resize (ulength);
+
+  // size the open list once as it can hold up to length entries
+  queue_.reserve (ulength);
+  scratch_.reserve (ulength);
 }
 
-bool FloydWarshallAlgo::find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, int *pathDistance) {
-   onAddedNode (srcIndex);
+bool DijkstraAlgo::Find (int src_index, int dest_index, NodeAdderFn on_added_node, int *path_distance) {
+  if (src_index < 0 || src_index >= size_ || dest_index < 0 || dest_index >= size_) {
+    return false;
+  }
+  queue_.clear ();
 
-   while (srcIndex != destIndex) {
-      srcIndex = (m_matrix.data () + (srcIndex * m_length) + destIndex)->index;
+  parent_.fill (kInvalidNodeIndex);
+  distance_.fill (kInfiniteDistanceLong);
 
-      if (srcIndex < 0) {
-         return false;
+  queue_.emplace (0, src_index);
+  distance_[src_index] = 0;
+
+  while (!queue_.empty ()) {
+    const auto &route = queue_.pop ();
+    auto current = route.second;
+
+    // finished search
+    if (current == dest_index) {
+      break;
+    }
+
+    if (distance_[current] != route.first) {
+      continue;
+    }
+
+    for (const auto &link : graph[current].links) {
+      if (link.index < 0 || link.index >= size_) {
+        continue;
       }
 
-      if (!onAddedNode (srcIndex)) {
-         return true;
+      // skip links crossing a closed mode wall
+      if (mode_walls.IsSegmentBlocked (graph[current].origin, graph[link.index].origin)) {
+        continue;
       }
-   }
+      const auto dlink = distance_[current] + link.distance;
 
-   // only fill path distance on full path
-   if (pathDistance != nullptr) {
-      *pathDistance = dist (srcIndex, destIndex);
-   }
-   return true;
+      if (dlink < distance_[link.index]) {
+        distance_[link.index] = dlink;
+        parent_[link.index] = current;
+
+        queue_.emplace (distance_[link.index], link.index);
+      }
+    }
+  }
+  if (on_added_node) {
+    scratch_.clear ();
+
+    for (int i = dest_index; i != kInvalidNodeIndex; i = parent_[i]) {
+      scratch_.push (i);
+    }
+    scratch_.reverse ();
+
+    for (const auto &node : scratch_) {
+      if (!on_added_node (node)) {
+        break;
+      }
+    }
+  }
+
+  // always fill path distance if we're need to
+  if (path_distance != nullptr) {
+    *path_distance = distance_[dest_index];
+  }
+  return distance_[dest_index] < kInfiniteDistanceLong;
 }
 
-void DijkstraAlgo::init (const int length) {
-   m_length = length;
+int DijkstraAlgo::Dist (int src_index, int dest_index) {
+  int path_distance = 0;
 
-   const auto ulength = static_cast <size_t> (length);
-
-   m_distance.resize (ulength);
-   m_parent.resize (ulength);
-
-   m_distance.shrink ();
-   m_parent.shrink ();
+  Find (src_index, dest_index, nullptr, &path_distance);
+  return path_distance;
 }
 
-bool DijkstraAlgo::find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, int *pathDistance) {
-   MutexScopedLock lock (m_cs);
+bool DijkstraAlgo::DistAll (int src_index, DistanceTable &distances, int slot) {
+  if (src_index < 0 || src_index >= size_) {
+    return false;
+  }
+  queue_.clear ();
 
-   m_queue.clear ();
+  // distances only: find () owns m_distance / m_parent, so use an isolated output slot
+  auto &distance = slot == 0 ? distance_all0_ : distance_all1_;
+  distance.fill (kInfiniteDistanceLong);
 
-   m_parent.fill (kInvalidNodeIndex);
-   m_distance.fill (kInfiniteDistanceLong);
+  queue_.emplace (0, src_index);
+  distance[src_index] = 0;
 
-   m_queue.emplace (0, srcIndex);
-   m_distance[srcIndex] = 0;
+  // same expansion as find (), but without early exit
+  while (!queue_.empty ()) {
+    const auto &route = queue_.pop ();
+    auto current = route.second;
 
-   while (!m_queue.empty ()) {
-      const auto &route = m_queue.pop ();
-      auto current = route.second;
+    if (distance[current] != route.first) {
+      continue;
+    }
 
-      // finished search
-      if (current == destIndex) {
-         break;
+    for (const auto &link : graph[current].links) {
+      if (link.index < 0 || link.index >= size_) {
+        continue;
       }
 
-      if (m_distance[current] != route.first) {
-         continue;
+      // skip links crossing a closed mode wall
+      if (mode_walls.IsSegmentBlocked (graph[current].origin, graph[link.index].origin)) {
+        continue;
       }
+      const auto dlink = distance[current] + link.distance;
 
-      for (const auto &link : graph[current].links) {
-         if (link.index != kInvalidNodeIndex) {
-            const auto dlink = m_distance[current] + link.distance;
-
-            if (dlink < m_distance[link.index]) {
-               m_distance[link.index] = dlink;
-               m_parent[link.index] = current;
-
-               m_queue.emplace (m_distance[link.index], link.index);
-            }
-         }
+      if (dlink < distance[link.index]) {
+        distance[link.index] = dlink;
+        queue_.emplace (distance[link.index], link.index);
       }
-   }
-   SmallArray <int> pir {};
-
-   for (int i = destIndex; i != kInvalidNodeIndex; i = m_parent[i]) {
-      pir.emplace (i);
-   }
-   pir.reverse ();
-
-   for (const auto &node : pir) {
-      if (onAddedNode && !onAddedNode (node)) {
-         break;
-      }
-   }
-
-   // always fill path distance if we're need to
-   if (pathDistance != nullptr) {
-      *pathDistance = m_distance[destIndex];
-   }
-   return m_distance[destIndex] < kInfiniteDistanceLong;
-}
-
-int DijkstraAlgo::dist (int srcIndex, int destIndex) {
-   int pathDistance = 0;
-
-   find (srcIndex, destIndex, nullptr, &pathDistance);
-   return pathDistance;
+    }
+  }
+  // hand out a view, no copy
+  distances = DistanceTable (distance.data (), size_);
+  return true;
 }
 
 PathPlanner::PathPlanner () {
-   m_dijkstra = cr::makeUnique <DijkstraAlgo> ();
-   m_floyd = cr::makeUnique <FloydWarshallAlgo> ();
+  dijkstra_ = ystl::make_unique<DijkstraAlgo> ();
+  floyd_ = ystl::make_unique<FloydWarshallAlgo> ();
 }
 
-void PathPlanner::init () {
-   const int length = graph.length ();
+void PathPlanner::Init () {
+  const int length = graph.Length ();
 
-   const float limitInMb = cv_path_floyd_memory_limit.as <float> ();
-   const float memoryUse = static_cast <float> (sizeof (FloydWarshallAlgo::Matrix) * cr::sqrf (static_cast <size_t> (length)) / 1024 / 1024);
+  // float division: integer math truncates small graphs to zero megabytes
+  const float memory_use =
+    static_cast<float> (sizeof (FloydWarshallAlgo::Matrix) * ystl::sqrf (static_cast<size_t> (length))) / 1024.0f / 1024.0f;
+  const float limit_in_mb = cv_path_floyd_memory_limit.As<float> ();
 
-   // ensure nodes are valid
-   m_pathsCheckFailed = !graph.checkNodes (false, true);
+  // limits can change at runtime, always re-evaluate
+  memory_limit_hit_ = false;
 
-   // if we're have too much memory for floyd matrices, planner will use dijkstra or uniform planner for other than pathfinding needs
-   if (memoryUse > limitInMb) {
-      m_memoryLimitHit = true;
+  // ensure nodes are valid
+  paths_check_failed_ = !graph.CheckNodes (false, true);
 
-      // we're need floyd tables when graph has failed sanity checks
-      if (m_pathsCheckFailed) {
-         m_memoryLimitHit = false;
-      }
-   }
-   m_dijkstra->init (length);
+  // if we're have too much memory for floyd matrices, planner will use dijkstra or uniform planner for other than pathfinding needs
+  if (memory_use > limit_in_mb) {
+    memory_limit_hit_ = true;
 
-   // load (re-create) floyds, if we're not hitting memory limits
-   if (!m_memoryLimitHit) {
-      m_floyd->load ();
-   }
+    // we're need floyd tables when graph has failed sanity checks
+    if (paths_check_failed_ && memory_use <= limit_in_mb * 1.5f) {
+      memory_limit_hit_ = false;
+    }
+  }
+  dijkstra_->Init (length);
+
+  // load (re-create) floyds, if we're not hitting memory limits
+  if (!memory_limit_hit_) {
+    floyd_->Load ();
+  }
 }
 
-bool PathPlanner::hasRealPathDistance () const {
-   return !m_memoryLimitHit || !cv_path_dijkstra_simple_distance;
+bool PathPlanner::HasRealPathDistance () const {
+  return !memory_limit_hit_ || !cv_path_dijkstra_simple_distance;
 }
 
-bool PathPlanner::find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, int *pathDistance) {
-   if (!graph.exists (srcIndex) || !graph.exists (destIndex)) {
-      return false;
-   }
-   // limit hit, use dijkstra
-   if (m_memoryLimitHit) {
-      return m_dijkstra->find (srcIndex, destIndex, onAddedNode, pathDistance);
-   }
-   return m_floyd->find (srcIndex, destIndex, onAddedNode, pathDistance);
+bool PathPlanner::Find (int src_index, int dest_index, NodeAdderFn on_added_node, int *path_distance) {
+  if (!graph.Exists (src_index) || !graph.Exists (dest_index)) {
+    return false;
+  }
+
+  // floyd matrix is precomputed without walls, so it's wall-unaware; use dijkstra whenever walls are up.
+  // limit hit or floyd matrix is being rebuilt on worker thread, use dijkstra
+  if (memory_limit_hit_ || floyd_->IsRebuilding () || mode_walls.HasWalls ()) {
+    return dijkstra_->Find (src_index, dest_index, on_added_node, path_distance);
+  }
+  return floyd_->Find (src_index, dest_index, on_added_node, path_distance);
 }
 
-float PathPlanner::dist (int srcIndex, int destIndex) {
-   if (!graph.exists (srcIndex) || !graph.exists (destIndex)) {
-      return kInfiniteDistanceLong;
-   }
+bool PathPlanner::DistAll (int src_index, DistanceTable &distances, int slot) {
+  if (!graph.Exists (src_index)) {
+    return false;
+  }
 
-   if (srcIndex == destIndex) {
-      return 1;
-   }
+  // dijkstra covers memory limit, rebuilds and walls (floyd matrix is wall-unaware)
+  if (memory_limit_hit_ || floyd_->IsRebuilding () || mode_walls.HasWalls ()) {
+    return dijkstra_->DistAll (src_index, distances, slot);
+  }
 
-   // limit hit, use dijkstra
-   if (m_memoryLimitHit) {
-      if (cv_path_dijkstra_simple_distance) {
-         return graph[srcIndex].origin.distance2d (graph[destIndex].origin);
-      }
-      return static_cast <float> (m_dijkstra->dist (srcIndex, destIndex));
-   }
-   return static_cast <float> (m_floyd->dist (srcIndex, destIndex));
+  // single floyd row read: same one-pass cost class as dijkstra, no copy
+  const auto row = floyd_->Row (src_index);
+
+  if (row == nullptr) {
+    return false;
+  }
+  distances = DistanceTable (row, graph.Length ());
+  return true;
 }
 
-float PathPlanner::preciseDistance (int srcIndex, int destIndex) {
-   // limit hit, use dijkstra
-   if (m_memoryLimitHit) {
-      return static_cast <float> (m_dijkstra->dist (srcIndex, destIndex));
-   }
-   return static_cast <float> (m_floyd->dist (srcIndex, destIndex));
+float PathPlanner::Dist (int src_index, int dest_index) {
+  if (!graph.Exists (src_index) || !graph.Exists (dest_index)) {
+    return kInfiniteDistanceLong;
+  }
+
+  if (src_index == dest_index) {
+    return 0.0f;
+  }
+
+  // wall-aware distance: 2d shortcut would pretend goals across a wall are close
+  if (mode_walls.HasWalls ()) {
+    return static_cast<float> (dijkstra_->Dist (src_index, dest_index));
+  }
+
+  // limit hit or floyd matrix is being rebuilt on worker thread, use dijkstra
+  if (memory_limit_hit_ || floyd_->IsRebuilding ()) {
+    if (cv_path_dijkstra_simple_distance) {
+      return graph[src_index].origin.distance2d (graph[dest_index].origin);
+    }
+    return static_cast<float> (dijkstra_->Dist (src_index, dest_index));
+  }
+  return static_cast<float> (floyd_->Dist (src_index, dest_index));
 }
+
+float PathPlanner::PreciseDistance (int src_index, int dest_index) {
+  if (!graph.Exists (src_index) || !graph.Exists (dest_index)) {
+    return static_cast<float> (kInfiniteDistanceLong);
+  }
+
+  // floyd matrix is wall-unaware, use dijkstra whenever walls are up
+  // limit hit or floyd matrix is being rebuilt on worker thread, use dijkstra
+  if (memory_limit_hit_ || floyd_->IsRebuilding () || mode_walls.HasWalls ()) {
+    return static_cast<float> (dijkstra_->Dist (src_index, dest_index));
+  }
+  return static_cast<float> (floyd_->Dist (src_index, dest_index));
+}
+
+} // namespace bot

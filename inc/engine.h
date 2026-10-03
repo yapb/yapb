@@ -1,897 +1,1008 @@
 //
-// YaPB, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright © YaPB Project Developers <yapb@jeefo.net>.
+// YaPB, started from PODBot by Count Floyd
+// Maintained by YaPB Team <yapb@jeefo.net>
 //
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Unlicense
 //
 
 #pragma once
 
 // line draw
-CR_DECLARE_SCOPED_ENUM (DrawLine,
-   Simple,
-   Arrow,
-   Count
-)
+namespace bot {
 
-// trace ignore
-CR_DECLARE_SCOPED_ENUM (TraceIgnore,
-   None = 0,
-   Glass = cr::bit (0),
-   Monsters = cr::bit (1),
-   Everything = Glass | Monsters
-)
+enum class DrawLineType : int32_t {
+  Simple,
+  Arrow,
+  Num
+};
 
 // variable type
-CR_DECLARE_SCOPED_ENUM (Var,
-   Normal = 0,
-   ReadOnly,
-   Password,
-   NoServer,
-   GameRef,
-   Xash3D // registrable only on xash3d engine
-)
+enum class Var : int32_t {
+  Normal = 0,
+  ReadOnly,
+  Password,
+  NoServer,
+  GameRef,
+  Xash3D // registrable only on xash3d engine
+};
 
 // supported cs's
-CR_DECLARE_SCOPED_ENUM (GameFlags,
-   Modern = cr::bit (0), // counter-strike 1.6 and above
-   Xash3D = cr::bit (1), // counter-strike 1.6 under the xash engine (additional flag)
-   ConditionZero = cr::bit (2), // counter-strike: condition zero
-   Legacy = cr::bit (3), // counter-strike 1.3-1.5 with/without steam
-   Mobility = cr::bit (4), // additional flag that bot is running on android (additional flag)
-   Unused = cr::bit (5), // not used currently
-   Metamod = cr::bit (6), // game running under meta\mod
-   CSDM = cr::bit (7), // csdm mod currently in use
-   FreeForAll = cr::bit (8), // csdm mod with ffa mode
-   ReGameDLL = cr::bit (9), // server dll is a regamedll
-   HasFakePings = cr::bit (10), // on that game version we can fake bots pings
-   HasBotVoice = cr::bit (11), // on that game version we can use chatter
-   AnniversaryHL25 = cr::bit (12), // half-life 25th anniversary engine
-   Xash3DLegacy = cr::bit (13), // old xash3d-branch
-   ZombieMod = cr::bit (14), // zombie mod is active
-   HasStudioModels = cr::bit (15) // game supports studio models, so we can use hitbox-based aiming
-)
+enum class GameFlags : int32_t {
+  None = 0,
+  Modern = ystl::bit (0), // counter-strike 1.6 and above
+  Xash3D = ystl::bit (1), // counter-strike 1.6 under the xash engine (additional flag)
+  ConditionZero = ystl::bit (2), // counter-strike: condition zero
+  Legacy = ystl::bit (3), // counter-strike 1.3-1.5 with/without steam
+  Mobility = ystl::bit (4), // additional flag that bot is running on android (additional flag)
+  ReHLDS = ystl::bit (5), // server engine is rehlds (SV_DropClient available)
+  Metamod = ystl::bit (6), // game running under meta\mod
+  CSDM = ystl::bit (7), // csdm mod currently in use
+  FreeForAll = ystl::bit (8), // csdm mod with ffa mode
+  ReGameDLL = ystl::bit (9), // server dll is a regamedll
+  HasFakePings = ystl::bit (10), // on that game version we can fake bots pings
+  HasBotVoice = ystl::bit (11), // on that game version we can use chatter
+  AnniversaryHL25 = ystl::bit (12), // half-life 25th anniversary engine
+  Xash3DLegacy = ystl::bit (13), // old xash3d-branch
+  ZombieMod = ystl::bit (14), // zombie mod is active
+  HasStudioModels = ystl::bit (15), // game supports studio models, so we can use hitbox-based aiming
+  GoldClient = ystl::bit (16) // game is custom-built goldclient engine
+};
+YSTL_ENABLE_ENUM_FLAGS (GameFlags);
 
 // defines map type
-CR_DECLARE_SCOPED_ENUM (MapFlags,
-   Assassination = cr::bit (0),
-   HostageRescue = cr::bit (1),
-   Demolition = cr::bit (2),
-   Escape = cr::bit (3),
-   KnifeArena = cr::bit (4),
-   FightYard = cr::bit (5),
-   GrenadeWar = cr::bit (6),
-   HasDoors = cr::bit (10), // additional flags
-   HasButtons = cr::bit (11) // map has buttons
-)
+enum class MapFlags : int32_t {
+  None = 0,
+  Assassination = ystl::bit (0),
+  HostageRescue = ystl::bit (1),
+  Demolition = ystl::bit (2),
+  Escape = ystl::bit (3),
+  KnifeArena = ystl::bit (4),
+  FightYard = ystl::bit (5),
+  GrenadeWar = ystl::bit (6),
+  HasDoors = ystl::bit (10), // additional flags
+  HasButtons = ystl::bit (11) // map has buttons
+};
+YSTL_ENABLE_ENUM_FLAGS (MapFlags);
 
 // recursive entity search
-CR_DECLARE_SCOPED_ENUM (EntitySearchResult,
-   Continue,
-   Break
-)
+enum class EntitySearchResult : int32_t {
+  Continue,
+  Break
+};
 
 // player body parts
-CR_DECLARE_SCOPED_ENUM (PlayerPart,
-   Head = 1,
-   Chest,
-   Stomach,
-   LeftArm,
-   RightArm,
-   LeftLeg,
-   RightLeg,
-   Feet // custom!
-)
-
-// variable reg pair
-struct ConVarReg {
-   cvar_t reg {};
-   String info {};
-   String init {};
-   String regval {};
-   String name {};
-   class ConVar *self {};
-   float initial {}, min {}, max {};
-   bool missing {};
-   bool bounded {};
-   int32_t type {};
+enum class PlayerPart : int32_t {
+  Invalid = -1,
+  Head = 1,
+  Chest,
+  Stomach,
+  LeftArm,
+  RightArm,
+  LeftLeg,
+  RightLeg,
+  Feet // custom!
 };
+
+// registration block handed to the engine, prefix-compatible with cvar_t
+struct ConVarEngineReg {
+  const char *name {};
+  const char *string {};
+  int flags {};
+  float value {};
+  void *next {};
+  const char *desc {};
+  const char *def {};
+};
+
+static_assert (sizeof (ConVarEngineReg) == sizeof (cvar_t) + 2 * sizeof (void *));
+
+// variable reg pair, string type selects storage: owned copies for logic,
+// views into ConVar members for the transient registration call
+template <typename S> struct ConVarRegT {
+  S name {};
+  S init {};
+  S info {};
+  bool bounded = false;
+  float min = 0.0f;
+  float max = 0.0f;
+  Var type = Var::NoServer;
+  bool missing = false;
+  S regval {};
+  ConVarEngineReg reg {};
+  class ConVar *self {};
+  float initial = 0.0f;
+};
+
+using ConVarReg = ConVarRegT<ystl::String>;
+using ConVarSpec = ConVarRegT<ystl::StringRef>;
 
 // entity prototype
 using EntityProto = void (*) (entvars_t *);
 
-// rehlds has this fixed, but original hlds doesn't allocate string space  passed to precache* argument, so game will crash when unloading module using metamod
+// work around missing precache string allocation on original hlds
 class EngineWrap final {
 public:
-   EngineWrap () = default;
-   ~EngineWrap () = default;
+  EngineWrap () = default;
+  ~EngineWrap () = default;
 
 private:
-   const char *allocStr (const char *str) const {
-      return string_t::from (engfuncs.pfnAllocString (str));
-   }
+  const char *AllocStr (const char *str) const {
+    return string_t::from (engfuncs.pfnAllocString (str));
+  }
 
 public:
-   int32_t precacheModel (const char *model) const {
-      return engfuncs.pfnPrecacheModel (allocStr (model));
-   }
+  int32_t PrecacheModel (const char *model) const {
+    return engfuncs.pfnPrecacheModel (AllocStr (model));
+  }
 
-   int32_t precacheSound (const char *sound) const {
-      return engfuncs.pfnPrecacheSound (allocStr (sound));
-   }
+  int32_t PrecacheSound (const char *sound) const {
+    return engfuncs.pfnPrecacheSound (AllocStr (sound));
+  }
 
-   void setModel (edict_t *ent, const char *model) {
-      engfuncs.pfnSetModel (ent, allocStr (model));
-   }
+  void SetModel (edict_t *ent, const char *model) {
+    engfuncs.pfnSetModel (ent, AllocStr (model));
+  }
 };
 
 // player model part info enumerator
 class PlayerHitboxEnumerator final {
 public:
-   struct Info {
-      float updated {};
-      Vector head {};
-      Vector stomach {};
-      Vector feet {};
-      Vector right {};
-      Vector left {};
-   } m_parts[kGameMaxPlayers] {};
+  struct Info {
+    float updated {};
+    ystl::Vector head {};
+    ystl::Vector stomach {};
+    ystl::Vector feet {};
+    ystl::Vector right {};
+    ystl::Vector left {};
+  } parts_[kGameMaxPlayers] {};
 
 public:
-   // get's the enemy part based on bone info
-   Vector get (edict_t *ent, int part, float updateTimestamp);
+  // get's the enemy part based on bone info
+  ystl::Vector Get (edict_t *ent, PlayerPart part, float update_timestamp);
 
-   // update bones positions for given player
-   void update (edict_t *ent);
+  // update bones positions for given player
+  void Update (edict_t *ent);
 
-   // reset all the poisitons
-   void reset ();
+  // reset all the poisitons
+  void Reset ();
+};
+
+// fake client command state kept in one buffer with tokens into it
+struct Command final {
+  static constexpr size_t kMaxArgs = 80; // same argument limit as the engine
+  static constexpr size_t kBufferSize = ystl::Strings::StaticBufferSize;
+
+  char buffer[kBufferSize] {}; // formatted command text
+  char tail_buffer[kBufferSize] {}; // args string for the gamedll (see tail)
+  ystl::FixedArray<ystl::StringRef, kMaxArgs> args {}; // tokens into buffer
+  ystl::StringRef tail {}; // pfncmd_args () result for the current part
+  size_t length = 0; // formatted length of buffer
+  size_t arg_count = 0;
+
+  // drops tokens of the current part
+  void Reset () {
+    arg_count = 0;
+    tail = {};
+  }
+
+  // true while a bot client command is being executed
+  bool Active () const {
+    return arg_count != 0;
+  }
+
+  // token by index, empty ref when out of bounds
+  ystl::StringRef Argv (size_t index) const {
+    return index < arg_count ? args[index] : ystl::StringRef {};
+  }
+
+  // null-terminates a token span in place, so that the gamedll can read it as a c-string
+  void Terminate (ystl::StringRef span) {
+    buffer[span.chars () - buffer + span.size ()] = ystl::kNullChar;
+  }
 };
 
 // provides utility functions to not call original engine (less call-cost)
-class Game final : public Singleton <Game> {
+class Game final : public ystl::Singleton<Game> {
 public:
-   using EntitySearch = const Lambda <EntitySearchResult (edict_t *)> &;
+  using EntitySearch = const ystl::Lambda<EntitySearchResult (edict_t *)> &;
 
 private:
-   int m_drawModels[DrawLine::Count] {};
-   int m_spawnCount[Team::Unassigned] {};
+  ystl::FixedArray<int32_t, ystl::to_underlying (DrawLineType::Num)> draw_models_ {};
+  ystl::FixedArray<int32_t, ystl::to_underlying (Team::Num)> spawn_count_ {};
 
-   // bot client command
-   StringArray m_botArgs {};
+  // bot client command
+  Command bot_cmd_ {};
 
-   edict_t *m_startEntity {};
-   edict_t *m_localEntity {};
+  edict_t *start_entity_ {};
+  edict_t *local_entity_ {};
 
-   Array <edict_t *> m_breakables {};
-   HashMap <int32_t, bool> m_checkedBreakables {};
+  ystl::HashSet<int32_t> checked_breakables_ {};
 
-   SmallArray <ConVarReg> m_cvars {};
-   SharedLibrary m_gameLib {};
-   SharedLibrary m_engineLib {};
-   EngineWrap m_engineWrap {};
+  ystl::SmallArray<ConVarReg> cvars_ {};
+  ystl::SharedLibrary game_lib_ {};
+  ystl::SharedLibrary engine_lib_ {};
+  EngineWrap engine_wrap_ {};
 
-   bool m_precached {};
+  bool precached_ {};
 
-   int m_gameFlags {};
-   int m_mapFlags {};
+  GameFlags game_flags_ {};
+  MapFlags map_flags_ {};
 
-   float m_oneSecondFrame {}; // per second updated
-   float m_halfSecondFrame {}; // per half second update
-
-public:
-   Game ();
-   ~Game () = default;
+  ystl::CountdownTimer one_second_timer_ {}; // per second updated
+  ystl::CountdownTimer half_second_timer_ {}; // per half second update
 
 public:
-   // preaches internal stuff
-   void precache ();
+  Game ();
+  ~Game () = default;
 
-   // initialize levels
-   void levelInitialize (edict_t *entities, int max);
-
-   // when entity spawns
-   void onSpawnEntity (edict_t *ent);
-
-   // shutdown levels
-   void levelShutdown ();
-
-   // display world line
-   void drawLine (edict_t *ent, const Vector &start, const Vector &end, int width, int noise, const Color &color, int brightness, int speed, int life, DrawLine type = DrawLine::Simple) const;
-
-   // test line
-   void testLine (const Vector &start, const Vector &end, int ignoreFlags, edict_t *ignoreEntity, TraceResult *ptr);
-
-   // test model
-   void testModel (const Vector &start, const Vector &end, int hullNumber, edict_t *entToHit, TraceResult *ptr);
-
-   // test line
-   void testHull (const Vector &start, const Vector &end, int ignoreFlags, int hullNumber, edict_t *ignoreEntity, TraceResult *ptr);
-
-   // we are on dedicated server ?
-   bool isDedicated ();
-
-   // get stripped down mod name
-   const char *getRunningModName ();
-
-   // get the valid mapname
-   const char *getMapName ();
-
-   // get the "any" entity origin
-   Vector getEntityOrigin (edict_t *ent);
-
-   // registers a server command
-   void registerEngineCommand (const char *command, void func ());
-
-   // play's sound to client
-   void playSound (edict_t *ent, const char *sound);
-
-   // sends bot command
-   void prepareBotArgs (edict_t *ent, String str);
-
-   // adds cvar to registration stack
-   void pushConVar (StringRef name, StringRef value, StringRef info, bool bounded, float min, float max, int32_t varType, bool missingAction, StringRef regval, class ConVar *self);
-
-   // check the cvar bounds
-   void checkCvarsBounds ();
-
-   // modify cvar description
-   void setCvarDescription (const ConVar &cv, StringRef info);
-
-   // sends local registration stack for engine registration
-   void registerCvars (bool gameVars = false);
-
-   // checks whether software rendering is enabled
-   bool isSoftwareRenderer ();
-
-   // checks if this is 25th anniversary half-life update
-   bool is25thAnniversaryUpdate ();
-
-   // load the cs binary in non metamod mode
-   bool loadCSBinary ();
-
-   void constructCSBinaryName (StringArray &libs);
-
-   // do post-load stuff
-   bool postload ();
-
-   // detects if csdm mod is in use
-   void applyGameModes ();
-
-   // executes stuff every 1 second
-   void slowFrame ();
-
-   // search entities by variable field
-   void searchEntities (StringRef field, StringRef value, EntitySearch functor);
-
-   // search entities in sphere
-   void searchEntities (const Vector &position, float radius, EntitySearch functor) const;
-
-   // check if map has entity
-   bool hasEntityInGame (StringRef classname) const;
-
-   // print the version to server console on startup
-   void printBotVersion () const;
-
-   // ensure prosperous gaming environment as per: https://github.com/yapb/yapb/issues/575
-   void ensureHealthyGameEnvironment ();
-
-   // creates a fake client's a nd resets all the entvars
-   edict_t *createFakeClient (StringRef name);
-
-   // mark breakable entity as invalid
-   void markBreakableAsInvalid (edict_t *ent);
-
-   // is developer mode ?
-   bool isDeveloperMode () const;
-
-   // entity utils
 public:
-   // check if entity is alive
-   bool isAliveEntity (edict_t *ent) const;
+  // preaches internal stuff
+  void Precache ();
 
-   // checks if entity is fakeclient
-   bool isFakeClientEntity (edict_t *ent) const;
+  // initialize levels
+  void LevelInitialize (edict_t *entities, int max);
 
-   // check if entity is a player
-   bool isPlayerEntity (edict_t *ent) const;
+  // when entity spawns
+  void OnSpawnEntity (edict_t *ent);
 
-   // check if entity is a monster
-   bool isMonsterEntity (edict_t *ent) const;
+  // shutdown levels
+  void LevelShutdown ();
 
-   // check if entity is a item
-   bool isItemEntity (edict_t *ent) const;
+  // display world line
+  void DrawLine (edict_t *ent, const ystl::Vector &start, const ystl::Vector &end, int width, int noise, const ystl::Color &color,
+    int brightness, int speed, int life, DrawLineType type = DrawLineType::Simple) const;
 
-   // check if entity is a hostage entity
-   bool isHostageEntity (edict_t *ent) const;
+  // display world axis-aligned box outline
+  void DrawBox (edict_t *ent, const ystl::Vector &bbmin, const ystl::Vector &bbmax, int width, int noise, const ystl::Color &color,
+    int brightness, int speed, int life) const;
 
-   // check if entity is a door entity
-   bool isDoorEntity (edict_t *ent) const;
+  // we are on dedicated server ?
+  bool IsDedicatedServer ();
 
-   // this function is checking that pointed by ent pointer obstacle, can be destroyed
-   bool isBreakableEntity (edict_t *ent, bool initialSeed = false) const;
+  // get stripped down mod name
+  const char *GetRunningModName ();
 
-   // checks if same model omitting the models directory
-   bool isEntityModelMatches (const edict_t *ent, StringRef model) const;
+  // get the valid mapname
+  const char *GetMapName ();
 
-   // check if entity is a vip
-   bool isPlayerVIP (edict_t *ent) const;
+  // get the "any" entity origin
+  ystl::Vector GetEntityOrigin (edict_t *ent);
 
-   // public inlines
+  // registers a server command
+  void RegisterEngineCommand (const char *command, void func ());
+
+  // play's sound to client
+  void PlaySound (edict_t *ent, const char *sound);
+
+  // sends bot command
+  void PrepareBotArgs (edict_t *ent);
+
+  // adds cvar to registration stack
+  void PushConVar (const ConVarSpec &spec, ConVar *self);
+
+  // check the cvar bounds
+  void CheckCvarsBounds ();
+
+  // modify cvar description
+  void SetCvarDescription (const ConVar &cv, ystl::StringRef info);
+
+  // sends local registration stack for engine registration
+  void RegisterCvars (bool game_vars = false);
+
+  // checks whether software rendering is enabled
+  bool IsSoftwareRenderer ();
+
+  // checks if this is 25th anniversary half-life update
+  bool Is25thAnniversaryUpdate ();
+
+  // check if engine is goldclient listenserver
+  bool IsGoldClientListenServer ();
+
+  // detect xash3d before cvar registration, the sentinel needs the flag early
+  void DetectXashEngine ();
+
+  // load the cs binary in non metamod mode
+  bool LoadCsBinary ();
+
+  void ConstructCsBinaryName (ystl::SmallArray<ystl::String> &libs);
+
+  // do post-load stuff
+  bool Postload ();
+
+  // detects if csdm mod is in use
+  void ApplyGameModes ();
+
+  // executes stuff every 1 second
+  void SlowFrame ();
+
+  // runs full per-frame orchestration (startframe hook body)
+  void Frame ();
+
+  // search entities by variable field
+  void SearchEntities (ystl::StringRef field, ystl::StringRef value, EntitySearch functor);
+
+  // search entities in sphere
+  void SearchEntities (const ystl::Vector &position, float radius, EntitySearch functor) const;
+
+  // check if map has entity
+  bool HasEntityInGame (ystl::StringRef classname) const;
+
+  // print the version to server console on startup
+  void PrintBotVersion () const;
+
+  // ensure prosperous gaming environment as per: https://github.com/yapb/yapb/issues/575
+  void EnsureHealthyGameEnvironment ();
+
+  // creates a fake client's a nd resets all the entvars
+  edict_t *CreateFakeClient (ystl::StringRef name);
+
+  // mark breakable entity as invalid
+  void MarkBreakableAsInvalid (edict_t *ent);
+
+  // is developer mode ?
+  bool IsDeveloperMode () const;
+
+  // entity utils
 public:
-   // get the current time on server
-   float time () const {
-      return globals->time;
-   }
+  // check if entity is alive
+  bool IsAliveEntity (edict_t *ent) const;
 
-   // get "maxplayers" limit on server
-   int maxClients () const {
-      return globals->maxClients;
-   }
+  // checks if entity is fakeclient
+  bool IsFakeClientEntity (edict_t *ent) const;
 
-   // get the fakeclient command interface
-   bool isBotCmd () const {
-      return !m_botArgs.empty ();
-   }
+  // check if entity is a player
+  bool IsPlayerEntity (edict_t *ent) const;
 
-   // gets custom engine args for client command
-   const char *botArgs () const {
-      auto result = strings.chars ();
-      strings.copy (result, String::join (m_botArgs, " ", m_botArgs[0].startsWith ("say") ? 1 : 0).chars (), Strings::StaticBufferSize);
+  // check if entity is a monster
+  bool IsMonsterEntity (edict_t *ent) const;
 
-      return result;
-   }
+  // check if entity is a item
+  bool IsItemEntity (edict_t *ent) const;
 
-   // gets custom engine argv for client command
-   const char *botArgv (int32_t index) const {
-      if (static_cast <size_t> (index) >= m_botArgs.length ()) {
-         return "";
-      }
-      return m_botArgs[index].chars ();
-   }
+  // check if entity is a hostage entity
+  bool IsHostageEntity (edict_t *ent) const;
 
-   // gets custom engine argc for client command
-   int32_t botArgc () const {
-      return m_botArgs.length <int32_t> ();
-   }
+  // check if entity is a door entity
+  bool IsDoorEntity (edict_t *ent) const;
 
-   // gets edict pointer out of entity index
-   CR_FORCE_INLINE edict_t *entityOfIndex (const int index) const {
-      return static_cast <edict_t *> (m_startEntity + index);
-   };
+  // check if entity is planted or dropped c4
+  bool IsBombEntity (edict_t *ent) const;
 
-   // gets edict pointer out of entity index (player)
-   CR_FORCE_INLINE edict_t *playerOfIndex (const int index) const {
-      return entityOfIndex (index) + 1;
-   };
+  // this function is checking that pointed by ent pointer obstacle, can be destroyed
+  bool IsBreakableEntity (edict_t *ent, bool initial_seed = false) const;
 
-   // gets edict index out of it's pointer
-   CR_FORCE_INLINE int indexOfEntity (const edict_t *ent) const {
-      return static_cast <int> (ent - m_startEntity);
-   };
+  // checks if same model omitting the models directory
+  bool IsEntityModelMatches (const edict_t *ent, ystl::StringRef model) const;
 
-   // gets edict index of it's pointer (player)
-   CR_FORCE_INLINE int indexOfPlayer (const edict_t *ent) const {
-      return indexOfEntity (ent) - 1;
-   }
+  // check if entity is a vip
+  bool IsPlayerVip (edict_t *ent) const;
 
-   // verify entity isn't null
-   CR_FORCE_INLINE bool isNullEntity (const edict_t *ent) const {
-      return !ent || !indexOfEntity (ent) || ent->free;
-   }
+  // public inlines
+public:
+  // get the current time on server
+  float Time () const {
+    return globals->time;
+  }
 
-   // get the worldspawn entity
-   edict_t *getStartEntity () const {
-      return m_startEntity;
-   }
+  // get "maxplayers" limit on server
+  int MaxClients () const {
+    return globals->maxClients;
+  }
 
-   // get spawn count for team
-   int getSpawnCount (int team) const {
-      return m_spawnCount[team];
-   }
+  // get the fakeclient command interface
+  bool IsBotCmd () const {
+    return bot_cmd_.Active ();
+  }
 
-   // gets the player team
-   int getPlayerTeam (edict_t *ent) const {
-      if (isNullEntity (ent)) {
-         return Team::Unassigned;
-      }
-      return util.getClient (indexOfPlayer (ent)).team;
-   }
+  // gets custom engine args for client command
+  const char *BotArgs () const {
+    return bot_cmd_.tail.chars ();
+  }
 
-   // gets the player team (real in ffa)
-   int getRealPlayerTeam (edict_t *ent) const {
-      if (isNullEntity (ent)) {
-         return Team::Unassigned;
-      }
-      return util.getClient (indexOfPlayer (ent)).team2;
-   }
+  // gets custom engine argv for client command
+  const char *BotArgv (int32_t index) const {
+    return bot_cmd_.Argv (static_cast<size_t> (index)).chars ();
+  }
 
-   // get real gamedll team (matches gamedll indices)
-   int getPlayerTeamGame (edict_t *ent) const {
-      return getRealPlayerTeam (ent) + 1;
-   }
+  // gets custom engine argc for client command
+  int32_t BotArgc () const {
+    return static_cast<int32_t> (bot_cmd_.arg_count);
+  }
 
-   // sets the precache to uninitialized
-   void setUnprecached () {
-      m_precached = false;
-   }
+  // gets edict pointer out of entity index
+  YSTL_FORCE_INLINE edict_t *EntityOfIndex (const int index) const {
+    if (!start_entity_) [[unlikely]] {
+      return engfuncs.pfnPEntityOfEntIndex (index);
+    }
+    return static_cast<edict_t *> (start_entity_ + index);
+  };
 
-   // gets the local entity (host edict)
-   edict_t *getLocalEntity () {
-      return m_localEntity;
-   }
+  // gets edict pointer out of entity index (player)
+  YSTL_FORCE_INLINE edict_t *PlayerOfIndex (const int index) const {
+    if (!start_entity_) [[unlikely]] {
+      return engfuncs.pfnPEntityOfEntIndex (index + 1);
+    }
+    return EntityOfIndex (index) + 1;
+  };
 
-   // sets the local entity (host edict)
-   void setLocalEntity (edict_t *ent) {
-      m_localEntity = ent;
-   }
+  // gets edict index out of it's pointer
+  YSTL_FORCE_INLINE int IndexOfEntity (const edict_t *ent) const {
+    return static_cast<int> (ent - start_entity_);
+  };
 
-   // sets player start entity draw models
-   void setPlayerStartDrawModels ();
+  // gets edict index of it's pointer (player)
+  YSTL_FORCE_INLINE int IndexOfPlayer (const edict_t *ent) const {
+    return IndexOfEntity (ent) - 1;
+  }
 
-   // check the engine visibility wrapper
-   bool checkVisibility (edict_t *ent, uint8_t *set);
+  // verify entity isn't null
+  YSTL_FORCE_INLINE bool IsNullEntity (const edict_t *ent) const {
+    return !start_entity_ || !ent || !IndexOfEntity (ent) || ent->free;
+  }
 
-   // get pvs/pas visibility set
-   uint8_t *getVisibilitySet (Bot *bot, bool pvs) const;
+  // get the worldspawn entity
+  edict_t *GetStartEntity () const {
+    return start_entity_;
+  }
 
-   // what kind of game engine / game dll / mod / tool we're running ?
-   bool is (const int type) const {
-      return !!(m_gameFlags & type);
-   }
+  // get spawn count for team
+  int GetSpawnCount (Team team) const {
+    return spawn_count_[team];
+  }
 
-   // adds game flag
-   void addGameFlag (const int type) {
-      m_gameFlags |= type;
-   }
+  // gets the player team
+  Team GetPlayerTeam (edict_t *ent) const;
 
-   // clears game flag
-   void clearGameFlag (const int type) {
-      m_gameFlags &= ~type;
-   }
+  // gets the player team (real in ffa)
+  Team GetRealPlayerTeam (edict_t *ent) const;
 
-   // gets the map type
-   bool mapIs (const int type) const {
-      return !!(m_mapFlags & type);
-   }
+  // get real gamedll team (matches gamedll indices)
+  Team GetPlayerTeamGame (edict_t *ent) const {
+    return GetRealPlayerTeam (ent) + Team::CT;
+  }
 
-   // get loaded gamelib
-   const SharedLibrary &lib () {
-      return m_gameLib;
-   }
+  // sets the precache to uninitialized
+  void SetUnprecached () {
+    precached_ = false;
+  }
 
-   // get loaded engine lib
-   const SharedLibrary &elib () {
-      return m_engineLib;
-   }
+  // gets the local entity (host edict)
+  edict_t *GetLocalEntity () {
+    return local_entity_;
+  }
 
-   // get registered cvars list
-   const SmallArray <ConVarReg> &getCvars () {
-      return m_cvars;
-   }
+  // sets the local entity (host edict)
+  void SetLocalEntity (edict_t *ent) {
+    local_entity_ = ent;
+  }
 
-   // check if map has breakables
-   const Array <edict_t *> &getBreakables () {
-      return m_breakables;
-   }
+  // sets player start entity draw models
+  void SetPlayerStartDrawModels ();
 
-   // map has breakables ?
-   bool hasBreakables () const {
-      return !m_breakables.empty ();
-   }
+  // check the engine visibility wrapper
+  bool CheckVisibility (edict_t *ent, uint8_t *set);
 
-   // is breakable entity is valid ?
-   bool isBreakableValid (edict_t *ent) {
-      return m_checkedBreakables[indexOfEntity (ent)];
-   }
+  // get pvs/pas visibility set
+  uint8_t *GetVisibilitySet (Bot *bot, bool pvs) const;
 
-   // find variable value by variable name
-   StringRef findCvar (StringRef name) {
-      return engfuncs.pfnCVarGetString (name.chars ());
-   }
+  // what kind of game engine / game dll / mod / tool we're running ?
+  bool Is (const GameFlags type) const {
+    return has_flag (game_flags_, type);
+  }
 
-   // helper to sending the client message
-   void sendClientMessage (bool console, edict_t *ent, StringRef message);
+  // adds game flag
+  void AddGameFlag (const GameFlags type) {
+    game_flags_ |= type;
+  }
 
-   // helper to sending the server message
-   void sendServerMessage (StringRef message);
+  // clears game flag
+  void ClearGameFlag (const GameFlags type) {
+    game_flags_ &= ~type;
+  }
 
-   // helper for sending hud messages to client
-   void sendHudMessage (edict_t *ent, const hudtextparms_t &htp, StringRef message);
+  // gets the map type
+  bool MapIs (const MapFlags type) const {
+    return has_flag (map_flags_, type);
+  }
 
-   // send server command
-   template <typename ...Args> void serverCommand (const char *fmt, Args &&...args) {
-      engfuncs.pfnServerCommand (strings.concat (strings.format (fmt, cr::forward <Args> (args)...), "\n", Strings::StaticBufferSize));
-   }
+  // get loaded gamelib
+  const ystl::SharedLibrary &Lib () {
+    return game_lib_;
+  }
 
-   // send a bot command
-   template <typename ...Args> void botCommand (edict_t *ent, const char *fmt, Args &&...args) {
-      prepareBotArgs (ent, strings.format (fmt, cr::forward <Args> (args)...));
-   }
+  // get loaded engine lib
+  const ystl::SharedLibrary &Elib () {
+    return engine_lib_;
+  }
 
-   // prints data to servers console
-   template <typename ...Args> void print (const char *fmt, Args &&...args) {
-      sendServerMessage (strings.concat (strings.format (conf.translate (fmt), cr::forward <Args> (args)...), "\n", Strings::StaticBufferSize));
-   }
+  // get registered cvars list (mutable: config load stores parsed values back)
+  ystl::SmallArray<ConVarReg> &GetCvars () {
+    return cvars_;
+  }
 
-   // prints center message to specified player
-   template <typename ...Args> void clientPrint (edict_t *ent, const char *fmt, Args &&...args) {
-      if (isNullEntity (ent)) {
-         print (fmt, cr::forward <Args> (args)...);
-         return;
-      }
-      sendClientMessage (true, ent, strings.concat (strings.format (conf.translate (fmt), cr::forward <Args> (args)...), "\n", Strings::StaticBufferSize));
-   }
+  // check if map has breakables (sweep-maintained flag, see GameState)
+  bool HasBreakables () const;
 
-   // prints message to client console
-   template <typename ...Args> void centerPrint (edict_t *ent, const char *fmt, Args &&...args) {
-      if (isNullEntity (ent)) {
-         print (fmt, cr::forward <Args> (args)...);
-         return;
-      }
-      sendClientMessage (false, ent, strings.concat (strings.format (conf.translate (fmt), cr::forward <Args> (args)...), "\n", Strings::StaticBufferSize));
-   }
+  // is breakable entity is valid ?
+  bool IsBreakableValid (edict_t *ent) {
+    return checked_breakables_.contains (IndexOfEntity (ent));
+    ;
+  }
+
+  // find variable value by variable name
+  ystl::StringRef FindCvar (ystl::StringRef name) {
+    return engfuncs.pfnCVarGetString (name.chars ());
+  }
+
+  // helper to sending the client message
+  void SendClientMessage (bool console, edict_t *ent, ystl::StringRef message);
+
+  // helper to sending the server message
+  void SendServerMessage (ystl::StringRef message);
+
+  // helper for sending hud messages to client
+  void SendHudMessage (edict_t *ent, const hudtextparms_t &htp, ystl::StringRef message);
+
+  // send server command
+  template <typename... Args> void ServerCommand (const char *fmt, Args &&...args) {
+    engfuncs.pfnServerCommand (
+      ystl::strings.concat (ystl::strings.format (fmt, ystl::forward<Args> (args)...), "\n", ystl::Strings::StaticBufferSize));
+  }
+
+  // send a bot command
+  template <typename... Args> void Command (edict_t *ent, const char *fmt, Args &&...args) {
+    const auto result = ystl::fmtwrap ().exec (bot_cmd_.buffer, Command::kBufferSize, fmt, ystl::forward<Args> (args)...);
+
+    // snprintf returns the would-be length on truncation, clamp to the real one
+    bot_cmd_.length = result > 0 ? ystl::min (static_cast<size_t> (result), Command::kBufferSize - 1) : 0;
+    PrepareBotArgs (ent);
+  }
+
+  // prints data to servers console
+  template <typename... Args> void Print (const char *fmt, Args &&...args) {
+    SendServerMessage (
+      ystl::strings.concat (ystl::strings.format (conf.Translate (fmt), ystl::forward<Args> (args)...), "\n", ystl::Strings::StaticBufferSize));
+  }
+
+  // prints center message to specified player
+  template <typename... Args> void ClientPrint (edict_t *ent, const char *fmt, Args &&...args) {
+    if (IsNullEntity (ent)) {
+      Print (fmt, ystl::forward<Args> (args)...);
+      return;
+    }
+    SendClientMessage (true, ent,
+      ystl::strings.concat (ystl::strings.format (conf.Translate (fmt), ystl::forward<Args> (args)...), "\n", ystl::Strings::StaticBufferSize));
+  }
+
+  // prints message to client console
+  template <typename... Args> void CenterPrint (edict_t *ent, const char *fmt, Args &&...args) {
+    if (IsNullEntity (ent)) {
+      Print (fmt, ystl::forward<Args> (args)...);
+      return;
+    }
+    SendClientMessage (false, ent,
+      ystl::strings.concat (ystl::strings.format (conf.Translate (fmt), ystl::forward<Args> (args)...), "\n", ystl::Strings::StaticBufferSize));
+  }
 };
 
 // reference some game/mod cvars for access
-class ConVarRef final : public NonCopyable {
+class ConVarRef final : public ystl::NonCopyable {
 private:
-   cvar_t *ptr_ {};
-   String name_ {};
-   bool checked_ {};
+  cvar_t *ptr_ {};
+  ystl::String name_ {};
+  bool checked_ {};
 
 public:
-   ConVarRef (StringRef name) : name_ (name) {}
-   ~ConVarRef () = default;
+  ConVarRef (ystl::StringRef name) : name_ (name) {}
+  ~ConVarRef () = default;
 
 public:
-   bool exists () {
-      if (checked_ && !ptr_) {
-         return false;
-      }
-      checked_ = true;
-      ptr_ = engfuncs.pfnCVarGetPointer (name_.chars ());
+  bool Exists () {
+    if (checked_ && !ptr_) {
+      return false;
+    }
+    checked_ = true;
+    ptr_ = engfuncs.pfnCVarGetPointer (name_.chars ());
 
-      return ptr_ != nullptr;
-   }
+    return ptr_ != nullptr;
+  }
 
-   template <typename U = float> U value () {
-      return exists () ? static_cast <U> (ptr_->value) : static_cast <U> (0);
-   }
+  template <typename U = float> U Value () {
+    return Exists () ? static_cast<U> (ptr_->value) : static_cast<U> (0);
+  }
 
-   void set (StringRef value) {
-      if (exists ()) {
-         engfuncs.pfnCvar_DirectSet (ptr_, value.chars ());
-      }
-   }
+  void Set (ystl::StringRef value) {
+    if (Exists ()) {
+      engfuncs.pfnCvar_DirectSet (ptr_, value.chars ());
+    }
+  }
 };
 
 // simplify access for console variables
-class ConVar final : public NonCopyable {
+class ConVar final : public ystl::NonCopyable {
 public:
-   cvar_t *ptr;
+  cvar_t *ptr;
 
 private:
-   String name_ {};
+  ystl::String name_ {};
+  ystl::String initval_ {}; // owned once, engine-visible pointers aim here: never reassign after construction
 
 public:
-   ConVar () = delete;
-   ~ConVar () = default;
+  ConVar () = delete;
+  ~ConVar () = default;
 
 public:
-   ConVar (StringRef name, StringRef initval, int32_t type = Var::NoServer, bool regMissing = false, StringRef regVal = nullptr) : ptr (nullptr) {
-      setPrefix (name, type);
-      Game::instance ().pushConVar (name_.chars (), initval, "", false, 0.0f, 0.0f, type, regMissing, regVal, this);
-   }
+  ConVar (ystl::StringRef name, ystl::StringRef initval, Var type = Var::NoServer, bool reg_missing = false, ystl::StringRef reg_val = nullptr) :
+    ptr (nullptr) {
+    SetPrefix (name, type);
+    initval_ = initval;
+    Game::instance ().PushConVar ({ name_.chars (), initval_.chars (), {}, false, 0.0f, 0.0f, type, reg_missing, reg_val }, this);
+  }
 
-   ConVar (StringRef name, StringRef initval, StringRef info, bool bounded = true, float min = 0.0f, float max = 1.0f, int32_t type = Var::NoServer, bool regMissing = false, const char *regVal = nullptr) : ptr (nullptr) {
-      setPrefix (name, type);
-      Game::instance ().pushConVar (name_.chars (), initval, info, bounded, min, max, type, regMissing, regVal, this);
-   }
+  ConVar (ystl::StringRef name, ystl::StringRef initval, ystl::StringRef info, bool bounded = true, float min = 0.0f, float max = 1.0f,
+    Var type = Var::NoServer, bool reg_missing = false, ystl::StringRef reg_val = nullptr) : ptr (nullptr) {
+    SetPrefix (name, type);
+    initval_ = initval;
 
-public:
-   template <typename U> constexpr U as () const {
-      if constexpr (cr::is_same <U, float>::value) {
-         return ptr->value;
-      }
-      else if constexpr (cr::is_same <U, bool>::value) {
-         return ptr->value > 0.0f;
-      }
-      else if constexpr (cr::is_same <U, int>::value) {
-         return static_cast <U> (ptr->value);
-      }
-      else if constexpr (cr::is_same <U, StringRef>::value) {
-         return ptr->string;
-      }
-   }
+    Game::instance ().PushConVar ({ name_.chars (), initval_.chars (), info, bounded, min, max, type, reg_missing, reg_val }, this);
+  }
 
 public:
-   operator bool () const {
-      return as <bool> ();
-   }
-
-   operator float () const {
-      return as <float> ();
-   }
-
-   operator int () const {
-      return as <int> ();
-   }
-
-   operator StringRef () {
-      return as <StringRef> ();
-   }
+  template <typename U> constexpr U As () const {
+    if constexpr (ystl::is_same_v<U, float>) {
+      return ptr->value;
+    }
+    else if constexpr (ystl::is_same_v<U, bool>) {
+      return ptr->value > 0.0f;
+    }
+    else if constexpr (ystl::is_same_v<U, int>) {
+      return static_cast<U> (ptr->value);
+    }
+    else if constexpr (ystl::is_same_v<U, ystl::StringRef>) {
+      return ptr->string;
+    }
+  }
 
 public:
-   StringRef name () const {
-      return ptr->name;
-   }
+  operator bool () const {
+    return As<bool> ();
+  }
 
-   void set (float val) {
-      engfuncs.pfnCVarSetFloat (ptr->name, val);
-   }
+  operator float () const {
+    return As<float> ();
+  }
 
-   void set (int val) {
-      set (static_cast <float> (val));
-   }
+  operator int () const {
+    return As<int> ();
+  }
 
-   void set (const char *val) {
+  operator ystl::StringRef () {
+    return As<ystl::StringRef> ();
+  }
+
+public:
+  ystl::StringRef Name () const {
+    return ptr->name;
+  }
+
+  void Set (float val) {
+    engfuncs.pfnCVarSetFloat (ptr->name, val);
+  }
+
+  void Set (int val) {
+    Set (static_cast<float> (val));
+  }
+
+  void Set (const char *val) {
+    if (ptr) {
       engfuncs.pfnCvar_DirectSet (ptr, val);
-   }
+    }
+  }
 
-   // revet cvar to default value
-   void revert ();
+  // revet cvar to default value
+  void Revert ();
 
-   // set the cvar prefix if needed
-   void setPrefix (StringRef name, int32_t type);
+  // set the cvar prefix if needed
+  void SetPrefix (ystl::StringRef name, Var type);
 };
 
 class MessageWriter final {
 private:
-   bool m_autoDestruct { false };
+  bool auto_destruct_ { false };
 
 public:
-   MessageWriter () = default;
+  MessageWriter () = default;
 
-   MessageWriter (int dest, int type, const Vector &pos = nullptr, edict_t *to = nullptr) {
-      start (dest, type, pos, to);
-      m_autoDestruct = true;
-   }
+  MessageWriter (int dest, int type, const ystl::Vector &pos = nullptr, edict_t *to = nullptr) {
+    Start (dest, type, pos, to);
+    auto_destruct_ = true;
+  }
 
-   ~MessageWriter () {
-      if (m_autoDestruct) {
-         end ();
-      }
-   }
-
-public:
-   MessageWriter &start (int dest, int type, const Vector &pos = nullptr, edict_t *to = nullptr) {
-      engfuncs.pfnMessageBegin (dest, type, pos, to);
-      return *this;
-   }
-
-   void end () {
-      engfuncs.pfnMessageEnd ();
-   }
-
-   MessageWriter &writeByte (int val) {
-      engfuncs.pfnWriteByte (val);
-      return *this;
-   }
-
-   MessageWriter &writeLong (int val) {
-      engfuncs.pfnWriteLong (val);
-      return *this;
-   }
-
-   MessageWriter &writeChar (int val) {
-      engfuncs.pfnWriteChar (val);
-      return *this;
-   }
-
-   MessageWriter &writeShort (int val) {
-      engfuncs.pfnWriteShort (val);
-      return *this;
-   }
-
-   MessageWriter &writeCoord (float val) {
-      engfuncs.pfnWriteCoord (val);
-      return *this;
-   }
-
-   MessageWriter &writeString (const char *val) {
-      engfuncs.pfnWriteString (val);
-      return *this;
-   }
+  ~MessageWriter () {
+    if (auto_destruct_) {
+      end ();
+    }
+  }
 
 public:
-   static constexpr uint16_t fu16 (float value, float scale) {
-      return cr::clamp <uint16_t> (static_cast <uint16_t> (value * cr::bit (static_cast <short> (scale))), 0, USHRT_MAX);
-   }
+  MessageWriter &Start (int dest, int type, const ystl::Vector &pos = nullptr, edict_t *to = nullptr) {
+    engfuncs.pfnMessageBegin (dest, type, pos, to);
+    return *this;
+  }
 
-   static constexpr short fs16 (float value, float scale) {
-      return cr::clamp <short> (static_cast <short> (value * cr::bit (static_cast <short> (scale))), -SHRT_MAX, SHRT_MAX);
-   }
+  void end () {
+    engfuncs.pfnMessageEnd ();
+  }
+
+  MessageWriter &WriteByte (int val) {
+    engfuncs.pfnWriteByte (val);
+    return *this;
+  }
+
+  MessageWriter &WriteLong (int val) {
+    engfuncs.pfnWriteLong (val);
+    return *this;
+  }
+
+  MessageWriter &WriteChar (int val) {
+    engfuncs.pfnWriteChar (val);
+    return *this;
+  }
+
+  MessageWriter &WriteShort (int val) {
+    engfuncs.pfnWriteShort (val);
+    return *this;
+  }
+
+  MessageWriter &WriteCoord (float val) {
+    engfuncs.pfnWriteCoord (val);
+    return *this;
+  }
+
+  MessageWriter &WriteString (const char *val) {
+    engfuncs.pfnWriteString (val);
+    return *this;
+  }
+
+public:
+  static uint16_t Fu16 (float value, float scale) {
+    return static_cast<uint16_t> (
+      ystl::clamp (value * ystl::bit (static_cast<short> (scale)), 0.0f, static_cast<float> (ystl::numeric_limits<uint16_t>::max ())));
+  }
+
+  static short Fs16 (float value, float scale) {
+    return static_cast<short> (ystl::clamp (value * ystl::bit (static_cast<short> (scale)),
+      static_cast<float> (-ystl::numeric_limits<short>::max ()), static_cast<float> (ystl::numeric_limits<short>::max ())));
+  }
 };
 
-class LightMeasure final : public Singleton <LightMeasure> {
+class LightMeasure final : public ystl::Singleton<LightMeasure> {
 private:
-   lightstyle_t m_lightstyle[MAX_LIGHTSTYLES] {};
-   uint32_t m_lightstyleValue[MAX_LIGHTSTYLEVALUE] {};
-   bool m_doAnimation = false;
+  lightstyle_t lightstyle_[MAX_LIGHTSTYLES] {};
+  uint32_t lightstyle_value_[MAX_LIGHTSTYLEVALUE] {};
+  bool do_animation_ = false;
 
-   Color m_point;
-   model_t *m_worldModel = nullptr;
-
-public:
-   LightMeasure () {
-      initializeLightstyles ();
-      m_point.reset ();
-   }
+  ystl::Color point_;
+  model_t *world_model_ = nullptr;
 
 public:
-   void initializeLightstyles ();
-   void animateLight ();
-   void updateLight (int style, char *value);
+  LightMeasure () {
+    InitializeLightstyles ();
+    point_.reset ();
+  }
 
-   float getLightLevel (const Vector &point);
-   float getSkyColor ();
+public:
+  void InitializeLightstyles ();
+  void AnimateLight ();
+  void UpdateLight (int style, char *value);
+
+  float GetLightLevel (const ystl::Vector &point);
+  float GetSkyColor ();
 
 private:
-   template <typename S, typename M> bool recursiveLightPoint (const M *node, const Vector &start, const Vector &end);
+  template <typename S, typename M> bool RecursiveLightPoint (const M *node, const ystl::Vector &start, const ystl::Vector &end);
+  template <typename S, typename M> static bool LightPointProc (LightMeasure *self, const ystl::Vector &start, const ystl::Vector &end);
 
 public:
-   void resetWorldModel () {
-      m_worldModel = nullptr;
-   }
+  void ResetWorldModel () {
+    world_model_ = nullptr;
+  }
 
-   void setWorldModel (model_t *model) {
-      if (m_worldModel) {
-         return;
-      }
-      m_worldModel = model;
-   }
+  void SetWorldModel (model_t *model) {
+    if (world_model_) {
+      return;
+    }
+    world_model_ = model;
+  }
 
-   model_t *getWorldModel () const {
-      return m_worldModel;
-   }
+  model_t *GetWorldModel () const {
+    return world_model_;
+  }
 
-   void enableAnimation (bool enable) {
-      m_doAnimation = enable;
-   }
+  void EnableAnimation (bool enable) {
+    do_animation_ = enable;
+  }
 };
 
-// define hash function for edict_t*
-CR_NAMESPACE_BEGIN
-
-template <> struct Hash <edict_t *> {
-   uint32_t operator () (const edict_t *key) const noexcept {
-      return Game::instance ().indexOfEntity (key);
-   }
+// tracked entity shape shared by both registries below. kept distinct types on purpose:
+// update cadence and consumer sets differ, so no common container
+template <typename Kind> struct TrackedEntity {
+  edict_t *ent {};
+  Kind kind {};
 };
 
-CR_NAMESPACE_END
+enum class EntityKind : uint8_t {
+  Pickup,
+  Hostage,
+  Button,
+  Csdm,
+  Monster,
+  Breakable
+};
+
+using InterestingEntity = TrackedEntity<EntityKind>;
+
+enum class GrenadeKind : uint8_t {
+  Flash,
+  Explosive,
+  Smoke,
+  Other
+};
+
+using ActiveGrenade = TrackedEntity<GrenadeKind>;
 
 // offload bot manager class from things it shouldn't do
-class GameState final : public Singleton <GameState> {
+class GameState final : public ystl::Singleton<GameState> {
 private:
-   bool m_bombPlanted {}; // is bomb planted ?
-   bool m_roundOver {}; // well, round is over>
-   bool m_resetHud {}; // reset HUD is called for some one
+  bool bomb_planted_ {}; // is bomb planted ?
+  bool round_over_ {}; // well, round is over>
+  bool reset_hud_ {}; // reset hud is called for some one
 
-   float m_timeBombPlanted {}; // time the bomb were planted
-   float m_timeRoundStart {}; // time round has started
-   float m_timeRoundEnd {}; // time round ended
-   float m_timeRoundMid {}; // middle point timestamp of a round
+  float time_bomb_planted_ {}; // time the bomb were planted
+  float time_round_start_ {}; // time round has started
+  float time_round_end_ {}; // time round ended
+  float time_round_mid_ {}; // middle point timestamp of a round
 
-   Vector m_bombOrigin {}; // stored bomb origin
+  ystl::Vector bomb_origin_ {}; // stored bomb origin
+  edict_t *bomb_entity_ {}; // stored bomb entity
 
-   Array <edict_t *> m_activeGrenades {}; // holds currently active grenades on the map
-   Array <edict_t *> m_interestingEntities {};  // holds currently interesting entities on the map
+  ystl::Array<ActiveGrenade> active_grenades_ {}; // holds currently active grenades on the map
+  ystl::Array<InterestingEntity> interesting_entities_ {}; // holds currently interesting entities on the map
 
-   IntervalTimer m_interestingEntitiesUpdateTime {}; // time to update interesting entities
-   IntervalTimer m_activeGrenadesUpdateTime {}; // time to update active grenades
+  bool has_breakables_ {}; // set by the sweep below, breakables change rarely
 
-public:
-   GameState () = default;
-   ~GameState () = default;
-
-public:
-   const Vector &getBombOrigin () const {
-      return m_bombOrigin;
-   }
-
-   bool isBombPlanted () const {
-      return m_bombPlanted;
-   }
-
-   float getTimeBombPlanted () const {
-      return m_timeBombPlanted;
-   }
-
-   float getRoundStartTime () const {
-      return m_timeRoundStart;
-   }
-
-   float getRoundMidTime () const {
-      return m_timeRoundMid;
-   }
-
-   float getRoundEndTime () const {
-      return m_timeRoundEnd;
-   }
-
-   bool isRoundOver () const {
-      return m_roundOver;
-   }
-
-   bool isResetHUD () const {
-      return m_resetHud;
-   }
-
-   void setResetHUD (bool resetHud) {
-      m_resetHud = resetHud;
-   }
-
-   void setRoundOver (bool roundOver) {
-      m_roundOver = roundOver;
-   }
-
-   const Array <edict_t *> &getActiveGrenades () {
-      return m_activeGrenades;
-   }
-
-   const Array <edict_t *> &getInterestingEntities () {
-      return m_interestingEntities;
-   }
-
-   bool hasActiveGrenades () const {
-      return !m_activeGrenades.empty ();
-   }
-
-   bool hasInterestingEntities () const {
-      return !m_interestingEntities.empty ();
-   }
+  ystl::IntervalTimer interesting_entities_update_time_ {}; // time to update interesting entities
+  ystl::IntervalTimer active_grenades_update_time_ {}; // time to update active grenades
 
 public:
-   float getBombTimeLeft () const;
+  GameState () = default;
+  ~GameState () = default;
 
-   void setBombPlanted (bool isPlanted);
-   void setBombOrigin (bool reset = false, const Vector &pos = nullptr);
-   void roundStart ();
-   void updateActiveGrenade ();
-   void updateInterestingEntities ();
+public:
+  const ystl::Vector &GetBombOrigin () const {
+    return bomb_origin_;
+  }
+
+  edict_t *GetBombEntity () const {
+    return bomb_entity_;
+  }
+
+  bool IsBombPlanted () const {
+    return bomb_planted_;
+  }
+
+  float GetTimeBombPlanted () const {
+    return time_bomb_planted_;
+  }
+
+  float GetRoundStartTime () const {
+    return time_round_start_;
+  }
+
+  float GetRoundMidTime () const {
+    return time_round_mid_;
+  }
+
+  float GetRoundEndTime () const {
+    return time_round_end_;
+  }
+
+  float GetRoundTimeLeft () const {
+    return time_round_end_ - Game::instance ().Time ();
+  }
+
+  bool IsRoundTimeLow (const float threshold = 30.0f) const {
+    return time_round_end_ - Game::instance ().Time () <= threshold;
+  }
+
+  bool IsRoundOver () const {
+    return round_over_;
+  }
+
+  bool IsResetHud () const {
+    return reset_hud_;
+  }
+
+  void SetResetHud (bool reset_hud) {
+    reset_hud_ = reset_hud;
+  }
+
+  void SetRoundOver (bool round_over) {
+    round_over_ = round_over;
+  }
+
+  const ystl::Array<ActiveGrenade> &GetActiveGrenades () {
+    return active_grenades_;
+  }
+
+  const ystl::Array<InterestingEntity> &GetInterestingEntities () {
+    return interesting_entities_;
+  }
+
+  bool HasActiveGrenades () const {
+    return !active_grenades_.empty ();
+  }
+
+  bool HasInterestingEntities () const {
+    return !interesting_entities_.empty ();
+  }
+
+  bool HasBreakables () const {
+    return has_breakables_;
+  }
+
+  void SetHasBreakables (bool has) {
+    has_breakables_ = has;
+  }
+
+public:
+  float GetBombTimeLeft () const;
+
+  void SetBombPlanted (bool is_planted);
+  void SetBombOrigin (bool reset = false, const ystl::Vector &pos = nullptr);
+  void RoundStart ();
+  void UpdateActiveGrenade ();
+  void UpdateInterestingEntities ();
+  bool IsEarlyRound (const float timestamp) const;
 };
 
 // sg detonation tracking
-class SGDetonateTrack final : public Singleton <SGDetonateTrack> {
+struct EdictHash {
+  uint32_t operator() (const edict_t *key) const noexcept {
+    return Game::instance ().IndexOfEntity (key);
+  }
+};
+
+class SGDetonateTrack final : public ystl::Singleton<SGDetonateTrack> {
 private:
-   HashMap <edict_t *, Vector> m_positions {};
+  ystl::HashMap<edict_t *, ystl::Vector, EdictHash> positions_ {};
 
 public:
-   SGDetonateTrack () = default;
-   ~SGDetonateTrack () = default;
+  SGDetonateTrack () = default;
+  ~SGDetonateTrack () = default;
 
 public:
-   void acquire (edict_t *ent, const Vector &pos) {
-      m_positions[ent] = pos;
-   }
+  void Acquire (edict_t *ent, const ystl::Vector &pos) {
+    positions_[ent] = pos;
+  }
 
-   const Vector &find (edict_t *ent) {
-      return m_positions[ent];
-   }
+  const ystl::Vector &Find (edict_t *ent) {
+    return positions_[ent];
+  }
 
-   bool has (edict_t *ent) const {
-      return m_positions.exists (ent);
-   }
+  bool Has (edict_t *ent) const {
+    return positions_.exists (ent);
+  }
 
-   void clear () {
-      m_positions.clear ();
-   }
+  void Clear () {
+    positions_.clear ();
+  }
 };
 
 // expose globals
-CR_EXPOSE_GLOBAL_SINGLETON (Game, game);
-CR_EXPOSE_GLOBAL_SINGLETON (GameState, gameState);
-CR_EXPOSE_GLOBAL_SINGLETON (LightMeasure, illum);
-CR_EXPOSE_GLOBAL_SINGLETON (SGDetonateTrack, sgtrack);
+YSTL_EXPOSE_GLOBAL_SINGLETON (Game, game);
+YSTL_EXPOSE_GLOBAL_SINGLETON (GameState, game_state);
+YSTL_EXPOSE_GLOBAL_SINGLETON (LightMeasure, illum);
+YSTL_EXPOSE_GLOBAL_SINGLETON (SGDetonateTrack, sgtrack);
+
+} // namespace bot

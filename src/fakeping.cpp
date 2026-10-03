@@ -1,128 +1,128 @@
 //
-// YaPB, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright © YaPB Project Developers <yapb@jeefo.net>.
+// YaPB, started from PODBot by Count Floyd
+// Maintained by YaPB Team <yapb@jeefo.net>
 //
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Unlicense
 //
 
 #include <yapb.h>
 
-ConVar cv_ping_base_min ("ping_base_min", "5", "Lower bound for base bot ping shown in the scoreboard upon creation.", true, 0.0f, 100.0f);
-ConVar cv_ping_base_max ("ping_base_max", "20", "Upper bound for base bot ping shown in the scoreboard upon creation.", true, 0.0f, 100.0f);
-ConVar cv_ping_count_real_players ("ping_count_real_players", "1", "Count player pings when calculating the average ping for bots. If not, a random ping is chosen for bots.");
-ConVar cv_ping_updater_interval ("ping_updater_interval", "1.25", "Interval at which the fake ping gets updated in the scoreboard.", true, 0.1f, 10.0f);
+namespace bot {
 
-bool BotFakePingManager::hasFeature () const {
-   return game.is (GameFlags::HasFakePings) && cv_show_latency.as <int> () >= 2;
+bool FakePingManager::HasFeature () const {
+  return game.Is (GameFlags::HasFakePings) && cv_show_latency.As<int> () >= 2;
 }
 
-void BotFakePingManager::reset (edict_t *to) {
+void FakePingManager::Reset (edict_t *to) {
 
-   // no reset if game isn't support them
-   if (!hasFeature ()) {
-      return;
-   }
+  // no reset if game isn't support them
+  if (!HasFeature ()) {
+    return;
+  }
 
-   for (const auto &client : util.getClients ()) {
-      if (!(client.flags & ClientFlags::Used) || game.isFakeClientEntity (client.ent)) {
-         continue;
+  for (const auto &client : clients) {
+    if (!client.IsUsed () || client.IsBot ()) {
+      continue;
+    }
+    pbm_.Start (client.ent);
+
+    pbm_.Write (1, PingBitMsg::Single);
+    pbm_.Write (game.IndexOfPlayer (to), PingBitMsg::PlayerID);
+    pbm_.Write (0, PingBitMsg::Ping);
+    pbm_.Write (0, PingBitMsg::Loss);
+
+    pbm_.Send ();
+    pbm_.Flush ();
+  }
+}
+
+void FakePingManager::SyncCalculate () {
+  int average_ping {};
+
+  if (cv_ping_count_real_players) {
+    int num_humans {};
+
+    for (const auto &client : clients) {
+      if (!client.IsUsed () || client.IsBot ()) {
+        continue;
       }
-      m_pbm.start (client.ent);
+      ++num_humans;
 
-      m_pbm.write (1, PingBitMsg::Single);
-      m_pbm.write (game.indexOfPlayer (to), PingBitMsg::PlayerID);
-      m_pbm.write (0, PingBitMsg::Ping);
-      m_pbm.write (0, PingBitMsg::Loss);
+      int ping {}, loss {};
+      engfuncs.pfnGetPlayerStats (client.ent, &ping, &loss);
 
-      m_pbm.send ();
-   }
-   m_pbm.flush ();
+      average_ping += ping > 0 && ping < 200 ? ping : RandomBase ();
+    }
+
+    if (num_humans > 0) {
+      average_ping /= num_humans;
+    }
+    else {
+      average_ping = RandomBase ();
+    }
+  }
+  else {
+    average_ping = RandomBase ();
+  }
+
+  for (auto &bot : bots) {
+    const auto diff = static_cast<int> (static_cast<float> (average_ping) * 0.2f);
+    const auto int_diff = static_cast<int> (bot.difficulty_);
+
+    // randomize bot ping
+    auto bot_ping =
+      static_cast<float> (bot.ping_base_ + ystl::rg (average_ping - diff, average_ping + diff) + ystl::rg (int_diff + 3, int_diff + 6));
+
+    if (bot_ping < 5.0f) {
+      bot_ping = ystl::rg (10.0f, 15.0f);
+    }
+    else if (bot_ping > 75.0f) {
+      bot_ping = ystl::rg (30.0f, 40.0f);
+    }
+    bot.ping_ = static_cast<int> (bot.Entindex () % 2 == 0 ? bot_ping * 0.25f : bot_ping * 0.5f);
+  }
 }
 
-void BotFakePingManager::syncCalculate () {
-   int averagePing {};
+void FakePingManager::Calculate () {
+  if (!HasFeature ()) {
+    return;
+  }
 
-   if (cv_ping_count_real_players) {
-      int numHumans {};
+  // throttle updating
+  if (!recalc_time_.elapsed ()) {
+    return;
+  }
+  RestartTimer ();
 
-      for (const auto &client : util.getClients ()) {
-         if (!(client.flags & ClientFlags::Used) || game.isFakeClientEntity (client.ent)) {
-            continue;
-         }
-         numHumans++;
-
-         int ping {}, loss {};
-         engfuncs.pfnGetPlayerStats (client.ent, &ping, &loss);
-
-         averagePing += ping > 0 && ping < 200 ? ping : randomBase ();
-      }
-
-      if (numHumans > 0) {
-         averagePing /= numHumans;
-      }
-      else {
-         averagePing = randomBase ();
-      }
-   }
-   else {
-      averagePing = randomBase ();
-   }
-
-   for (auto &bot : bots) {
-      const auto diff = static_cast <int> (static_cast <float> (averagePing) * 0.2f);
-
-      // randomize bot ping
-      auto botPing = static_cast <float> (bot->m_pingBase + rg (averagePing - diff, averagePing + diff) + rg (bot->m_difficulty + 3, bot->m_difficulty + 6));
-
-      if (botPing < 5.0f) {
-         botPing = rg (10.0f, 15.0f);
-      }
-      else if (botPing > 75.0f) {
-         botPing = rg (30.0f, 40.0f);
-      }
-      bot->m_ping = static_cast <int> (static_cast <float> (bot->entindex () % 2 == 0 ? botPing * 0.25f : botPing * 0.5f));
-   }
+  worker.Enqueue ([this] () {
+    SyncCalculate ();
+  });
 }
 
-void BotFakePingManager::calculate () {
-   if (!hasFeature ()) {
-      return;
-   }
+void FakePingManager::Emit (edict_t *ent) {
+  if (!HasFeature () || !game.IsPlayerEntity (ent)) {
+    return;
+  }
 
-   // throttle updating
-   if (!m_recalcTime.elapsed ()) {
-      return;
-   }
-   restartTimer ();
+  for (const auto &bot : bots) {
+    pbm_.Start (ent);
 
-   worker.enqueue ([this] () {
-      syncCalculate ();
-   });
+    pbm_.Write (1, PingBitMsg::Single);
+    pbm_.Write (bot.Entindex () - 1, PingBitMsg::PlayerID);
+    pbm_.Write (bot.ping_, PingBitMsg::Ping);
+    pbm_.Write (0, PingBitMsg::Loss);
+
+    pbm_.Send ();
+  }
+  pbm_.Flush ();
 }
 
-void BotFakePingManager::emit (edict_t *ent) {
-   if (!game.isPlayerEntity (ent)) {
-      return;
-   }
-
-   for (const auto &bot : bots) {
-      m_pbm.start (ent);
-
-      m_pbm.write (1, PingBitMsg::Single);
-      m_pbm.write (bot->entindex () - 1, PingBitMsg::PlayerID);
-      m_pbm.write (bot->m_ping, PingBitMsg::Ping);
-      m_pbm.write (0, PingBitMsg::Loss);
-
-      m_pbm.send ();
-   }
-   m_pbm.flush ();
+void FakePingManager::RestartTimer () {
+  recalc_time_.start (cv_ping_updater_interval.As<float> ());
 }
 
-void BotFakePingManager::restartTimer () {
-   m_recalcTime.start (cv_ping_updater_interval.as <float> ());
+int FakePingManager::RandomBase () const {
+  return ystl::rg (cv_ping_base_min.As<int> (), cv_ping_base_max.As<int> ());
 }
 
-int BotFakePingManager::randomBase () const {
-   return rg (cv_ping_base_min.as <int> (), cv_ping_base_max.as <int> ());
-}
-
+} // namespace bot

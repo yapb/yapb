@@ -1,293 +1,403 @@
 //
-// YaPB, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright © YaPB Project Developers <yapb@jeefo.net>.
+// YaPB, started from PODBot by Count Floyd
+// Maintained by YaPB Team <yapb@jeefo.net>
 //
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Unlicense
 //
 
 #pragma once
 
+namespace bot {
+
 const float kInfiniteHeuristic = 65535.0f; // max out heuristic value
 
 // a* route state
-CR_DECLARE_SCOPED_ENUM (RouteState,
-   Open = 0,
-   Closed,
-   New
-)
+enum class RouteState : int32_t {
+  Open = 0,
+  Closed,
+  New
+};
 
 // a * find path result
-CR_DECLARE_SCOPED_ENUM (AStarResult,
-   Success = 0,
-   Failed,
-   InternalError,
-   )
-
-   // node added
-   using NodeAdderFn = const Lambda <bool (int)> &;
-
-// route twin node
-template <typename HT> struct RouteTwin final {
-public:
-   int32_t index {};
-   HT heuristic {};
-
-   constexpr RouteTwin () = default;
-   ~RouteTwin () = default;
-
-public:
-   constexpr RouteTwin (const int32_t &ri, const HT &rh) : index (ri), heuristic (rh) {}
-
-public:
-   constexpr bool operator < (const RouteTwin &rhs) const {
-      return heuristic < rhs.heuristic;
-   }
-
-   constexpr bool operator > (const RouteTwin &rhs) const {
-      return heuristic > rhs.heuristic;
-   }
+enum class AStarResult : int32_t {
+  Success = 0,
+  Failed,
+  InternalError
 };
 
-// bot heuristic functions for astar planner
-class PlannerHeuristic final {
+// node added
+using NodeAdderFn = const ystl::Lambda<bool (int)> &;
+
+// a* heuristic strategy: pairs g and h so they can never be mismatched
+class PlannerHeuristic {
 public:
-   using Func = float (*) (int, int, int);
+  virtual ~PlannerHeuristic () = default;
 
-public:
-   // least kills and number of nodes to goal for a team
-   static float gfunctionKillsDist (int team, int currentIndex, int parentIndex);
+  // cost of moving from parent to current node, edgeDistance is the direct link distance
+  virtual float G (Team team, int current_index, int parent_index, int edge_distance) const = 0;
 
-   // least kills and number of nodes to goal for a team (when with hostage)
-   static float gfunctionKillsDistCTWithHostage (int team, int currentIndex, int parentIndex);
-
-   // least kills to goal for a team
-   static float gfunctionKills (int team, int currentIndex, int);
-
-   // least kills to goal for a team (when with hostage)
-   static float gfunctionKillsCTWithHostage (int team, int currentIndex, int parentIndex);
-
-   // least distance for a team
-   static float gfunctionPathDist (int, int currentIndex, int parentIndex);
-
-   // least distance for a team (when with hostage)
-   static float gfunctionPathDistWithHostage (int, int currentIndex, int parentIndex);
-
-public:
-   // square distance heuristic
-   static float hfunctionPathDist (int index, int, int goalIndex);
-
-   // square distance heuristic with hostages
-   static float hfunctionPathDistWithHostage (int index, int, int goalIndex);
-
-   // none heuristic
-   static float hfunctionNone (int index, int, int goalIndex);
+  // estimated cost from a node to the goal
+  virtual float H (int index, int goal_index) const = 0;
 };
 
-// A* algorithm for bots
-class AStarAlgo final : public NonCopyable {
+// route variety, random heuristics
+class PlannerHeuristicDiversity final : public PlannerHeuristic {
 public:
-   using HeuristicFn = PlannerHeuristic::Func;
+  float G (Team team, int current_index, int parent_index, int edge_distance) const override;
+  float H (int index, int goal_index) const override;
+};
 
+// shortest path
+class PlannerHeuristicFast final : public PlannerHeuristic {
 public:
-   struct Route {
-      float g {}, f {};
-      int parent { kInvalidNodeIndex };
-      RouteState state { RouteState::New };
-   };
+  float G (Team team, int current_index, int parent_index, int edge_distance) const override;
+  float H (int index, int goal_index) const override;
+};
+
+// shortest path, hostage-aware
+class PlannerHeuristicFastHostage final : public PlannerHeuristic {
+public:
+  float G (Team team, int current_index, int parent_index, int edge_distance) const override;
+  float H (int index, int goal_index) const override;
+};
+
+// least dangerous path
+class PlannerHeuristicOptimal final : public PlannerHeuristic {
+public:
+  float G (Team team, int current_index, int parent_index, int edge_distance) const override;
+  float H (int index, int goal_index) const override;
+};
+
+// least dangerous path, hostage-aware
+class PlannerHeuristicOptimalHostage final : public PlannerHeuristic {
+public:
+  float G (Team team, int current_index, int parent_index, int edge_distance) const override;
+  float H (int index, int goal_index) const override;
+};
+
+// kill-weighted path
+class PlannerHeuristicSafe final : public PlannerHeuristic {
+public:
+  float G (Team team, int current_index, int parent_index, int edge_distance) const override;
+  float H (int index, int goal_index) const override;
+};
+
+// kill-weighted path, hostage-aware
+class PlannerHeuristicSafeHostage final : public PlannerHeuristic {
+public:
+  float G (Team team, int current_index, int parent_index, int edge_distance) const override;
+  float H (int index, int goal_index) const override;
+};
+
+// built-in heuristic strategy instances
+namespace plannerHeuristics {
+inline const PlannerHeuristicDiversity diversity {};
+inline const PlannerHeuristicFast fast {};
+inline const PlannerHeuristicFastHostage fast_hostage {};
+inline const PlannerHeuristicOptimal optimal {};
+inline const PlannerHeuristicOptimalHostage optimal_hostage {};
+inline const PlannerHeuristicSafe safe {};
+inline const PlannerHeuristicSafeHostage safe_hostage {};
+} // namespace plannerHeuristics
+
+// a* algorithm for bots
+class AStarAlgo final : public ystl::NonCopyable {
+public:
+  struct Route {
+    float g {}, f {};
+    int parent { kInvalidNodeIndex };
+    uint32_t epoch {}; // search stamp, zero means never touched
+    RouteState state { RouteState::New };
+  };
 
 private:
-   BinaryHeap <RouteTwin <float>> m_routeQue {};
-   Array <Route> m_routes {};
+  // open list entry
+  struct OpenNode {
+    int32_t index {};
+    float f {};
 
-   HeuristicFn m_hcalc {};
-   HeuristicFn m_gcalc {};
+    OpenNode () = default;
+    OpenNode (const int32_t index, const float f) : index (index), f (f) {}
 
-   int m_length {};
-
-   Array <int> m_constructedPath {};
-   Array <int> m_smoothedPath {};
+    bool operator< (const OpenNode &rhs) const {
+      return f < rhs.f;
+    }
+  };
 
 private:
-   // clears the currently built route
-   void clearRoute ();
+  ystl::BinaryHeap<OpenNode> route_que_ {};
+  ystl::Array<Route> routes_ {};
 
-   // do a post-smoothing after a* finished constructing path
-   void postSmooth (NodeAdderFn onAddedNode);
+  const PlannerHeuristic *heuristic_ {}; // g/h strategy, set by the caller
 
-public:
-   explicit AStarAlgo (const int length) {
-      init (length);
-   }
+  uint32_t epoch_ {}; // bumped on every find (), stale route cells are lazily reset
+  int size_ {};
 
-   AStarAlgo () = default;
-   ~AStarAlgo () = default;
+  ystl::Array<int> constructed_path_ {};
+  ystl::Array<int> smoothed_path_ {};
 
-public:
-   // do the pathfinding
-   AStarResult find (int botTeam, int srcIndex, int destIndex, NodeAdderFn onAddedNode);
+private:
+  // clears the currently built route
+  void ClearRoute ();
 
-public:
-   // initialize astar with valid path length
-   void init (const int length) {
-      m_length = length;
-      clearRoute ();
+  // get a route cell for the current search, lazily resetting stale ones
+  Route *RouteAt (const int index) {
+    auto route = &routes_[index];
 
-      m_constructedPath.reserve (getMaxLength ());
-      m_smoothedPath.reserve (getMaxLength ());
+    if (route->epoch != epoch_) {
+      route->epoch = epoch_;
+      route->g = route->f = 0.0f;
+      route->parent = kInvalidNodeIndex;
+      route->state = RouteState::New;
+    }
+    return route;
+  }
 
-      m_constructedPath.shrink ();
-      m_smoothedPath.shrink ();
-   }
-
-   // set the g heuristic
-   void setG (HeuristicFn fn) {
-      m_gcalc = fn;
-   }
-
-   // set the h heuristic
-   void setH (HeuristicFn fn) {
-      m_hcalc = fn;
-   }
-
-   // get route max length, route length should not be larger than half of map nodes
-   size_t getMaxLength () const {
-      return m_length / 2 + kMaxNodes / 256;
-   }
+  // do a post-smoothing after a* finished constructing path
+  void PostSmooth (NodeAdderFn on_added_node);
 
 public:
-   // can the node can be skipped?
-   static bool cantSkipNode (const int a, const int b, bool skipVisCheck = false);
+  explicit AStarAlgo (const int length) {
+    Init (length);
+  }
+
+  AStarAlgo () = default;
+  ~AStarAlgo () = default;
+
+public:
+  // do the pathfinding
+  AStarResult Find (Team bot_team, int src_index, int dest_index, NodeAdderFn on_added_node);
+
+public:
+  // initialize astar with valid path length
+  void Init (const int length) {
+    size_ = length;
+    ClearRoute ();
+
+    route_que_.reserve (GetMaxLength ());
+    constructed_path_.reserve (GetMaxLength ());
+    smoothed_path_.reserve (GetMaxLength ());
+
+    constructed_path_.shrink ();
+    smoothed_path_.shrink ();
+  }
+
+  // set the g/h heuristic strategy
+  void SetHeuristic (const PlannerHeuristic *heuristic) {
+    heuristic_ = heuristic;
+  }
+
+  // get route max length, route length should not be larger than half of map nodes
+  size_t GetMaxLength () const {
+    return size_ / 2 + kMaxNodes / 256;
+  }
+
+public:
+  // can the node can be skipped?
+  static bool CantSkipNode (const int a, const int b, bool skip_vis_check = false);
 };
 
 // floyd-warshall shortest path algorithm
 class FloydWarshallAlgo final {
 private:
-   int m_length {};
+  int size_ {};
+  ystl::Atomic<bool> rebuilding_ {}; // matrix is being rebuilt on worker thread, unusable for reads
 
 public:
+  // infinity value for floyd-warshall (max int16_t - 1 to prevent overflow on addition)
+  static constexpr int16_t kInfinity = ystl::numeric_limits<int16_t>::max () - 1;
 
-   // floyd-warshall matrices
-   struct Matrix {
-      int16_t index { kInvalidNodeIndex };
-      int16_t dist { SHRT_MAX };
+public:
+  // floyd-warshall matrices
+  struct Matrix {
+    int16_t index { kInvalidNodeIndex };
+    int16_t dist { kInfinity };
 
-   public:
-      Matrix () = default;
-      ~Matrix () = default;
+  public:
+    Matrix () = default;
+    ~Matrix () = default;
 
-   public:
-      Matrix (const int index, const int dist) : index (static_cast <int16_t> (index)), dist (static_cast <int16_t> (dist)) {}
-   };
+  public:
+    Matrix (const int index, const int dist) : index (static_cast<int16_t> (index)), dist (static_cast<int16_t> (dist)) {}
+  };
 
 private:
-   SmallArray <Matrix> m_matrix {};
+  ystl::Array<Matrix, ReservePolicy::Proportional> matrix_ {};
 
 public:
-   FloydWarshallAlgo () = default;
-   ~FloydWarshallAlgo () = default;
+  FloydWarshallAlgo () = default;
+  ~FloydWarshallAlgo () = default;
+
+public:
+  // is matrix being rebuilt on worker thread ?
+  bool IsRebuilding () const {
+    return rebuilding_.load (ystl::MemoryOrder::acquire);
+  }
 
 private:
-   // create floyd matrics
-   void syncRebuild ();
+  // create floyd matrics
+  void SyncRebuild ();
 
-   // async rebuild
-   void rebuild ();
-
-public:
-   // load matrices from disk
-   bool load ();
-
-   // flush matrices to disk, so we will not rebuild them on load same map
-   void save () const;
-
-   // do the pathfinding
-   bool find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, int *pathDistance = nullptr);
+  // async rebuild
+  void Rebuild ();
 
 public:
-   // distance between two nodes with pathfinder
-   int dist (int srcIndex, int destIndex) {
-      return static_cast <int> ((m_matrix.data () + (srcIndex * m_length) + destIndex)->dist);
-   }
+  // load matrices from disk
+  bool Load ();
+
+  // flush matrices to disk, so we will not rebuild them on load same map
+  void Save () const;
+
+  // do the pathfinding
+  bool Find (int src_index, int dest_index, NodeAdderFn on_added_node, int *path_distance = nullptr);
+
+public:
+  // flat matrix cell accessor
+  Matrix &Cell (const int src_index, const int dest_index) {
+    return *(matrix_.data () + (src_index * size_) + dest_index);
+  }
+
+  const Matrix &Cell (const int src_index, const int dest_index) const {
+    return *(matrix_.data () + (src_index * size_) + dest_index);
+  }
+
+public:
+  // distance between two nodes with pathfinder
+  int Dist (int src_index, int dest_index) {
+    // validate input indices to prevent out-of-bounds access
+    if (src_index < 0 || src_index >= size_ || dest_index < 0 || dest_index >= size_) {
+      return kInfinity;
+    }
+    return static_cast<int> (Cell (src_index, dest_index).dist);
+  }
+
+  // contiguous row for a source, valid until next rebuild
+  const Matrix *Row (const int src_index) const {
+    if (src_index < 0 || src_index >= size_) {
+      return nullptr;
+    }
+    return matrix_.data () + (src_index * size_);
+  }
+};
+
+YSTL_LE_FIELDS (FloydWarshallAlgo::Matrix, index, dist);
+
+// non-owning view over a per-source distance table (dijkstra flat ints or floyd matrix row)
+class DistanceTable final {
+private:
+  const FloydWarshallAlgo::Matrix *cells_ {};
+  const int *ints_ {};
+  int size_ {};
+
+public:
+  DistanceTable () = default;
+  DistanceTable (const int *ints, const int length) : ints_ (ints), size_ (length) {}
+  DistanceTable (const FloydWarshallAlgo::Matrix *cells, const int length) : cells_ (cells), size_ (length) {}
+
+public:
+  int At (const int index) const {
+    return cells_ != nullptr ? static_cast<int> (cells_[index].dist) : ints_[index];
+  }
+
+  int Length () const {
+    return size_;
+  }
+
+  explicit operator bool () const {
+    return size_ > 0;
+  }
 };
 
 // dijkstra shortest path algorithm
 class DijkstraAlgo final {
 private:
-   mutable Mutex m_cs {};
+  using Route = ystl::Twin<int, int>;
 
 private:
-   using Route = Twin <int, int>;
+  ystl::Array<int> distance_ {};
+  ystl::Array<int> parent_ {};
+  ystl::Array<int> scratch_ {};
+  ystl::Array<int> distance_all0_ {}; // distAll output slot 0, kept apart from find () scratch
+  ystl::Array<int> distance_all1_ {}; // distAll output slot 1
 
-private:
-   Array <int> m_distance {};
-   Array <int> m_parent {};
-
-   BinaryHeap <Route> m_queue {};
-   int m_length {};
-
-public:
-   DijkstraAlgo () = default;
-   ~DijkstraAlgo () = default;
+  ystl::BinaryHeap<Route> queue_ {};
+  int size_ {};
 
 public:
-   // initialize dijkstra with valid path length
-   void init (const int length);
+  DijkstraAlgo () = default;
+  ~DijkstraAlgo () = default;
 
-   // do the pathfinding
-   bool find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, int *pathDistance = nullptr);
+public:
+  // initialize dijkstra with valid path length
+  void Init (const int length);
 
-   // distance between two nodes with pathfinder
-   int dist (int srcIndex, int destIndex);
+  // do the pathfinding
+  bool Find (int src_index, int dest_index, NodeAdderFn on_added_node, int *path_distance = nullptr);
+
+  // distances from src to every node in a single pass (wall-aware, one search instead of one per node)
+  bool DistAll (int src_index, DistanceTable &distances, int slot);
+
+  // distance between two nodes with pathfinder
+  int Dist (int src_index, int dest_index);
 };
 
 // the bot path planner
-class PathPlanner : public Singleton <PathPlanner> {
+class PathPlanner : public ystl::Singleton<PathPlanner> {
 private:
-   UniquePtr <DijkstraAlgo> m_dijkstra {};
-   UniquePtr <FloydWarshallAlgo> m_floyd {};
-   bool m_memoryLimitHit {};
-   bool m_pathsCheckFailed {};
+  ystl::UniquePtr<DijkstraAlgo> dijkstra_ {};
+  ystl::UniquePtr<FloydWarshallAlgo> floyd_ {};
+  bool memory_limit_hit_ {};
+  bool paths_check_failed_ {};
 
 public:
-   PathPlanner ();
-   ~PathPlanner () = default;
+  PathPlanner ();
+  ~PathPlanner () = default;
 
 public:
-   // initialize all planners
-   void init ();
+  // initialize all planners
+  void Init ();
 
-   // has real path distance (instead  of distance2d) ?
-   bool hasRealPathDistance () const;
-
-public:
-   // get the dijkstra algo
-   decltype (auto) getDijkstra () {
-      return m_dijkstra.get ();
-   }
-
-   // get the floyd algo
-   decltype (auto) getFloydWarshall () {
-      return m_floyd.get ();
-   }
+  // has real path distance (instead  of distance2d) ?
+  bool HasRealPathDistance () const;
 
 public:
-   bool isPathsCheckFailed () const {
-      return m_pathsCheckFailed;
-   }
+  // get the dijkstra algo
+  decltype (auto) GetDijkstra () {
+    return dijkstra_.get ();
+  }
 
-   void setPathsCheckFailed (const bool value) {
-      m_pathsCheckFailed = value;
-   }
+  // get the floyd algo
+  decltype (auto) GetFloydWarshall () {
+    return floyd_.get ();
+  }
 
 public:
-   // do the pathfinding
-   bool find (int srcIndex, int destIndex, NodeAdderFn onAddedNode, int *pathDistance = nullptr);
+  bool IsPathsCheckFailed () const {
+    return paths_check_failed_;
+  }
 
-   // distance between two nodes with pathfinder
-   float dist (int srcIndex, int destIndex);
+  bool IsMemoryLimitHit () const {
+    return memory_limit_hit_;
+  }
 
-   // get the precise distanace regardless of cvar
-   float preciseDistance (int srcIndex, int destIndex);
+  void SetPathsCheckFailed (const bool value) {
+    paths_check_failed_ = value;
+  }
+
+public:
+  // do the pathfinding
+  bool Find (int src_index, int dest_index, NodeAdderFn on_added_node, int *path_distance = nullptr);
+
+  // distances from src to every node in a single pass (one dijkstra / one floyd row)
+  bool DistAll (int src_index, DistanceTable &distances, int slot);
+
+  // distance between two nodes with pathfinder
+  float Dist (int src_index, int dest_index);
+
+  // get the precise distanace regardless of cvar
+  float PreciseDistance (int src_index, int dest_index);
 };
 
-CR_EXPOSE_GLOBAL_SINGLETON (PathPlanner, planner);
+YSTL_EXPOSE_GLOBAL_SINGLETON (PathPlanner, planner);
+
+} // namespace bot

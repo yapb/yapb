@@ -1,0 +1,7 @@
+; Undecorated stdcall export alias for 32-bit Windows builds with zig.
+; zig's built-in COFF linker has no --kill-at, so the engine entry point
+; would otherwise be exported as GiveFnptrsToDll@8 and HLDS/Metamod
+; (GetProcAddress("GiveFnptrsToDll")) would fail to find it.
+; Mirrors the MSVC /EXPORT pragma in src/linkage.cpp.
+EXPORTS
+	GiveFnptrsToDll=GiveFnptrsToDll@8 @1

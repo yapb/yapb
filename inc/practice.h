@@ -1,132 +1,148 @@
 //
-// YaPB, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright © YaPB Project Developers <yapb@jeefo.net>.
+// YaPB, started from PODBot by Count Floyd
+// Maintained by YaPB Team <yapb@jeefo.net>
 //
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Unlicense
 //
 
 #pragma once
 
+// forward declarations
+namespace bot {
+
+class Bot;
+
 // limits for storing practice data
-CR_DECLARE_SCOPED_ENUM_TYPE (PracticeLimit, int32_t,
-   Goal = 2040,
-   Damage = 2040
-);
+namespace PracticeLimit {
+constexpr uint16_t kGoal = 2040;
+constexpr uint16_t kDamage = 2040;
+}
 
-// storage for from, to, team
-class DangerStorage final {
-protected:
-   uint16_t data[3] {};
-
+// hybrid storage: dense diagonal for hot path, sparse map for the rest
+class Practice final : public ystl::Singleton<Practice> {
 public:
-   constexpr DangerStorage () = default;
+  // experience cell
+  struct Cell {
+    uint16_t damage {};
+    uint16_t value {};
+    uint16_t index { static_cast<uint16_t> (kInvalidNodeIndex) };
 
-public:
-   constexpr DangerStorage (const int32_t &a, const int32_t &b, const int32_t &c) :
-      data { static_cast <uint16_t> (a), static_cast <uint16_t> (b), static_cast <uint16_t> (c) } {}
+  public:
+    Cell () = default;
+    ~Cell () = default;
 
-public:
-   constexpr bool operator == (const DangerStorage &rhs) const {
-      return rhs.data[2] == data[2] && rhs.data[1] == data[1] && rhs.data[0] == data[0];
-   }
+  public:
+    Cell (uint16_t d, uint16_t v, uint16_t i) : damage (d), value (v), index (i) {}
 
-   constexpr bool operator != (const DangerStorage &rhs) const {
-      return !operator == (rhs);
-   }
+  public:
+    bool IsDefault () const noexcept {
+      return damage == 0 && value == 0 && index == static_cast<uint16_t> (kInvalidNodeIndex);
+    }
+  };
 
-public:
-   // fnv1a for 3d vector hash
-   constexpr uint32_t hash () const {
-      constexpr uint32_t prime = 16777619u;
-      constexpr uint32_t seed = 2166136261u;
-
-      uint32_t hash = seed;
-
-      for (const auto &key : data) {
-         hash = (hash * prime) ^ key;
-      }
-      return hash;
-   }
-};
-
-// define hash function for hash map
-CR_NAMESPACE_BEGIN
-
-template <> struct Hash <DangerStorage> {
-   uint32_t operator () (const DangerStorage &key) const noexcept {
-      return key.hash ();
-   }
-};
-
-CR_NAMESPACE_END
-
-class BotPractice final : public Singleton <BotPractice> {
-public:
-   // collected data
-   struct PracticeData {
-      int16_t damage {}, value {};
-      int16_t index { kInvalidNodeIndex };
-   };
-
-   // used to save-restore practice data
-   struct DangerSaveRestore {
-      DangerStorage danger {};
-      PracticeData data {};
-
-   public:
-      DangerSaveRestore () = default;
-
-   public:
-      DangerSaveRestore (const DangerStorage &ds, const PracticeData &pd) : danger (ds), data (pd) {}
-   };
+  // sparse disk entry (v6)
+  struct Entry {
+    uint16_t team {};
+    uint16_t src {};
+    uint16_t dst {};
+    Cell cell {};
+  };
 
 private:
-   HashMap <DangerStorage, PracticeData> m_data {};
-   int32_t m_teamHighestDamage[kGameTeamNum] {};
+  ystl::Array<Cell> diag_ {}; // hot diagonal cells [team * length + node]
+  ystl::HashMap<uint32_t, Cell> sparse_ {}; // off-diagonal cells only
 
-   // avoid concurrent access to practice
-   mutable Mutex m_damageUpdateLock {};
+  ystl::FixedArray<uint16_t, ystl::to_underlying (Team::Num)> team_damage_ {};
 
-public:
-   BotPractice () = default;
-   ~BotPractice () = default;
+  int32_t size_ {}; // current graph size
+  bool initialized_ {}; // storage initialized flag
 
-private:
-   bool exists (int32_t team, int32_t start, int32_t goal) const {
-      return m_data.exists ({ start, goal, team });
-   }
-   void syncUpdate ();
-
-public:
-   int32_t getIndex (int32_t team, int32_t start, int32_t goal);
-   void setIndex (int32_t team, int32_t start, int32_t goal, int32_t value);
-
-   int32_t getValue (int32_t team, int32_t start, int32_t goal);
-   void setValue (int32_t team, int32_t start, int32_t goal, int32_t value);
-
-   int32_t getDamage (int32_t team, int32_t start, int32_t goal);
-   void setDamage (int32_t team, int32_t start, int32_t goal, int32_t value);
-
-   // interlocked get damage
-   float getDamageEx (int32_t team, int32_t start, int32_t goal, bool addTeamHighestDamage);
-
-public:
-   void update ();
-   void load ();
-   void save ();
+  ystl::Atomic<bool> busy_ {}; // storage is being updated/loaded on worker thread
 
 private:
-   void syncLoad ();
+  // is storage being updated on worker thread ?
+  bool Busy () const noexcept {
+    return busy_.load (ystl::MemoryOrder::acquire);
+  }
+
+private:
+  // flat diagonal position
+  size_t DiagPos (Team team, int src) const noexcept {
+    return static_cast<size_t> (ystl::to_underlying (team)) * static_cast<size_t> (size_) + static_cast<size_t> (src);
+  }
+
+  // sparse key for off-diagonal cells
+  uint32_t SparseKey (Team team, int src, int dst) const noexcept {
+    const auto n = static_cast<uint32_t> (size_);
+    return (static_cast<uint32_t> (ystl::to_underlying (team)) * n + static_cast<uint32_t> (src)) * n + static_cast<uint32_t> (dst);
+  }
+
+  // check bounds
+  bool InBounds (int src, int dst) const noexcept {
+    return src >= 0 && src < size_ && dst >= 0 && dst < size_;
+  }
+
+  // validate team and bounds (combines common checks)
+  bool Valid (Team team, int src, int dst) const noexcept {
+    return (team == Team::Terrorist || team == Team::CT) && InBounds (src, dst);
+  }
 
 public:
-   template <typename U = int32_t> U getHighestDamageForTeam (int32_t team) const {
-      return static_cast <U> (cr::max (1, m_teamHighestDamage[team]));
-   }
+  Practice () = default;
+  ~Practice () = default;
 
-   void setHighestDamageForTeam (int32_t team, int32_t value) {
-      m_teamHighestDamage[team] = value;
-   }
+private:
+  // invalid index as uint16_t for comparisons
+  static constexpr uint16_t kInvalidIndex16 = static_cast<uint16_t> (kInvalidNodeIndex);
+
+  // initialize storage for given graph size
+  void Initialize () noexcept;
+
+  void SyncUpdate ();
+  void SyncLoad ();
+
+public:
+  int32_t GetIndex (Team team, int32_t start, int32_t goal) noexcept;
+  void SetIndex (Team team, int32_t start, int32_t goal, int32_t value) noexcept;
+
+  int32_t GetValue (Team team, int32_t start, int32_t goal) const noexcept;
+  void SetValue (Team team, int32_t start, int32_t goal, int32_t value) noexcept;
+
+  int32_t GetDamage (Team team, int32_t start, int32_t goal) const noexcept;
+  void SetDamage (Team team, int32_t start, int32_t goal, int32_t value) noexcept;
+
+  // get damage with possibility to get highest team damage
+  float GetDamageEx (Team team, int32_t start, int32_t goal, bool add_team_highest_damage) noexcept;
+
+public:
+  // update practice damage/value tracking (called when bot takes damage)
+  void UpdateValue (Bot *bot, int damage);
+  void UpdateDamage (Bot *bot, edict_t *attacker, int damage);
+
+  void Update ();
+  void Load ();
+  void Save ();
+
+public:
+  template <typename U = int32_t> U GetTeamDamage (Team team) const {
+    if (Busy ()) [[unlikely]] {
+      return static_cast<U> (1);
+    }
+    return static_cast<U> (ystl::max (1, static_cast<int32_t> (team_damage_[team])));
+  }
+
+  void SetTeamDamage (Team team, int32_t value) {
+    if (Busy ()) [[unlikely]] {
+      return;
+    }
+    team_damage_[team] = static_cast<uint16_t> (value);
+  }
 };
+
+YSTL_LE_FIELDS (Practice::Cell, damage, value, index);
+YSTL_LE_FIELDS (Practice::Entry, team, src, dst, cell);
 
 // expose global
-CR_EXPOSE_GLOBAL_SINGLETON (BotPractice, practice);
+YSTL_EXPOSE_GLOBAL_SINGLETON (Practice, practice);
+
+} // namespace bot

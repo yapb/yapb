@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -19,63 +19,92 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\ext\crlib\crlib\array.h" />
-    <ClInclude Include="..\ext\crlib\crlib\basic.h" />
-    <ClInclude Include="..\ext\crlib\crlib\binheap.h" />
-    <ClInclude Include="..\ext\crlib\crlib\color.h" />
-    <ClInclude Include="..\ext\crlib\crlib\cpuflags.h" />
-    <ClInclude Include="..\ext\crlib\crlib\crlib.h" />
-    <ClInclude Include="..\ext\crlib\crlib\deque.h" />
-    <ClInclude Include="..\ext\crlib\crlib\detour.h" />
-    <ClInclude Include="..\ext\crlib\crlib\files.h" />
-    <ClInclude Include="..\ext\crlib\crlib\hashmap.h" />
-    <ClInclude Include="..\ext\crlib\crlib\http.h" />
-    <ClInclude Include="..\ext\crlib\crlib\lambda.h" />
-    <ClInclude Include="..\ext\crlib\crlib\library.h" />
-    <ClInclude Include="..\ext\crlib\crlib\logger.h" />
-    <ClInclude Include="..\ext\crlib\crlib\mathlib.h" />
-    <ClInclude Include="..\ext\crlib\crlib\memory.h" />
-    <ClInclude Include="..\ext\crlib\crlib\movable.h" />
-    <ClInclude Include="..\ext\crlib\crlib\override.h" />
-    <ClInclude Include="..\ext\crlib\crlib\platform.h" />
-    <ClInclude Include="..\ext\crlib\crlib\random.h" />
-    <ClInclude Include="..\ext\crlib\crlib\simd.h" />
-    <ClInclude Include="..\ext\crlib\crlib\simd\neon.h" />
-    <ClInclude Include="..\ext\crlib\crlib\simd\sse2.h" />
-    <ClInclude Include="..\ext\crlib\crlib\simd\sse2neon.h" />
-    <ClInclude Include="..\ext\crlib\crlib\string.h" />
-    <ClInclude Include="..\ext\crlib\crlib\thread.h" />
-    <ClInclude Include="..\ext\crlib\crlib\timers.h" />
-    <ClInclude Include="..\ext\crlib\crlib\traits.h" />
-    <ClInclude Include="..\ext\crlib\crlib\twin.h" />
-    <ClInclude Include="..\ext\crlib\crlib\ulz.h" />
-    <ClInclude Include="..\ext\crlib\crlib\uniqueptr.h" />
-    <ClInclude Include="..\ext\crlib\crlib\vector.h" />
-    <ClInclude Include="..\ext\crlib\crlib\wavehelper.h" />
+    <ClInclude Include="..\ext\ystl\ystl\algorithm.h" />
+    <ClInclude Include="..\ext\ystl\ystl\array.h" />
+    <ClInclude Include="..\ext\ystl\ystl\atomic.h" />
+    <ClInclude Include="..\ext\ystl\ystl\binheap.h" />
+    <ClInclude Include="..\ext\ystl\ystl\color.h" />
+    <ClInclude Include="..\ext\ystl\ystl\confparse.h" />
+    <ClInclude Include="..\ext\ystl\ystl\cpuflags.h" />
+    <ClInclude Include="..\ext\ystl\ystl\ystl.h" />
+    <ClInclude Include="..\ext\ystl\ystl\deque.h" />
+    <ClInclude Include="..\ext\ystl\ystl\detour.h" />
+    <ClInclude Include="..\ext\ystl\ystl\endian.h" />
+    <ClInclude Include="..\ext\ystl\ystl\files.h" />
+    <ClInclude Include="..\ext\ystl\ystl\fixedarray.h" />
+    <ClInclude Include="..\ext\ystl\ystl\flags.h" />
+    <ClInclude Include="..\ext\ystl\ystl\hashmap.h" />
+    <ClInclude Include="..\ext\ystl\ystl\http.h" />
+    <ClInclude Include="..\ext\ystl\ystl\lambda.h" />
+    <ClInclude Include="..\ext\ystl\ystl\library.h" />
+    <ClInclude Include="..\ext\ystl\ystl\logger.h" />
+    <ClInclude Include="..\ext\ystl\ystl\mathlib.h" />
+    <ClInclude Include="..\ext\ystl\ystl\memory.h" />
+    <ClInclude Include="..\ext\ystl\ystl\memory_debugger.h" />
+    <ClInclude Include="..\ext\ystl\ystl\movable.h" />
+    <ClInclude Include="..\ext\ystl\ystl\optional.h" />
+    <ClInclude Include="..\ext\ystl\ystl\optparse.h" />
+    <ClInclude Include="..\ext\ystl\ystl\memory_override.h" />
+    <ClInclude Include="..\ext\ystl\ystl\platform.h" />
+    <ClInclude Include="..\ext\ystl\ystl\random.h" />
+    <ClInclude Include="..\ext\ystl\ystl\simd.h" />
+    <ClInclude Include="..\ext\ystl\ystl\simd\neon.h" />
+    <ClInclude Include="..\ext\ystl\ystl\simd\sse2.h" />
+    <ClInclude Include="..\ext\ystl\ystl\simd\rvv.h" />
+    <ClInclude Include="..\ext\ystl\ystl\singleton.h" />
+    <ClInclude Include="..\ext\ystl\ystl\sort.h" />
+    <ClInclude Include="..\ext\ystl\ystl\span.h" />
+    <ClInclude Include="..\ext\ystl\ystl\string.h" />
+    <ClInclude Include="..\ext\ystl\ystl\thread.h" />
+    <ClInclude Include="..\ext\ystl\ystl\timers.h" />
+    <ClInclude Include="..\ext\ystl\ystl\tokenizer.h" />
+    <ClInclude Include="..\ext\ystl\ystl\traits.h" />
+    <ClInclude Include="..\ext\ystl\ystl\tuple.h" />
+    <ClInclude Include="..\ext\ystl\ystl\twin.h" />
+    <ClInclude Include="..\ext\ystl\ystl\ulz.h" />
+    <ClInclude Include="..\ext\ystl\ystl\uniqueptr.h" />
+    <ClInclude Include="..\ext\ystl\ystl\utf8tools.h" />
+    <ClInclude Include="..\ext\ystl\ystl\utility.h" />
+    <ClInclude Include="..\ext\ystl\ystl\vector.h" />
+    <ClInclude Include="..\ext\ystl\ystl\wavehelper.h" />
     <ClInclude Include="..\ext\linkage\linkage\goldsrc.h" />
     <ClInclude Include="..\ext\linkage\linkage\metamod.h" />
     <ClInclude Include="..\ext\linkage\linkage\physint.h" />
+    <ClInclude Include="..\ext\linkage\linkage\rehlds_api.h" />
     <ClInclude Include="..\inc\analyze.h" />
+    <ClInclude Include="..\inc\behavior.h" />
+    <ClInclude Include="..\inc\buying.h" />
     <ClInclude Include="..\inc\chatlib.h" />
+    <ClInclude Include="..\inc\clients.h" />
+    <ClInclude Include="..\inc\combat.h" />
     <ClInclude Include="..\inc\config.h" />
     <ClInclude Include="..\inc\constant.h" />
     <ClInclude Include="..\inc\control.h" />
+    <ClInclude Include="..\inc\cvars.h" />
+    <ClInclude Include="..\inc\debug.h" />
     <ClInclude Include="..\inc\engine.h" />
     <ClInclude Include="..\inc\fakeping.h" />
+    <ClInclude Include="..\inc\funmode.h" />
     <ClInclude Include="..\inc\graph.h" />
     <ClInclude Include="..\inc\hooks.h" />
     <ClInclude Include="..\inc\manager.h" />
     <ClInclude Include="..\inc\message.h" />
     <ClInclude Include="..\inc\module.h" />
+    <ClInclude Include="..\inc\navigate.h" />
     <ClInclude Include="..\inc\planner.h" />
     <ClInclude Include="..\inc\practice.h" />
     <ClInclude Include="..\inc\product.h" />
+    <ClInclude Include="..\inc\radio.h" />
+    <ClInclude Include="..\inc\rehlds.h" />
     <ClInclude Include="..\inc\sounds.h" />
     <ClInclude Include="..\inc\storage.h" />
     <ClInclude Include="..\inc\support.h" />
+    <ClInclude Include="..\inc\tasks.h" />
+    <ClInclude Include="..\inc\trace.h" />
     <ClInclude Include="..\inc\version.h" />
     <ClInclude Include="..\inc\vision.h" />
     <ClInclude Include="..\inc\vistable.h" />
+    <ClInclude Include="..\inc\weapons.h" />
     <ClInclude Include="..\inc\yapb.h" />
   </ItemGroup>
   <ItemGroup>
@@ -88,19 +117,19 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\analyze.cpp" />
-    <ClCompile Include="..\src\botlib.cpp" />
+    <ClCompile Include="..\src\behavior.cpp" />
+    <ClCompile Include="..\src\buying.cpp" />
     <ClCompile Include="..\src\chatlib.cpp" />
+    <ClCompile Include="..\src\clients.cpp" />
     <ClCompile Include="..\src\combat.cpp" />
     <ClCompile Include="..\src\config.cpp" />
     <ClCompile Include="..\src\control.cpp" />
-    <ClCompile Include="..\src\engine.cpp" />
-    <ClCompile Include="..\src\entities.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    <ClCompile Include="..\src\debug.cpp">
+      <ObjectFileName>$(IntDir)yapb_debug.obj</ObjectFileName>
     </ClCompile>
+    <ClCompile Include="..\src\engine.cpp" />
     <ClCompile Include="..\src\fakeping.cpp" />
+    <ClCompile Include="..\src\funmode.cpp" />
     <ClCompile Include="..\src\graph.cpp" />
     <ClCompile Include="..\src\hooks.cpp" />
     <ClCompile Include="..\src\linkage.cpp" />
@@ -110,12 +139,489 @@
     <ClCompile Include="..\src\navigate.cpp" />
     <ClCompile Include="..\src\planner.cpp" />
     <ClCompile Include="..\src\practice.cpp" />
+    <ClCompile Include="..\src\radio.cpp" />
+    <ClCompile Include="..\src\rehlds.cpp" />
     <ClCompile Include="..\src\sounds.cpp" />
     <ClCompile Include="..\src\storage.cpp" />
     <ClCompile Include="..\src\support.cpp" />
     <ClCompile Include="..\src\tasks.cpp" />
     <ClCompile Include="..\src\vision.cpp" />
     <ClCompile Include="..\src\vistable.cpp" />
+    <ClCompile Include="..\src\weapons.cpp" />
+    <ClCompile Include="..\src\entities.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\printf\printf.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;4146;4701;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\printf\stub.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;4146;4701;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\debug.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\error.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\mbedtls_config.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\mps_reader.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\mps_trace.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\net_sockets.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\pkcs7.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\ssl_cache.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\ssl_ciphersuites.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\ssl_client.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\ssl_cookie.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\ssl_debug_helpers_generated.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\ssl_msg.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\ssl_ticket.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\ssl_tls.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\ssl_tls12_client.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\ssl_tls12_server.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\ssl_tls13_client.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\ssl_tls13_generic.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\ssl_tls13_keys.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\ssl_tls13_server.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\timing.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\version_features.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\version.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\x509_create.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\x509_crl.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\x509_crt.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\x509_csr.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\x509_oid.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\x509.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\x509write_crt.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\x509write_csr.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\library\x509write.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\core\psa_crypto_client.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\core\psa_crypto_driver_wrappers_no_static.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\core\psa_crypto_random.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\core\psa_crypto_slot_management.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\core\psa_crypto_storage.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\core\psa_crypto.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\core\psa_its_file.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\core\psa_util.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\core\tf_psa_crypto_config.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\core\tf_psa_crypto_version.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\aes.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\aesce.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\aesni.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\aria.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\bignum_core.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\bignum_mod_raw.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\bignum_mod.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\bignum.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\block_cipher.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\camellia.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\ccm.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\chacha20_neon.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\chacha20.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\chachapoly.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\cipher_wrap.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\cipher.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\cmac.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\ctr_drbg.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\ecdsa.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\ecjpake.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\ecp_curves.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\ecp.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\entropy_poll.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\entropy.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\gcm.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\hmac_drbg.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\md5.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\poly1305.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\psa_crypto_aead.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\psa_crypto_cipher.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\psa_crypto_ecp.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\psa_crypto_ffdh.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\psa_crypto_hash.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\psa_crypto_mac.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\psa_crypto_pake.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\psa_crypto_rsa.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\psa_crypto_xof.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\psa_util_internal.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\ripemd160.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\rsa_alt_helpers.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\rsa.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\sha1.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\sha256.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\sha3.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src\sha512.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\everest\library\Hacl_Curve25519_joined.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\everest\library\x25519.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\p256-m\p256-m_driver_entrypoints.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\p256-m\p256-m\p256-m.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\pqcp\src\psa_crypto_mldsa.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\pqcp\src\wrap_mldsa_native.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\extras\lmots.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\extras\lms.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\extras\md.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\extras\nist_kw.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\extras\pk_ecc.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\extras\pk_rsa.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\extras\pk_wrap.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\extras\pk.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\extras\pkparse.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\extras\pkwrite.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\platform\memory_buffer_alloc.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\platform\platform_util.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\platform\platform.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\platform\threading.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\utilities\asn1parse.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\utilities\asn1write.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\utilities\base64.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\utilities\constant_time.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\utilities\oid.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\utilities\pem.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ClCompile Include="..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\utilities\pkcs5.c">
+      <CompileAs>CompileAsC</CompileAs>
+      <DisableSpecificWarnings>4244;4267;4389;4334;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\inc\version.h.in" />
@@ -129,29 +635,28 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <EnableASAN>false</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <EnableASAN>false</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <UseOfMfc>false</UseOfMfc>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <UseDebugLibraries>false</UseDebugLibraries>
     <EnableASAN>false</EnableASAN>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseOfMfc>false</UseOfMfc>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <UseDebugLibraries>false</UseDebugLibraries>
     <EnableASAN>false</EnableASAN>
   </PropertyGroup>
@@ -219,7 +724,7 @@
       <Command />
     </CustomBuildStep>
     <Midl>
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;YSTL_USE_VENDORED_PRINTF;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MkTypLibCompatible>true</MkTypLibCompatible>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <TargetEnvironment>Win32</TargetEnvironment>
@@ -228,9 +733,8 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\vc;..\inc;..\ext;..\ext\crlib;..\ext\linkage;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;CR_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <AdditionalIncludeDirectories>..\vc;..\inc;..\ext;..\ext\ystl;..\ext\linkage;..\ext\ystl\ext\mbedtls;..\ext\ystl\ext;..\ext\ystl\ext\mbedtls\mbedtls\include;..\ext\ystl\ext\mbedtls\mbedtls\library;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\include;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\core;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\dispatch;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\include;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\everest\include;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\everest\include\tf-psa-crypto\private\everest;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\everest\include\tf-psa-crypto\private\everest\kremlib;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\p256-m;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\p256-m\p256-m;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\pqcp\include;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\pqcp\mldsa-native\mldsa;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\pqcp\src;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\extras;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\platform;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\utilities;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;YSTL_DEBUG;YSTL_WITH_TLS;MBEDTLS_CONFIG_FILE="$(ProjectDir)..\ext\ystl\ext\mbedtls\mbedtls_config.h";TF_PSA_CRYPTO_CONFIG_FILE="$(ProjectDir)..\ext\ystl\ext\mbedtls\crypto_config.h";YSTL_USE_VENDORED_PRINTF;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader />
       <PrecompiledHeaderFile>yapb.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>.\debug\inf\yapb.pch</PrecompiledHeaderOutputFile>
@@ -249,11 +753,12 @@
       <InlineFunctionExpansion>Default</InlineFunctionExpansion>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;YSTL_USE_VENDORED_PRINTF;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Culture>0x0409</Culture>
     </ResourceCompile>
     <PreLinkEvent>
@@ -272,7 +777,7 @@
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <DataExecutionPrevention />
       <ImportLibrary>.\debug\inf\yapb.lib</ImportLibrary>
-      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;bcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
     <PostBuildEvent>
@@ -290,7 +795,7 @@
       </Command>
     </CustomBuildStep>
     <Midl>
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;YSTL_USE_VENDORED_PRINTF;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MkTypLibCompatible>true</MkTypLibCompatible>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <TypeLibraryName>.\x64\debug\yapb.tlb</TypeLibraryName>
@@ -299,8 +804,8 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\vc;..\inc;..\ext;..\ext\crlib;..\ext\linkage;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;_DEBUG;CR_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\vc;..\inc;..\ext;..\ext\ystl;..\ext\linkage;..\ext\ystl\ext\mbedtls;..\ext\ystl\ext;..\ext\ystl\ext\mbedtls\mbedtls\include;..\ext\ystl\ext\mbedtls\mbedtls\library;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\include;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\core;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\dispatch;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\include;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\everest\include;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\everest\include\tf-psa-crypto\private\everest;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\everest\include\tf-psa-crypto\private\everest\kremlib;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\p256-m;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\p256-m\p256-m;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\pqcp\include;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\pqcp\mldsa-native\mldsa;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\pqcp\src;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\extras;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\platform;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\utilities;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;YSTL_DEBUG;YSTL_WITH_TLS;MBEDTLS_CONFIG_FILE="$(ProjectDir)..\ext\ystl\ext\mbedtls\mbedtls_config.h";TF_PSA_CRYPTO_CONFIG_FILE="$(ProjectDir)..\ext\ystl\ext\mbedtls\crypto_config.h";YSTL_USE_VENDORED_PRINTF;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <PrecompiledHeader>
       </PrecompiledHeader>
@@ -323,11 +828,11 @@
       <InlineFunctionExpansion>Default</InlineFunctionExpansion>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;YSTL_USE_VENDORED_PRINTF;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Culture>0x0409</Culture>
     </ResourceCompile>
     <PreLinkEvent>
@@ -348,7 +853,7 @@
       <DataExecutionPrevention>
       </DataExecutionPrevention>
       <ImportLibrary>.\x64\debug\inf\yapb.lib</ImportLibrary>
-      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;bcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
     <PostBuildEvent>
@@ -365,7 +870,7 @@
       <Command />
     </CustomBuildStep>
     <Midl>
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;YSTL_USE_VENDORED_PRINTF;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MkTypLibCompatible>true</MkTypLibCompatible>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <TargetEnvironment>Win32</TargetEnvironment>
@@ -377,8 +882,8 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <EnableFiberSafeOptimizations>false</EnableFiberSafeOptimizations>
-      <AdditionalIncludeDirectories>..\vc;..\inc;..\ext;..\ext\crlib;..\ext\linkage;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\vc;..\inc;..\ext;..\ext\ystl;..\ext\linkage;..\ext\ystl\ext\mbedtls;..\ext\ystl\ext;..\ext\ystl\ext\mbedtls\mbedtls\include;..\ext\ystl\ext\mbedtls\mbedtls\library;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\include;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\core;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\dispatch;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\include;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\everest\include;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\everest\include\tf-psa-crypto\private\everest;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\everest\include\tf-psa-crypto\private\everest\kremlib;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\p256-m;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\p256-m\p256-m;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\pqcp\include;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\pqcp\mldsa-native\mldsa;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\pqcp\src;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\extras;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\platform;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\utilities;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG;WIN32;YSTL_WITH_TLS;MBEDTLS_CONFIG_FILE="$(ProjectDir)..\ext\ystl\ext\mbedtls\mbedtls_config.h";TF_PSA_CRYPTO_CONFIG_FILE="$(ProjectDir)..\ext\ystl\ext\mbedtls\crypto_config.h";YSTL_USE_VENDORED_PRINTF;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>false</ExceptionHandling>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <PrecompiledHeaderFile>
@@ -406,10 +911,10 @@
       <StringPooling>true</StringPooling>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;YSTL_USE_VENDORED_PRINTF;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Culture>0x0409</Culture>
       <ResourceOutputFileName>$(IntDir)%(Filename).res</ResourceOutputFileName>
     </ResourceCompile>
@@ -433,7 +938,7 @@
       <ImportLibrary>.\release\inf\yapb.lib</ImportLibrary>
       <TargetMachine>MachineX86</TargetMachine>
       <MinimumRequiredVersion />
-      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;bcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <ImageHasSafeExceptionHandlers>
       </ImageHasSafeExceptionHandlers>
@@ -456,7 +961,7 @@
       </Command>
     </CustomBuildStep>
     <Midl>
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;YSTL_USE_VENDORED_PRINTF;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MkTypLibCompatible>true</MkTypLibCompatible>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <TypeLibraryName>.\release\yapb.tlb</TypeLibraryName>
@@ -468,8 +973,8 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <EnableFiberSafeOptimizations>false</EnableFiberSafeOptimizations>
-      <AdditionalIncludeDirectories>..\vc;..\inc;..\ext;..\ext\crlib;..\ext\linkage;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG;WIN32;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\vc;..\inc;..\ext;..\ext\ystl;..\ext\linkage;..\ext\ystl\ext\mbedtls;..\ext\ystl\ext;..\ext\ystl\ext\mbedtls\mbedtls\include;..\ext\ystl\ext\mbedtls\mbedtls\library;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\include;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\core;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\dispatch;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\include;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\builtin\src;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\everest\include;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\everest\include\tf-psa-crypto\private\everest;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\everest\include\tf-psa-crypto\private\everest\kremlib;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\p256-m;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\p256-m\p256-m;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\pqcp\include;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\pqcp\mldsa-native\mldsa;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\drivers\pqcp\src;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\extras;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\platform;..\ext\ystl\ext\mbedtls\mbedtls\tf-psa-crypto\utilities;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG;WIN32;YSTL_WITH_TLS;MBEDTLS_CONFIG_FILE="$(ProjectDir)..\ext\ystl\ext\mbedtls\mbedtls_config.h";TF_PSA_CRYPTO_CONFIG_FILE="$(ProjectDir)..\ext\ystl\ext\mbedtls\crypto_config.h";YSTL_USE_VENDORED_PRINTF;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>false</ExceptionHandling>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions</EnableEnhancedInstructionSet>
       <PrecompiledHeaderFile>
@@ -498,10 +1003,10 @@
       <StringPooling>true</StringPooling>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <ResourceCompile>
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;YSTL_USE_VENDORED_PRINTF;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <Culture>0x0409</Culture>
       <ResourceOutputFileName>$(IntDir)%(Filename).res</ResourceOutputFileName>
     </ResourceCompile>
@@ -527,7 +1032,7 @@
       <ImportLibrary>.\x64\release\inf\yapb.lib</ImportLibrary>
       <MinimumRequiredVersion>
       </MinimumRequiredVersion>
-      <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;bcrypt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <ImageHasSafeExceptionHandlers>
       </ImageHasSafeExceptionHandlers>

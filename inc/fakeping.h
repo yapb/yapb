@@ -1,113 +1,116 @@
 //
-// YaPB, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright © YaPB Project Developers <yapb@jeefo.net>.
+// YaPB, started from PODBot by Count Floyd
+// Maintained by YaPB Team <yapb@jeefo.net>
 //
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Unlicense
 //
 
 #pragma once
 
 // adopted from pingfaker amxx plugin
+namespace bot {
+
 class PingBitMsg final {
 private:
-   int32_t bits_ {};
-   int32_t used_ {};
+  int32_t bits_ {};
+  int32_t used_ {};
 
-   MessageWriter msg_ {};
-   bool started_ {};
-
-public:
-   enum : int32_t {
-      Single = 1,
-      PlayerID = 5,
-      Loss = 7,
-      Ping = 12
-   };
+  MessageWriter msg_ {};
+  bool started_ {};
 
 public:
-   PingBitMsg () = default;
-   ~PingBitMsg () = default;
+  enum : int32_t {
+    Single = 1,
+    PlayerID = 5,
+    Loss = 7,
+    Ping = 12
+  };
 
 public:
-   void write (int32_t bit, int32_t size) {
-      if (size > 32 - used_ || size < 1) {
-         return;
-      }
-      const auto maxSize = cr::bit (size);
+  PingBitMsg () = default;
+  ~PingBitMsg () = default;
 
-      if (bit >= maxSize) {
-         bit = maxSize - 1;
-      }
-      bits_ = bits_ + (bit << used_);
-      used_ += size;
-   }
+public:
+  void Write (int32_t bit, int32_t size) {
+    if (size > 32 - used_ || size < 1) {
+      return;
+    }
+    const auto max_size = ystl::bit (size);
 
-   void send (bool remaining = false) {
-      while (used_ >= 8) {
-         msg_.writeByte (bits_ & (cr::bit (8) - 1));
-         bits_ = (bits_ >> 8);
-         used_ -= 8;
-      }
+    if (bit >= max_size) {
+      bit = max_size - 1;
+    }
+    bits_ = bits_ + (bit << used_);
+    used_ += size;
+  }
 
-      if (remaining && used_ > 0) {
-         msg_.writeByte (bits_);
-         bits_ = used_ = 0;
-      }
-   }
+  void Send (bool remaining = false) {
+    while (used_ >= 8) {
+      msg_.WriteByte (bits_ & (ystl::bit (8) - 1));
+      bits_ = (bits_ >> 8);
+      used_ -= 8;
+    }
 
-   void start (edict_t *ent) {
-      if (started_) {
-         return;
-      }
-      msg_.start (MSG_ONE_UNRELIABLE, SVC_PINGS, nullptr, ent);
-      started_ = true;
-   }
+    if (remaining && used_ > 0) {
+      msg_.WriteByte (bits_);
+      bits_ = used_ = 0;
+    }
+  }
 
-   void flush () {
-      if (!started_) {
-         return;
-      }
-      write (0, Single);
-      send (true);
+  void Start (edict_t *ent) {
+    if (started_) {
+      return;
+    }
+    msg_.Start (MSG_ONE_UNRELIABLE, SVC_PINGS, nullptr, ent);
+    started_ = true;
+  }
 
-      started_ = false;
-      msg_.end ();
-   }
+  void Flush () {
+    if (!started_) {
+      return;
+    }
+    Write (0, Single);
+    Send (true);
+
+    started_ = false;
+    msg_.end ();
+  }
 };
 
 // bot fakeping manager
-class BotFakePingManager final : public Singleton <BotFakePingManager> {
+class FakePingManager final : public ystl::Singleton<FakePingManager> {
 private:
-   CountdownTimer m_recalcTime {};
-   PingBitMsg m_pbm {};
+  ystl::CountdownTimer recalc_time_ {};
+  PingBitMsg pbm_ {};
 
 public:
-   explicit BotFakePingManager () = default;
-   ~BotFakePingManager () = default;
+  explicit FakePingManager () = default;
+  ~FakePingManager () = default;
 
 public:
-   // verify game supports fakeping and it's enabled
-   bool hasFeature () const;
+  // verify game supports fakeping and it's enabled
+  bool HasFeature () const;
 
-   // reset the ping on disconnecting player
-   void reset (edict_t *ent);
+  // reset the ping on disconnecting player
+  void Reset (edict_t *ent);
 
-   // calculate our own pings for all the bots
-   void syncCalculate ();
+  // calculate our own pings for all the bots
+  void SyncCalculate ();
 
-   // calculate our own pings for all the bots
-   void calculate ();
+  // calculate our own pings for all the bots
+  void Calculate ();
 
-   // emit pings in update client data hook
-   void emit (edict_t *ent);
+  // emit pings in update client data hook
+  void Emit (edict_t *ent);
 
-   // resetarts update timers
-   void restartTimer ();
+  // restarts update timers
+  void RestartTimer ();
 
-   // get random base ping
-   int randomBase () const;
+  // get random base ping
+  int RandomBase () const;
 };
 
 // expose fakeping manager
-CR_EXPOSE_GLOBAL_SINGLETON (BotFakePingManager, fakeping);
+YSTL_EXPOSE_GLOBAL_SINGLETON (FakePingManager, fakeping);
 
+} // namespace bot

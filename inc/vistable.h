@@ -1,66 +1,72 @@
 //
-// YaPB, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright © YaPB Project Developers <yapb@jeefo.net>.
+// YaPB, started from PODBot by Count Floyd
+// Maintained by YaPB Team <yapb@jeefo.net>
 //
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Unlicense
 //
 
 #pragma once
 
 // limits for storing practice data
-CR_DECLARE_SCOPED_ENUM_TYPE (VisIndex, int32_t,
-   None = 0,
-   Stand = 1,
-   Crouch = 2,
-   Any = Stand | Crouch
-)
+namespace bot {
+
+enum class VisIndex : uint16_t {
+  None = 0,
+  Stand = 1,
+  Crouch = 2,
+  Any = Stand | Crouch
+};
+YSTL_ENABLE_ENUM_FLAGS (VisIndex);
 
 // defines visibility count
 struct PathVis {
-   uint16_t stand {}, crouch {};
+  uint16_t stand {}, crouch {};
 };
 
-class GraphVistable final : public Singleton <GraphVistable> {
+YSTL_LE_FIELDS (PathVis, stand, crouch);
+
+class GraphVistable final : public ystl::Singleton<GraphVistable> {
 public:
-   using VisStorage = uint8_t;
+  using VisStorage = uint8_t;
 
 private:
-   SmallArray <VisStorage> m_vistable {};
-   bool m_rebuild {};
-   int m_length {};
+  ystl::Array<VisStorage, ReservePolicy::Proportional> vistable_ {};
+  bool rebuild_ {};
+  int size_ {};
+  size_t row_bytes_ {}; // bytes per row (4 pairs per byte)
 
-   int m_curIndex {};
-   int m_sliceIndex {};
+  int cur_index_ {};
+  int slice_index_ {};
 
-   float m_notifyMsgTimestamp {};
-
-public:
-   explicit GraphVistable () = default;
-   ~GraphVistable () = default;
+  ystl::CountdownTimer notify_msg_timer_ {};
 
 public:
-   bool visible (int srcIndex, int destIndex, VisIndex vis = VisIndex::Any) const;
-
-   void load ();
-   void save () const;
-   void rebuild ();
+  explicit GraphVistable () = default;
+  ~GraphVistable () = default;
 
 public:
+  bool Visible (int src_index, int dest_index, VisIndex vis = VisIndex::Any) const;
 
-   // triggers re-check for all the nodes
-   void startRebuild ();
+  void Load ();
+  void Save () const;
+  void Rebuild ();
 
-   // ready to use ?
-   bool isReady () const {
-      return !m_rebuild;
-   }
+public:
+  // triggers re-check for all the nodes
+  void StartRebuild ();
 
-   // is visible fromr both points ?
-   bool visibleBothSides (int srcIndex, int destIndex, VisIndex vis = VisIndex::Any) const {
-      return visible (srcIndex, destIndex, vis) && visible (destIndex, srcIndex, vis);
-   }
+  // ready to use ?
+  bool IsReady () const {
+    return !rebuild_;
+  }
+
+  // is visible fromr both points ?
+  bool VisibleBothSides (int src_index, int dest_index, VisIndex vis = VisIndex::Any) const {
+    return Visible (src_index, dest_index, vis) && Visible (dest_index, src_index, vis);
+  }
 };
 
 // expose global
-CR_EXPOSE_GLOBAL_SINGLETON (GraphVistable, vistab);
+YSTL_EXPOSE_GLOBAL_SINGLETON (GraphVistable, vistab);
 
+} // namespace bot

@@ -1,600 +1,764 @@
 //
-// YaPB, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright © YaPB Project Developers <yapb@jeefo.net>.
+// YaPB, started from PODBot by Count Floyd
+// Maintained by YaPB Team <yapb@jeefo.net>
 //
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Unlicense
 //
 
 #include <yapb.h>
 
-void MessageDispatcher::netMsgTextMsg () {
-   enum args { msg = 1, min = 2 };
+namespace bot {
 
-   // check the minimum states
-   if (m_args.length () < min) {
-      return;
-   }
+void MessageDispatch::NetMsgTextMsg () {
+  enum args {
+    msg = 1,
+    min = 2
+  };
 
-   // lookup cached message
-   const auto cached = m_textMsgCache[m_args[msg].chars_];
+  // check the minimum states
+  if (args_.size () < min) {
+    return;
+  }
 
-   // check if we're need to handle message
-   if (!(cached & TextMsgCache::NeedHandle)) {
-      return;
-   }
+  // lookup cached message, skip unknown messages
+  const auto cached_item = FindInCache (text_msg_cache_, args_[msg].chars_);
 
-   // reset bomb position for all the bots
-   const auto resetBombPosition = [] () -> void {
-      if (game.mapIs (MapFlags::Demolition)) {
-         gameState.setBombOrigin (true);
+  if (!cached_item) {
+    return;
+  }
+  const auto cached = *cached_item;
+
+  // reset bomb position for all the bots
+  const auto reset_bomb_position = [] () -> void {
+    if (game.MapIs (MapFlags::Demolition)) {
+      game_state.SetBombOrigin (true);
+    }
+  };
+
+  if (has_flag (cached, TextMsgCache::Commencing)) {
+    util.SetNeedForWelcome (true);
+  }
+  else if (has_flag (cached, TextMsgCache::CounterWin)) {
+    bots.SetLastWinner (Team::CT); // update last winner for economics
+    reset_bomb_position ();
+  }
+  else if (has_flag (cached, TextMsgCache::RestartRound)) {
+    bots.UpdateTeamEconomics (Team::CT, true);
+    bots.UpdateTeamEconomics (Team::Terrorist, true);
+
+    // set balance for all players
+    bots.ForEach ([] (Bot *bot) {
+      bot->money_amount_ = mp_startmoney.As<int> ();
+      return false;
+    });
+
+    reset_bomb_position ();
+  }
+  else if (has_flag (cached, TextMsgCache::TerroristWin)) {
+    bots.SetLastWinner (Team::Terrorist); // update last winner for economics
+    reset_bomb_position ();
+  }
+  else if (has_flag (cached, TextMsgCache::BombPlanted) && !game_state.IsBombPlanted ()) {
+    game_state.SetBombPlanted (true);
+
+    for (auto &notify : bots) {
+      if (notify.is_alive_) {
+        notify.ClearSearchNodes ();
+
+        // clear only camp tasks
+        notify.ClearTask (TaskId::Camp);
+
+        if (cv_radio_mode.As<int> () == 2 && ystl::rg.chance (55) && notify.team_ == Team::CT) {
+          notify.PushRadioChat (RadioChat::WhereIsTheC4);
+        }
       }
-   };
+    }
+    game_state.SetBombOrigin ();
+  }
 
-   if (cached & TextMsgCache::Commencing) {
-      util.setNeedForWelcome (true);
-   }
-   else if (cached & TextMsgCache::CounterWin) {
-      bots.setLastWinner (Team::CT); // update last winner for economics
-      resetBombPosition ();
-   }
-   else if (cached & TextMsgCache::RestartRound) {
-      bots.updateTeamEconomics (Team::CT, true);
-      bots.updateTeamEconomics (Team::Terrorist, true);
-
-      // set balance for all players
-      bots.forEach ([] (Bot *bot) {
-         bot->m_moneyAmount = mp_startmoney.as <int> ();
-         return false;
-      });
-
-      resetBombPosition ();
-   }
-   else if (cached & TextMsgCache::TerroristWin) {
-      bots.setLastWinner (Team::Terrorist); // update last winner for economics
-      resetBombPosition ();
-   }
-   else if ((cached & TextMsgCache::BombPlanted) && !gameState.isBombPlanted ()) {
-      gameState.setBombPlanted (true);
-
-      for (const auto &notify : bots) {
-         if (notify->m_isAlive) {
-            notify->clearSearchNodes ();
-
-            // clear only camp tasks
-            notify->clearTask (Task::Camp);
-
-            if (cv_radio_mode.as <int> () == 2 && rg.chance (55) && notify->m_team == Team::CT) {
-               notify->pushChatterMessage (Chatter::WhereIsTheC4);
-            }
-         }
-      }
-      gameState.setBombOrigin ();
-   }
-
-   // check for burst fire message
-   if (m_bot) {
-      if (cached & TextMsgCache::BurstOn) {
-         m_bot->m_weaponBurstMode = BurstMode::On;
-      }
-      else if (cached & TextMsgCache::BurstOff) {
-         m_bot->m_weaponBurstMode = BurstMode::Off;
-      }
-   }
+  // check for burst fire message
+  if (bot_) {
+    if (has_flag (cached, TextMsgCache::BurstOn)) {
+      bot_->weapon_burst_mode_ = BurstMode::On;
+    }
+    else if (has_flag (cached, TextMsgCache::BurstOff)) {
+      bot_->weapon_burst_mode_ = BurstMode::Off;
+    }
+  }
 }
 
-void MessageDispatcher::netMsgVGUIMenu () {
-   // this message is sent when a VGUI menu is displayed.
+void MessageDispatch::NetMsgVguiMenu () {
+  // this message is sent when a vgui menu is displayed
 
-   enum args { menu = 0, min = 1 };
+  enum args {
+    MenuId = 0,
+    min = 1
+  };
 
-   // check the minimum states or existence of bot
-   if (m_args.length () < min || !m_bot) {
-      return;
-   }
+  // check the minimum states or existence of bot
+  if (args_.size () < min || !bot_) {
+    return;
+  }
+  const auto gui_menu = static_cast<GuiMenu> (args_[MenuId].long_);
 
-   switch (m_args[menu].long_) {
-   case GuiMenu::TeamSelect:
-      m_bot->m_startAction = BotMsg::TeamSelect;
-      break;
+  switch (gui_menu) {
+  case GuiMenu::TeamSelect:
+    bot_->start_action_ = Msg::TeamSelect;
+    break;
 
-   case GuiMenu::TerroristSelect:
-   case GuiMenu::CTSelect:
-      m_bot->m_startAction = BotMsg::ClassSelect;
-      break;
-   }
+  case GuiMenu::TerroristSelect:
+  case GuiMenu::CTSelect:
+    bot_->start_action_ = Msg::ClassSelect;
+    break;
+  }
 }
 
-void MessageDispatcher::netMsgShowMenu () {
-   // this message is sent when a text menu is displayed.
+void MessageDispatch::NetMsgShowMenu () {
+  // this message is sent when a text menu is displayed
 
-   enum args { menu = 3, min = 4 };
+  enum args {
+    MenuId = 3,
+    min = 4
+  };
 
-   // check the minimum states or existence of bot
-   if (m_args.length () < min || !m_bot) {
-      return;
-   }
-   const auto cached = m_showMenuCache[m_args[menu].chars_];
+  // check the minimum states or existence of bot
+  if (args_.size () < min || !bot_) {
+    return;
+  }
+  const auto cached_item = FindInCache (show_menu_cache_, args_[MenuId].chars_);
 
-   // only assign if non-zero
-   if (cached > 0) {
-      m_bot->m_startAction = cached;
-   }
+  if (!cached_item) {
+    return;
+  }
+  bot_->start_action_ = *cached_item;
 }
 
-void MessageDispatcher::netMsgWeaponList () {
-   // this message is sent when a client joins the game. All of the weapons are sent with the weapon ID and information about what ammo is used.
+void MessageDispatch::NetMsgWeaponList () {
+  // this message is sent when a client joins the game. all of the weapons are sent with the weapon id and information about what ammo is used
 
-   enum args { classname = 0, ammo_index_1 = 1, max_ammo_1 = 2, slot = 5, slot_pos = 6, id = 7, flags = 8, min = 9 };
+  enum args {
+    classname = 0,
+    ammo_index_1 = 1,
+    max_ammo_1 = 2,
+    slot = 5,
+    slot_pos = 6,
+    weapon_id = 7,
+    flags = 8,
+    min = 9
+  };
 
-   // check the minimum states
-   if (m_args.length () < min) {
-      return;
-   }
+  // check the minimum states
+  if (args_.size () < min) {
+    return;
+  }
 
-   // store away this weapon with it's ammo information...
-   auto &prop = conf.getWeaponProp (m_args[id].long_);
+  // validate weapon id before indexing
+  if (args_[weapon_id].long_ < 0 || args_[weapon_id].long_ >= kMaxWeapons) {
+    return;
+  }
 
-   prop.classname = m_args[classname].chars_;
-   prop.ammo1 = m_args[ammo_index_1].long_;
-   prop.ammo1Max = m_args[max_ammo_1].long_;
-   prop.slot = m_args[slot].long_;
-   prop.pos = m_args[slot_pos].long_;
-   prop.id = m_args[id].long_;
-   prop.flags = m_args[flags].long_;
+  // store away this weapon with it's ammo information
+  auto &prop = conf.GetWeaponProp (static_cast<Weapon> (args_[weapon_id].long_));
+
+  prop.id = static_cast<Weapon> (args_[weapon_id].long_);
+  prop.classname = args_[classname].chars_;
+  prop.ammo1 = args_[ammo_index_1].long_;
+  prop.ammo1_max = args_[max_ammo_1].long_;
+  prop.slot = args_[slot].long_;
+  prop.pos = args_[slot_pos].long_;
+  prop.flags = args_[flags].long_;
 }
 
-void MessageDispatcher::netMsgCurWeapon () {
-   // this message is sent when a weapon is selected (either by the bot choosing a weapon or by the server auto assigning the bot a weapon). In CS it's also called when Ammo is increased/decreased
+void MessageDispatch::NetMsgCurWeapon () {
+  // this message is sent when a weapon is selected
 
-   enum args { state = 0, id = 1, clip = 2, min = 3 };
+  enum args {
+    state = 0,
+    weapon_id = 1,
+    clip = 2,
+    min = 3
+  };
 
-   // check the minimum states
-   if (m_args.length () < min || !m_bot) {
-      return;
-   }
+  // check the minimum states
+  if (args_.size () < min || !bot_) {
+    return;
+  }
 
-   if (m_args[id].long_ < kMaxWeapons) {
-      if (m_args[state].long_ != 0) {
-         m_bot->m_currentWeapon = m_args[id].long_;
-         m_bot->m_weaponType = conf.getWeaponType (m_args[id].long_);
-      }
+  if (args_[weapon_id].long_ >= 0 && args_[weapon_id].long_ < kMaxWeapons) {
+    if (args_[state].long_ != 0) {
+      const auto weapon = static_cast<Weapon> (args_[weapon_id].long_);
 
-      // ammo amount decreased ? must have fired a bullet...
-      if (m_args[id].long_ == m_bot->m_currentWeapon && m_bot->m_ammoInClip[m_args[id].long_] > m_args[clip].long_) {
-         m_bot->m_timeLastFired = game.time (); // remember the last bullet time
-      }
-      m_bot->m_ammoInClip[m_args[id].long_] = m_args[clip].long_;
-   }
+      bot_->current_weapon_ = weapon;
+      bot_->weapon_type_ = conf.GetWeaponType (weapon);
+    }
+
+    // ammo amount decreased ? must have fired a bullet
+    if (args_[weapon_id].long_ == bot_->current_weapon_ && bot_->ammo_in_clip_[args_[weapon_id].long_] > args_[clip].long_) {
+      bot_->last_fired_timer_.start (); // remember the last bullet time
+    }
+    bot_->ammo_in_clip_[args_[weapon_id].long_] = args_[clip].long_;
+  }
 }
 
-void MessageDispatcher::netMsgAmmoX () {
-   // this message is sent whenever ammo amounts are adjusted (up or down). NOTE: Logging reveals that CS uses it very unreliable!
+void MessageDispatch::NetMsgAmmoX () {
+  // this message is sent whenever ammo amounts are adjusted (up or down). note: logging reveals that cs uses it very unreliable!
 
 #if 1
-   netMsgAmmoPickup ();
+  NetMsgAmmoPickup ();
 #else
-   enum args { index = 0, value = 1, min = 2 };
+  enum args {
+    arg_index = 0,
+    value = 1,
+    min = 2
+  };
 
-   // check the minimum states
-   if (m_args.length () < min || !m_bot) {
-      return;
-   }
-   m_bot->m_ammo[m_args[index].long_] = m_args[value].long_; // store it away
+  // check the minimum states
+  if (args_.size () < min || !bot_) {
+    return;
+  }
+  bot_->ammo_[args_[arg_index].long_] = args_[value].long_; // store it away
 #endif
 }
 
-void MessageDispatcher::netMsgAmmoPickup () {
-   // this message is sent when the bot picks up some ammo (AmmoX messages are also sent so this message is probably
-   // not really necessary except it allows the HUD to draw pictures of ammo that have been picked up.  The bots
-   // don't really need pictures since they don't have any eyes anyway.
+void MessageDispatch::NetMsgAmmoPickup () {
+  // this message is sent when the bot picks up some ammo
 
-   enum args { index = 0, value = 1, min = 2 };
+  enum args {
+    arg_index = 0,
+    value = 1,
+    min = 2
+  };
 
-   // check the minimum states
-   if (m_args.length () < min || !m_bot) {
-      return;
-   }
-   m_bot->m_ammo[m_args[index].long_] = m_args[value].long_; // store it away
+  // check the minimum states
+  if (args_.size () < min || !bot_) {
+    return;
+  }
+  const auto ammo_index = args_[arg_index].long_;
+
+  if (ammo_index >= 0 && ammo_index < MAX_AMMO_SLOTS) {
+    bot_->ammo_[ammo_index] = args_[value].long_; // store it away
+  }
 }
 
-void MessageDispatcher::netMsgDamage () {
-   // this message gets sent when the bots are getting damaged.
+void MessageDispatch::NetMsgDamage () {
+  // this message gets sent when the bots are getting damaged
 
-   enum args { armor = 0, health = 1, bits = 2, min = 3 };
+  enum args {
+    armor = 0,
+    health = 1,
+    bits = 2,
+    min = 3
+  };
 
-   // check the minimum states
-   if (m_args.length () < min || !m_bot) {
-      return;
-   }
+  // check the minimum states
+  if (args_.size () < min || !bot_) {
+    return;
+  }
 
-   // handle damage if any
-   if (m_args[armor].long_ > 0 || m_args[health].long_) {
-      m_bot->takeDamage (m_bot->pev->dmg_inflictor, m_args[health].long_, m_args[armor].long_, m_args[bits].long_);
-   }
+  // handle damage if any
+  if (args_[armor].long_ > 0 || args_[health].long_ > 0) {
+    bot_->TakeDamage (bot_->pev->dmg_inflictor, args_[health].long_, args_[armor].long_, args_[bits].long_);
+  }
 }
 
-void MessageDispatcher::netMsgMoney () {
-   // this message gets sent when the bots money amount changes
+void MessageDispatch::NetMsgMoney () {
+  // this message gets sent when the bots money amount changes
 
-   enum args { money = 0, min = 1 };
+  enum args {
+    money = 0,
+    min = 1
+  };
 
-   // check the minimum states
-   if (m_args.length () < min || !m_bot) {
-      return;
-   }
-   auto amount = m_args[money].long_;
+  // check the minimum states
+  if (args_.size () < min || !bot_) {
+    return;
+  }
+  auto amount = args_[money].long_;
 
-   if (amount < 0) {
-      amount = 800;
-   }
-   else if (amount >= INT32_MAX) {
-      amount = 16000;
-   }
-   m_bot->m_moneyAmount = amount;
+  if (amount < 0) {
+    amount = 800;
+  }
+  else if (amount > mp_maxmoney.As<int> ()) {
+    amount = mp_maxmoney.As<int> ();
+  }
+  bot_->money_amount_ = amount;
 }
 
-void MessageDispatcher::netMsgStatusIcon () {
-   enum args { enabled = 0, icon = 1, min = 2 };
+void MessageDispatch::NetMsgStatusIcon () {
+  enum args {
+    enabled = 0,
+    icon = 1,
+    min = 2
+  };
 
-   // check the minimum states
-   if (m_args.length () < min || !m_bot) {
-      return;
-   }
-   // lookup cached icon
-   const auto cached = m_statusIconCache[m_args[icon].chars_];
+  // check the minimum states
+  if (args_.size () < min || !bot_) {
+    return;
+  }
 
-   // check if we're need to handle message
-   if (!(cached & TextMsgCache::NeedHandle)) {
-      return;
-   }
+  // lookup cached icon, skip unknown icons
+  const auto cached_item = FindInCache (status_icon_cache_, args_[icon].chars_);
 
-   // handle cases
-   if (cached & StatusIconCache::BuyZone) {
-      m_bot->m_inBuyZone = (m_args[enabled].long_ != 0);
+  if (!cached_item) {
+    return;
+  }
+  const auto cached = *cached_item;
 
-      // try to equip in buyzone
-      m_bot->enteredBuyZone (BuyState::PrimaryWeapon);
-   }
-   else if (cached & StatusIconCache::Escape) {
-      m_bot->m_inEscapeZone = (m_args[enabled].long_ != 0);
-   }
-   else if (cached & StatusIconCache::Rescue) {
-      m_bot->m_inRescueZone = (m_args[enabled].long_ != 0);
-   }
-   else if (cached & StatusIconCache::VipSafety) {
-      m_bot->m_inVIPZone = (m_args[enabled].long_ != 0);
-   }
-   else if (cached & StatusIconCache::C4) {
-      m_bot->m_inBombZone = (m_args[enabled].long_ == 2);
-   }
-   else if (cached & StatusIconCache::Defuser) {
-      m_bot->m_hasDefuser = (m_args[enabled].long_ != 0);
-   }
+  // handle cases
+  if (has_flag (cached, StatusIconCache::BuyZone)) {
+    bot_->in_buy_zone_ = (args_[enabled].long_ != 0);
+
+    // try to equip in buyzone
+    bot_->EnteredBuyZone (BuyState::PrimaryWeapon);
+  }
+  else if (has_flag (cached, StatusIconCache::Escape)) {
+    bot_->in_escape_zone_ = (args_[enabled].long_ != 0);
+  }
+  else if (has_flag (cached, StatusIconCache::Rescue)) {
+    bot_->in_rescue_zone_ = (args_[enabled].long_ != 0);
+  }
+  else if (has_flag (cached, StatusIconCache::VipSafety)) {
+    bot_->in_vip_zone_ = (args_[enabled].long_ != 0);
+  }
+  else if (has_flag (cached, StatusIconCache::C4)) {
+    bot_->in_bomb_zone_ = (args_[enabled].long_ == 2);
+  }
+  else if (has_flag (cached, StatusIconCache::Defuser)) {
+    bot_->has_defuser_ = (args_[enabled].long_ != 0);
+  }
 }
 
-void MessageDispatcher::netMsgDeathMsg () {
-   // this message gets sent when player kills player
+void MessageDispatch::NetMsgDeathMsg () {
+  // this message gets sent when player kills player
 
-   enum args { killer = 0, victim = 1, min = 2 };
+  enum args {
+    killer = 0,
+    victim = 1,
+    min = 2
+  };
 
-   // check the minimum states
-   if (m_args.length () < min) {
-      return;
-   }
+  // check the minimum states
+  if (args_.size () < min) {
+    return;
+  }
 
-   auto killerEntity = game.entityOfIndex (m_args[killer].long_);
-   auto victimEntity = game.entityOfIndex (m_args[victim].long_);
+  auto killer_entity = game.EntityOfIndex (args_[killer].long_);
+  auto victim_entity = game.EntityOfIndex (args_[victim].long_);
 
-   if (game.isNullEntity (killerEntity) || game.isNullEntity (victimEntity) || victimEntity == killerEntity) {
-      return;
-   }
-   bots.handleDeath (killerEntity, victimEntity);
+  if (game.IsNullEntity (killer_entity) || game.IsNullEntity (victim_entity) || victim_entity == killer_entity) {
+    return;
+  }
+  bots.HandleDeath (killer_entity, victim_entity);
 }
 
-void MessageDispatcher::netMsgScreenFade () {
-   // this message gets sent when the screen fades (flashbang)
+void MessageDispatch::NetMsgScreenFade () {
+  // this message gets sent when the screen fades (flashbang)
 
-   enum args { r = 3, g = 4, b = 5, alpha = 6, min = 7 };
+  enum args {
+    r = 3,
+    g = 4,
+    b = 5,
+    alpha = 6,
+    min = 7
+  };
 
-   // check the minimum states
-   if (m_args.length () < min || !m_bot) {
-      return;
-   }
+  // check the minimum states
+  if (args_.size () < min || !bot_) {
+    return;
+  }
 
-   // screen completely faded ?
-   if (m_args[r].long_ >= 255 && m_args[g].long_ >= 255 && m_args[b].long_ >= 255 && m_args[alpha].long_ > 180) {
-      m_bot->takeBlind (m_args[alpha].long_);
-   }
+  // screen completely faded ? (flash color is typically white, allow near-white for mod compatibility)
+  if (args_[r].long_ > 200 && args_[g].long_ > 200 && args_[b].long_ > 200 && args_[alpha].long_ > 180) {
+    bot_->TakeBlind (args_[alpha].long_);
+  }
 }
 
-void MessageDispatcher::netMsgHLTV () {
-   // this message gets sent when new round is started in modern cs versions
+void MessageDispatch::NetMsgHltv () {
+  // this message gets sent when new round is started in modern cs versions
 
-   enum args { players = 0, fov = 1, min = 2 };
+  enum args {
+    players = 0,
+    fov = 1,
+    min = 2
+  };
 
-   // check the minimum states
-   if (m_args.length () < min) {
-      return;
-   }
+  // check the minimum states
+  if (args_.size () < min) {
+    return;
+  }
 
-   // need to start new round ? (we're tracking FOV reset message)
-   if (m_args[players].long_ == 0 && m_args[fov].long_ == 0) {
-      gameState.roundStart ();
-   }
+  // need to start new round ? (we're tracking fov reset message)
+  if (args_[players].long_ == 0 && args_[fov].long_ == 0) {
+    game_state.RoundStart ();
+  }
 }
 
-void MessageDispatcher::netMsgTeamInfo () {
-   // this message gets sent when player team index is changed
+void MessageDispatch::NetMsgTeamInfo () {
+  // this message gets sent when player team index is changed
 
-   enum args { index = 0, team = 1, min = 2 };
+  enum args {
+    arg_index = 0,
+    team = 1,
+    min = 2
+  };
 
-   // check the minimum states
-   if (m_args.length () < min) {
-      return;
-   }
-   auto &client = util.getClient (m_args[index].long_ - 1);
+  // check the minimum states
+  if (args_.size () < min) {
+    return;
+  }
+  const auto client_index = args_[arg_index].long_ - 1;
 
-   // update player team
-   client.team2 = m_teamInfoCache[m_args[team].chars_]; // update real team
-   client.team = game.is (GameFlags::FreeForAll) ? m_args[index].long_ : client.team2;
+  if (client_index < 0 || client_index >= game.MaxClients ()) {
+    return;
+  }
+  auto &client = clients[client_index];
+
+  // update player team, skip unknown team strings
+  const auto cached_item = FindInCache (team_info_cache_, args_[team].chars_);
+
+  if (!cached_item) {
+    return;
+  }
+
+  client.team2 = *cached_item; // update real team
+  client.team = game.Is (GameFlags::FreeForAll) ? static_cast<Team> (args_[arg_index].long_) : client.team2;
 }
 
-void MessageDispatcher::netMsgScoreInfo () {
-   // this message gets sent when scoreboard info is update, we're use it to track k-d ratio
+void MessageDispatch::NetMsgScoreInfo () {
+  // this message gets sent when scoreboard info is update, we're use it to track k-d ratio
 
-   enum args { index = 0, score = 1, deaths = 2, class_id = 3, team_id = 4, min = 5 };
+  enum args {
+    arg_index = 0,
+    score = 1,
+    deaths = 2,
+    class_id = 3,
+    team_id = 4,
+    min = 5
+  };
 
-   // check the minimum states
-   if (m_args.length () < min) {
-      return;
-   }
-   auto bot = pickBot (index);
+  // check the minimum states
+  if (args_.size () < min) {
+    return;
+  }
+  auto bot = PickBot (arg_index);
 
-   // if we're have bot, set the kd ratio
-   if (bot != nullptr) {
-      bot->m_kpdRatio = bot->pev->frags / cr::max (static_cast <float> (m_args[deaths].long_), 1.0f);
-      bot->m_deathCount = m_args[deaths].long_;
-   }
+  // if we're have bot, set the kd ratio
+  if (bot != nullptr) {
+    bot->kpd_ratio_ = bot->pev->frags / ystl::max (static_cast<float> (args_[deaths].long_), 1.0f);
+    bot->death_count_ = args_[deaths].long_;
+  }
 }
 
-void MessageDispatcher::netMsgScoreAttrib () {
-   // this message updates the scoreboard attribute for the specified player
+void MessageDispatch::NetMsgScoreAttrib () {
+  // this message updates the scoreboard attribute for the specified player
 
-   enum args { index = 0, flags = 1, min = 2 };
+  enum args {
+    arg_index = 0,
+    flags = 1,
+    min = 2
+  };
 
-   // check the minimum states
-   if (m_args.length () < min) {
-      return;
-   }
-   auto bot = pickBot (index);
+  // check the minimum states
+  if (args_.size () < min) {
+    return;
+  }
+  auto bot = PickBot (arg_index);
 
-   // if we're have bot, set the vip state
-   if (bot != nullptr) {
-      constexpr int32_t kPlayerIsVIP = cr::bit (2);
+  // if we're have bot, set the vip state
+  if (bot != nullptr) {
+    constexpr int32_t kPlayerIsVIP = ystl::bit (2);
 
-      bot->m_isVIP = !!(m_args[flags].long_ & kPlayerIsVIP);
-   }
+    bot->is_vip_ = !!(args_[flags].long_ & kPlayerIsVIP);
+  }
 }
 
-void MessageDispatcher::netMsgBarTime () {
-   enum args { enabled = 0, min = 1 };
+void MessageDispatch::NetMsgBarTime () {
+  enum args {
+    enabled = 0,
+    min = 1
+  };
 
-   // check the minimum states
-   if (m_args.length () < min || !m_bot) {
-      return;
-   }
+  // check the minimum states
+  if (args_.size () < min || !bot_) {
+    return;
+  }
 
-   // check if has progress bar
-   if (m_args[enabled].long_ > 0) {
-      m_bot->m_hasProgressBar = true; // the progress bar on a hud
+  // check if has progress bar
+  if (args_[enabled].long_ > 0) {
+    bot_->has_progress_bar_ = true; // the progress bar on a hud
 
-      // notify bots about defusing has started
-      if (game.mapIs (MapFlags::Demolition) && gameState.isBombPlanted () && m_bot->m_team == Team::CT) {
-         bots.notifyBombDefuse ();
-      }
-   }
-   else {
-      m_bot->m_hasProgressBar = false; // no progress bar or disappeared
-   }
+    // notify bots about defusing has started
+    if (game.MapIs (MapFlags::Demolition) && game_state.IsBombPlanted () && bot_->team_ == Team::CT) {
+      bots.NotifyBombDefuse ();
+    }
+  }
+  else {
+    bot_->has_progress_bar_ = false; // no progress bar or disappeared
+  }
 }
 
-void MessageDispatcher::netMsgItemStatus () {
-   enum args { value = 0, min = 1 };
+void MessageDispatch::NetMsgItemStatus () {
+  enum args {
+    value = 0,
+    min = 1
+  };
 
-   // check the minimum states
-   if (m_args.length () < min || !m_bot) {
-      return;
-   }
-   const auto mask = m_args[value].long_;
+  // check the minimum states
+  if (args_.size () < min || !bot_) {
+    return;
+  }
+  const auto mask = args_[value].long_;
 
-   m_bot->m_hasNVG = !!(mask & ItemStatus::Nightvision);
-   m_bot->m_hasDefuser = !!(mask & ItemStatus::DefusalKit);
+  bot_->has_nvg_ = has_flag (mask, ItemStatus::Nightvision);
+  bot_->has_defuser_ = has_flag (mask, ItemStatus::DefusalKit);
 }
 
-void MessageDispatcher::netMsgNVGToggle () {
-   enum args { value = 0, min = 1 };
+void MessageDispatch::NetMsgNvgToggle () {
+  enum args {
+    value = 0,
+    min = 1
+  };
 
-   // check the minimum states
-   if (m_args.length () < min || !m_bot) {
-      return;
-   }
-   m_bot->m_usesNVG = m_args[value].long_ > 0;
+  // check the minimum states
+  if (args_.size () < min || !bot_) {
+    return;
+  }
+  bot_->uses_nvg_ = args_[value].long_ > 0;
 }
 
-void MessageDispatcher::netMsgFlashBat () {
-   enum args { value = 0, min = 1 };
+void MessageDispatch::NetMsgFlashBat () {
+  enum args {
+    value = 0,
+    min = 1
+  };
 
-   // check the minimum states
-   if (m_args.length () < min || !m_bot) {
-      return;
-   }
-   m_bot->m_flashLevel = m_args[value].long_;
+  // check the minimum states
+  if (args_.size () < min || !bot_) {
+    return;
+  }
+  bot_->flash_level_ = args_[value].long_;
 }
 
-void MessageDispatcher::netMsgResetHUD () {
-   if (m_bot) {
-      m_bot->spawned ();
-   }
-   gameState.setResetHUD (true);
+void MessageDispatch::NetMsgResetHud () {
+  if (bot_) {
+    bot_->Spawned ();
+  }
+  game_state.SetResetHud (true);
 }
 
-MessageDispatcher::MessageDispatcher () {
+MessageDispatch::MessageDispatch () {
+  Reset ();
 
-   // register wanted message
-   auto addWanted = [&] (StringRef name, NetMsg id, MsgFunc handler) -> void {
-      m_wanted[name] = id;
-      m_handlers[id] = handler;
-   };
-   reset ();
+  // initialize engine lookup array with none
+  engine_to_net_msg_.fill (NetMsg::None);
 
-   // we want to handle next messages
-   addWanted ("TextMsg", NetMsg::TextMsg, &MessageDispatcher::netMsgTextMsg);
-   addWanted ("VGUIMenu", NetMsg::VGUIMenu, &MessageDispatcher::netMsgVGUIMenu);
-   addWanted ("ShowMenu", NetMsg::ShowMenu, &MessageDispatcher::netMsgShowMenu);
-   addWanted ("WeaponList", NetMsg::WeaponList, &MessageDispatcher::netMsgWeaponList);
-   addWanted ("CurWeapon", NetMsg::CurWeapon, &MessageDispatcher::netMsgCurWeapon);
-   addWanted ("AmmoX", NetMsg::AmmoX, &MessageDispatcher::netMsgAmmoX);
-   addWanted ("AmmoPickup", NetMsg::AmmoPickup, &MessageDispatcher::netMsgAmmoPickup);
-   addWanted ("Damage", NetMsg::Damage, &MessageDispatcher::netMsgDamage);
-   addWanted ("Money", NetMsg::Money, &MessageDispatcher::netMsgMoney);
-   addWanted ("StatusIcon", NetMsg::StatusIcon, &MessageDispatcher::netMsgStatusIcon);
-   addWanted ("DeathMsg", NetMsg::DeathMsg, &MessageDispatcher::netMsgDeathMsg);
-   addWanted ("ScreenFade", NetMsg::ScreenFade, &MessageDispatcher::netMsgScreenFade);
-   addWanted ("HLTV", NetMsg::HLTV, &MessageDispatcher::netMsgHLTV);
-   addWanted ("TeamInfo", NetMsg::TeamInfo, &MessageDispatcher::netMsgTeamInfo);
-   addWanted ("BarTime", NetMsg::BarTime, &MessageDispatcher::netMsgBarTime);
-   addWanted ("ItemStatus", NetMsg::ItemStatus, &MessageDispatcher::netMsgItemStatus);
-   addWanted ("NVGToggle", NetMsg::NVGToggle, &MessageDispatcher::netMsgNVGToggle);
-   addWanted ("FlashBat", NetMsg::FlashBat, &MessageDispatcher::netMsgFlashBat);
-   addWanted ("ScoreInfo", NetMsg::ScoreInfo, &MessageDispatcher::netMsgScoreInfo);
-   addWanted ("ScoreAttrib", NetMsg::ScoreAttrib, &MessageDispatcher::netMsgScoreAttrib);
-   addWanted ("ResetHUD", NetMsg::ResetHUD, &MessageDispatcher::netMsgResetHUD);
+  // keep registration dynamic, msvc x64 fails library load on a local static array
+  auto register_entry = [&] (ystl::StringRef name, NetMsg id, MsgFunc handler) -> void {
+    entries_[name] = { id, handler, MessageEntry::none };
+  };
 
-   // we're need next messages IDs but we're won't handle them, so they will be removed from wanted list as soon as they get engine IDs
-   addWanted ("BotVoice", NetMsg::BotVoice, nullptr);
-   addWanted ("SendAudio", NetMsg::SendAudio, nullptr);
-   addWanted ("SayText", NetMsg::SayText, nullptr);
+  // we want to handle next messages
+  register_entry ("TextMsg", NetMsg::TextMsg, &MessageDispatch::NetMsgTextMsg);
+  register_entry ("VGUIMenu", NetMsg::VGUIMenu, &MessageDispatch::NetMsgVguiMenu);
+  register_entry ("ShowMenu", NetMsg::ShowMenu, &MessageDispatch::NetMsgShowMenu);
+  register_entry ("WeaponList", NetMsg::WeaponList, &MessageDispatch::NetMsgWeaponList);
+  register_entry ("CurWeapon", NetMsg::CurWeapon, &MessageDispatch::NetMsgCurWeapon);
+  register_entry ("AmmoX", NetMsg::AmmoX, &MessageDispatch::NetMsgAmmoX);
+  register_entry ("AmmoPickup", NetMsg::AmmoPickup, &MessageDispatch::NetMsgAmmoPickup);
+  register_entry ("Damage", NetMsg::Damage, &MessageDispatch::NetMsgDamage);
+  register_entry ("Money", NetMsg::Money, &MessageDispatch::NetMsgMoney);
+  register_entry ("StatusIcon", NetMsg::StatusIcon, &MessageDispatch::NetMsgStatusIcon);
+  register_entry ("DeathMsg", NetMsg::DeathMsg, &MessageDispatch::NetMsgDeathMsg);
+  register_entry ("ScreenFade", NetMsg::ScreenFade, &MessageDispatch::NetMsgScreenFade);
+  register_entry ("HLTV", NetMsg::HLTV, &MessageDispatch::NetMsgHltv);
+  register_entry ("TeamInfo", NetMsg::TeamInfo, &MessageDispatch::NetMsgTeamInfo);
+  register_entry ("BarTime", NetMsg::BarTime, &MessageDispatch::NetMsgBarTime);
+  register_entry ("ItemStatus", NetMsg::ItemStatus, &MessageDispatch::NetMsgItemStatus);
+  register_entry ("NVGToggle", NetMsg::NVGToggle, &MessageDispatch::NetMsgNvgToggle);
+  register_entry ("FlashBat", NetMsg::FlashBat, &MessageDispatch::NetMsgFlashBat);
+  register_entry ("ScoreInfo", NetMsg::ScoreInfo, &MessageDispatch::NetMsgScoreInfo);
+  register_entry ("ScoreAttrib", NetMsg::ScoreAttrib, &MessageDispatch::NetMsgScoreAttrib);
+  register_entry ("ResetHUD", NetMsg::ResetHUD, &MessageDispatch::NetMsgResetHud);
 
-   // register text msg cache
-   m_textMsgCache["#CTs_Win"] = TextMsgCache::NeedHandle | TextMsgCache::CounterWin;
-   m_textMsgCache["#Bomb_Defused"] = TextMsgCache::NeedHandle | TextMsgCache::CounterWin;
-   m_textMsgCache["#Bomb_Planted"] = TextMsgCache::NeedHandle | TextMsgCache::BombPlanted;
-   m_textMsgCache["#Terrorists_Win"] = TextMsgCache::NeedHandle | TextMsgCache::TerroristWin;
-   m_textMsgCache["#Round_Draw"] = TextMsgCache::NeedHandle | TextMsgCache::RestartRound;
-   m_textMsgCache["#All_Hostages_Rescued"] = TextMsgCache::NeedHandle | TextMsgCache::CounterWin;
-   m_textMsgCache["#Target_Saved"] = TextMsgCache::NeedHandle | TextMsgCache::CounterWin;
-   m_textMsgCache["#Hostages_Not_Rescued"] = TextMsgCache::NeedHandle | TextMsgCache::TerroristWin;
-   m_textMsgCache["#Terrorists_Not_Escaped"] = TextMsgCache::NeedHandle | TextMsgCache::CounterWin;
-   m_textMsgCache["#VIP_Not_Escaped"] = TextMsgCache::NeedHandle | TextMsgCache::TerroristWin;
-   m_textMsgCache["#Escaping_Terrorists_Neutralized"] = TextMsgCache::NeedHandle | TextMsgCache::CounterWin;
-   m_textMsgCache["#VIP_Assassinated"] = TextMsgCache::NeedHandle | TextMsgCache::TerroristWin;
-   m_textMsgCache["#VIP_Escaped"] = TextMsgCache::NeedHandle | TextMsgCache::CounterWin;
-   m_textMsgCache["#Terrorists_Escaped"] = TextMsgCache::NeedHandle | TextMsgCache::TerroristWin;
-   m_textMsgCache["#CTs_PreventEscape"] = TextMsgCache::NeedHandle | TextMsgCache::CounterWin;
-   m_textMsgCache["#Target_Bombed"] = TextMsgCache::NeedHandle | TextMsgCache::TerroristWin;
-   m_textMsgCache["#Game_Commencing"] = TextMsgCache::NeedHandle | TextMsgCache::Commencing;
-   m_textMsgCache["#Game_will_restart_in"] = TextMsgCache::NeedHandle | TextMsgCache::RestartRound;
-   m_textMsgCache["#Switch_To_BurstFire"] = TextMsgCache::NeedHandle | TextMsgCache::BurstOn;
-   m_textMsgCache["#Switch_To_SemiAuto"] = TextMsgCache::NeedHandle | TextMsgCache::BurstOff;
-   m_textMsgCache["#Switch_To_FullAuto"] = TextMsgCache::NeedHandle | TextMsgCache::BurstOff;
+  // we're need next messages ids but we're won't handle them, so they will be removed from wanted list as soon as they get engine ids
+  register_entry ("BotVoice", NetMsg::BotVoice, nullptr);
+  register_entry ("SendAudio", NetMsg::SendAudio, nullptr);
+  register_entry ("SayText", NetMsg::SayText, nullptr);
+  register_entry ("ScreenShake", NetMsg::ScreenShake, nullptr);
+
+  // register text msg cache (fixed array, no heap allocation)
+  // clang-format off
+   text_msg_cache_ = { {
+      { "#CTs_Win", TextMsgCache::CounterWin },
+      { "#Bomb_Defused", TextMsgCache::CounterWin },
+      { "#Bomb_Planted", TextMsgCache::BombPlanted },
+      { "#Terrorists_Win", TextMsgCache::TerroristWin },
+      { "#Round_Draw", TextMsgCache::RestartRound },
+      { "#All_Hostages_Rescued", TextMsgCache::CounterWin },
+      { "#Target_Saved", TextMsgCache::CounterWin },
+      { "#Hostages_Not_Rescued", TextMsgCache::TerroristWin },
+      { "#Terrorists_Not_Escaped", TextMsgCache::CounterWin },
+      { "#VIP_Not_Escaped", TextMsgCache::TerroristWin },
+      { "#Escaping_Terrorists_Neutralized", TextMsgCache::CounterWin },
+      { "#VIP_Assassinated", TextMsgCache::TerroristWin },
+      { "#VIP_Escaped", TextMsgCache::CounterWin },
+      { "#Terrorists_Escaped", TextMsgCache::TerroristWin },
+      { "#CTs_PreventEscape", TextMsgCache::CounterWin },
+      { "#Target_Bombed", TextMsgCache::TerroristWin },
+      { "#Game_Commencing", TextMsgCache::Commencing },
+      { "#Game_will_restart_in", TextMsgCache::RestartRound },
+      { "#Switch_To_BurstFire", TextMsgCache::BurstOn },
+      { "#Switch_To_SemiAuto", TextMsgCache::BurstOff },
+      { "#Switch_To_FullAuto", TextMsgCache::BurstOff }
+   } };
 
    // register show menu cache
-   m_showMenuCache["#Team_Select"] = BotMsg::TeamSelect;
-   m_showMenuCache["#Team_Select_Spect"] = BotMsg::TeamSelect;
-   m_showMenuCache["#IG_Team_Select_Spect"] = BotMsg::TeamSelect;
-   m_showMenuCache["#IG_Team_Select"] = BotMsg::TeamSelect;
-   m_showMenuCache["#IG_VIP_Team_Select"] = BotMsg::TeamSelect;
-   m_showMenuCache["#IG_VIP_Team_Select_Spect"] = BotMsg::TeamSelect;
-   m_showMenuCache["#Terrorist_Select"] = BotMsg::ClassSelect;
-   m_showMenuCache["#CT_Select"] = BotMsg::ClassSelect;
+   show_menu_cache_ = { {
+      { "#Team_Select", Msg::TeamSelect },
+      { "#Team_Select_Spect", Msg::TeamSelect },
+      { "#IG_Team_Select_Spect", Msg::TeamSelect },
+      { "#IG_Team_Select", Msg::TeamSelect },
+      { "#IG_VIP_Team_Select", Msg::TeamSelect },
+      { "#IG_VIP_Team_Select_Spect", Msg::TeamSelect },
+      { "#Terrorist_Select", Msg::ClassSelect },
+      { "#CT_Select", Msg::ClassSelect }
+   } };
 
    // register status icon cache
-   m_statusIconCache["buyzone"] = StatusIconCache::NeedHandle | StatusIconCache::BuyZone;
-   m_statusIconCache["escape"] = StatusIconCache::NeedHandle | StatusIconCache::Escape;
-   m_statusIconCache["rescue"] = StatusIconCache::NeedHandle | StatusIconCache::Rescue;
-   m_statusIconCache["vipsafety"] = StatusIconCache::NeedHandle | StatusIconCache::VipSafety;
-   m_statusIconCache["c4"] = StatusIconCache::NeedHandle | StatusIconCache::C4;
-   m_statusIconCache["defuser"] = StatusIconCache::NeedHandle | StatusIconCache::Defuser;
+   status_icon_cache_ = { {
+      { "buyzone", StatusIconCache::BuyZone },
+      { "escape", StatusIconCache::Escape },
+      { "rescue", StatusIconCache::Rescue },
+      { "vipsafety", StatusIconCache::VipSafety },
+      { "c4", StatusIconCache::C4 },
+      { "defuser", StatusIconCache::Defuser }
+   } };
 
    // register team info cache
-   m_teamInfoCache["TERRORIST"] = Team::Terrorist;
-   m_teamInfoCache["UNASSIGNED"] = Team::Unassigned;
-   m_teamInfoCache["SPECTATOR"] = Team::Spectator;
-   m_teamInfoCache["CT"] = Team::CT;
+   team_info_cache_ = { {
+      { "TERRORIST", Team::Terrorist },
+      { "UNASSIGNED", Team::Unassigned },
+      { "SPECTATOR", Team::Spectator },
+      { "CT", Team::CT }
+   } };
+  // clang-format on
 }
 
-int32_t MessageDispatcher::add (StringRef name, int32_t id) {
-   if (!m_wanted.exists (name)) {
-      return id;
-   }
+int32_t MessageDispatch::Add (ystl::StringRef name, int32_t id) {
+  auto entry = entries_.find (name);
 
-   m_maps[m_wanted[name]] = id; // add message from engine regusermsg
-   m_reverseMap[id] = m_wanted[name]; // add message from engine regusermsg
+  if (!entry) {
+    return id;
+  }
 
-   return id;
+  // store engine message id in the entry
+  entry->engine_id = id;
+
+  // map engine id to our message id for fast lookup during message processing
+  if (id >= 0 && id < 256) {
+    engine_to_net_msg_[id] = entry->id;
+  }
+  return id;
 }
 
-void MessageDispatcher::start (edict_t *ent, int32_t type) {
-   reset ();
+void MessageDispatch::Start (edict_t *ent, int32_t type) {
+  Reset ();
 
-   if (game.is (GameFlags::Metamod)) {
-      ensureMessages ();
-   }
+  if (game.Is (GameFlags::Metamod)) {
+    EnsureMessages ();
+  }
 
-   // search if we need to handle this message
-   if (m_reverseMap.exists (type)) {
-      const auto msg = m_reverseMap[type];
-      m_current = m_handlers[msg] ? msg : NetMsg::None;
-   }
+  // search if we need to handle this message using fast array lookup
+  if (type >= 0 && type < 256) {
+    const auto msg = engine_to_net_msg_[type];
 
-   // no message no processing
-   if (m_current == NetMsg::None) {
-      return;
-   }
-
-   // message for bot bot?
-   if (!game.isNullEntity (ent) && !(ent->v.flags & FL_DORMANT)) {
-      m_bot = bots[ent];
-
-      if (!m_bot) {
-         stopCollection ();
-         return;
+    if (msg != NetMsg::None) {
+      // find entry by iterating (small fixed set, fast enough)
+      for (const auto &item : entries_) {
+        if (item.second.id == msg && item.second.HasHandler ()) {
+          current_ = msg;
+          break;
+        }
       }
-   }
-   m_args.clear (); // clear previous args
-}
+    }
+  }
 
-void MessageDispatcher::stop () {
-   if (m_current == NetMsg::None) {
+  // no message no processing
+  if (current_ == NetMsg::None) {
+    return;
+  }
+
+  // message for bot bot?
+  if (!game.IsNullEntity (ent) && !(ent->v.flags & FL_DORMANT)) {
+    bot_ = bots[ent];
+
+    if (!bot_) {
+      StopCollection ();
       return;
-   }
-   (this->*m_handlers[m_current]) ();
-
-   stopCollection ();
+    }
+  }
+  args_.clear (); // clear previous args
 }
 
-void MessageDispatcher::ensureMessages () {
-   // we're getting messages ids in regusermsg for metamod, but when we're unloaded, we're lost our ids on next 'meta load'.
-   // this function tries to associate appropriate message ids.
+void MessageDispatch::Stop () {
+  if (current_ == NetMsg::None) {
+    return;
+  }
 
-   // check if we're have one
-   if (m_maps.exists (NetMsg::Money)) {
-      return;
-   }
+  // find handler by iterating entries
+  for (const auto &item : entries_) {
+    if (item.second.id == current_ && item.second.HasHandler ()) {
+      (this->*item.second.handler) ();
+      break;
+    }
+  }
 
-   // re-register our message
-   for (const auto &[key, _] : m_wanted) {
-      add (key, MUTIL_GetUserMsgID (PLID, key.chars (), nullptr));
-   }
+  StopCollection ();
 }
 
-int32_t MessageDispatcher::id (NetMsg msg) {
-   return m_maps[msg];
+void MessageDispatch::EnsureMessages () {
+  // refresh metamod message ids lost on unload and reload
+
+  // check if we have engine ids registered
+  bool has_ids = false;
+
+  for (const auto &item : entries_) {
+    if (item.second.HasEngineId ()) {
+      has_ids = true;
+      break;
+    }
+  }
+
+  if (has_ids) {
+    return;
+  }
+
+  // re-register our message
+  for (const auto &item : entries_) {
+    Add (item.first, MUTIL_GetUserMsgID (PLID, item.first.chars (), nullptr));
+  }
 }
 
-Bot *MessageDispatcher::pickBot (int32_t index) {
-   const auto &client = util.getClient (m_args[index].long_ - 1);
-
-   // get the bot in this message
-   return bots[client.ent];
+int32_t MessageDispatch::Id (NetMsg msg) {
+  // find engine id for this message
+  for (const auto &item : entries_) {
+    if (item.second.id == msg) {
+      return item.second.engine_id;
+    }
+  }
+  return MessageEntry::none;
 }
+
+Bot *MessageDispatch::PickBot (int32_t index) {
+  const auto client_index = args_[index].long_ - 1;
+
+  if (client_index < 0 || client_index >= game.MaxClients ()) {
+    return nullptr;
+  }
+  const auto &client = clients[client_index];
+
+  // get the bot in this message
+  return bots[client.ent];
+}
+
+} // namespace bot

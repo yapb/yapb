@@ -1,0 +1,365 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 28
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "warnings": {
+        "deprecated": true,
+        "dev": true,
+        "systemVars": true,
+        "uninitialized": false,
+        "unusedCli": false
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "ci-linux-x86",
+      "inherits": [
+        "base"
+      ],
+      "toolchainFile": "cmake/toolchains/linux-x86.cmake"
+    },
+    {
+      "name": "ci-linux-amd64",
+      "inherits": [
+        "base"
+      ],
+      "toolchainFile": "cmake/toolchains/linux-amd64.cmake",
+      "cacheVariables": {
+        "YAPB_64BIT": "ON"
+      }
+    },
+    {
+      "name": "linux-amd64-asan",
+      "inherits": [
+        "base"
+      ],
+      "cacheVariables": {
+        "YAPB_64BIT": "ON",
+        "YAPB_BUILD_TESTS": "ON",
+        "YAPB_SANITIZE": "address",
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "linux-x86-asan",
+      "description": "Needs 32-bit ASan runtime (e.g. lib32asan) from the distro",
+      "inherits": [
+        "base"
+      ],
+      "cacheVariables": {
+        "YAPB_SANITIZE": "address",
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "ci-linux-x86-nosimd",
+      "inherits": [
+        "base"
+      ],
+      "toolchainFile": "cmake/toolchains/linux-x86-nosimd.cmake",
+      "cacheVariables": {
+        "YAPB_NOSIMD": "ON"
+      }
+    },
+    {
+      "name": "ci-linux-arm64",
+      "inherits": [
+        "base"
+      ],
+      "toolchainFile": "cmake/toolchains/linux-arm64.cmake"
+    },
+    {
+      "name": "ci-linux-riscv64",
+      "inherits": [
+        "base"
+      ],
+      "toolchainFile": "cmake/toolchains/linux-riscv64.cmake"
+    },
+    {
+      "name": "ci-apple-amd64",
+      "inherits": [
+        "base"
+      ],
+      "toolchainFile": "cmake/toolchains/apple-amd64.cmake",
+      "cacheVariables": {
+        "YAPB_64BIT": "ON"
+      }
+    },
+    {
+      "name": "ci-windows-x86-clang",
+      "inherits": [
+        "base"
+      ],
+      "toolchainFile": "cmake/toolchains/windows-x86-clang.cmake"
+    },
+    {
+      "name": "ci-windows-amd64",
+      "inherits": [
+        "base"
+      ],
+      "toolchainFile": "cmake/toolchains/windows-amd64.cmake",
+      "cacheVariables": {
+        "YAPB_64BIT": "ON"
+      }
+    },
+    {
+      "name": "ci-apple-arm64",
+      "inherits": [
+        "base"
+      ]
+    },
+    {
+      "name": "ci-windows-x86",
+      "inherits": [
+        "base"
+      ]
+    },
+    {
+      "name": "ci-windows-x86-clang-cl",
+      "inherits": [
+        "base"
+      ],
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang-cl",
+        "CMAKE_CXX_COMPILER": "clang-cl",
+        "CMAKE_C_COMPILER_TARGET": "i386-pc-windows-msvc",
+        "CMAKE_CXX_COMPILER_TARGET": "i386-pc-windows-msvc"
+      }
+    },
+    {
+      "name": "ci-windows-x86-msvc-xp",
+      "inherits": [
+        "base"
+      ],
+      "cacheVariables": {
+        "YAPB_WINXP": "ON"
+      }
+    },
+    {
+      "name": "windows-tests",
+      "displayName": "Native Windows x64 test host",
+      "description": "Fake engine harness; requires MSVC/clang-cl x64 and a 64-bit build",
+      "inherits": [
+        "base"
+      ],
+      "cacheVariables": {
+        "YAPB_64BIT": "ON",
+        "YAPB_NATIVE": "ON",
+        "YAPB_BUILD_TESTS": "ON",
+        "YAPB_WITH_TLS": "OFF",
+        "YAPB_LTO": "OFF",
+        "YAPB_STATIC_LINKENT": "ON",
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "linux-tests",
+      "displayName": "Native Linux x64 test host",
+      "description": "Fake engine harness; requires gcc/clang x64 and a 64-bit build",
+      "inherits": [
+        "base"
+      ],
+      "cacheVariables": {
+        "YAPB_64BIT": "ON",
+        "YAPB_NATIVE": "ON",
+        "YAPB_BUILD_TESTS": "ON",
+        "YAPB_WITH_TLS": "OFF",
+        "YAPB_LTO": "OFF",
+        "YAPB_STATIC_LINKENT": "ON",
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "dist",
+      "description": "Native packaging-only configure for the release job",
+      "inherits": [
+        "base"
+      ]
+    },
+    {
+      "name": "release",
+      "displayName": "Native release build",
+      "description": "Plain native configure for local development",
+      "inherits": [
+        "base"
+      ],
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "vs-x86",
+      "displayName": "Visual Studio solution (Win32)",
+      "description": "Generate a Visual Studio solution for the 32-bit build",
+      "generator": "Visual Studio 18 2026",
+      "architecture": "Win32"
+    },
+    {
+      "name": "vs-x64",
+      "displayName": "Visual Studio solution (x64)",
+      "description": "Generate a Visual Studio solution for the 64-bit build",
+      "generator": "Visual Studio 18 2026",
+      "architecture": "x64",
+      "cacheVariables": {
+        "YAPB_64BIT": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "verbose": true
+    },
+    {
+      "name": "ci-linux-x86",
+      "configurePreset": "ci-linux-x86",
+      "inherits": [
+        "base"
+      ]
+    },
+    {
+      "name": "ci-linux-amd64",
+      "configurePreset": "ci-linux-amd64",
+      "inherits": [
+        "base"
+      ]
+    },
+    {
+      "name": "linux-amd64-asan",
+      "configurePreset": "linux-amd64-asan",
+      "inherits": [
+        "base"
+      ]
+    },
+    {
+      "name": "linux-x86-asan",
+      "configurePreset": "linux-x86-asan",
+      "inherits": [
+        "base"
+      ]
+    },
+    {
+      "name": "ci-linux-x86-nosimd",
+      "configurePreset": "ci-linux-x86-nosimd",
+      "inherits": [
+        "base"
+      ]
+    },
+    {
+      "name": "ci-linux-arm64",
+      "configurePreset": "ci-linux-arm64",
+      "inherits": [
+        "base"
+      ]
+    },
+    {
+      "name": "ci-linux-riscv64",
+      "configurePreset": "ci-linux-riscv64",
+      "inherits": [
+        "base"
+      ]
+    },
+    {
+      "name": "ci-apple-amd64",
+      "configurePreset": "ci-apple-amd64",
+      "inherits": [
+        "base"
+      ]
+    },
+    {
+      "name": "ci-windows-x86-clang",
+      "configurePreset": "ci-windows-x86-clang",
+      "inherits": [
+        "base"
+      ]
+    },
+    {
+      "name": "ci-windows-amd64",
+      "configurePreset": "ci-windows-amd64",
+      "inherits": [
+        "base"
+      ]
+    },
+    {
+      "name": "ci-apple-arm64",
+      "configurePreset": "ci-apple-arm64",
+      "inherits": [
+        "base"
+      ]
+    },
+    {
+      "name": "ci-windows-x86",
+      "configurePreset": "ci-windows-x86",
+      "inherits": [
+        "base"
+      ]
+    },
+    {
+      "name": "ci-windows-x86-clang-cl",
+      "configurePreset": "ci-windows-x86-clang-cl",
+      "inherits": [
+        "base"
+      ]
+    },
+    {
+      "name": "ci-windows-x86-msvc-xp",
+      "configurePreset": "ci-windows-x86-msvc-xp",
+      "inherits": [
+        "base"
+      ]
+    },
+    {
+      "name": "windows-tests",
+      "configurePreset": "windows-tests",
+      "inherits": [
+        "base"
+      ]
+    },
+    {
+      "name": "linux-tests",
+      "configurePreset": "linux-tests",
+      "inherits": [
+        "base"
+      ]
+    },
+    {
+      "name": "dist",
+      "configurePreset": "dist",
+      "inherits": [
+        "base"
+      ]
+    },
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "inherits": [
+        "base"
+      ]
+    },
+    {
+      "name": "vs-x86",
+      "configurePreset": "vs-x86",
+      "inherits": [
+        "base"
+      ]
+    },
+    {
+      "name": "vs-x64",
+      "configurePreset": "vs-x64",
+      "inherits": [
+        "base"
+      ]
+    }
+  ]
+}

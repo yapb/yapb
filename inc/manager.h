@@ -1,258 +1,322 @@
 //
-// YaPB, based on PODBot by Markus Klinge ("CountFloyd").
-// Copyright © YaPB Project Developers <yapb@jeefo.net>.
+// YaPB, started from PODBot by Count Floyd
+// Maintained by YaPB Team <yapb@jeefo.net>
 //
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Unlicense
 //
 
 #pragma once
 
+// bomb say string
+namespace bot {
+
+enum class BombPlantedSay : int32_t {
+  ChatSay = ystl::bit (1),
+  Chatter = ystl::bit (2)
+};
+YSTL_ENABLE_ENUM_FLAGS (BombPlantedSay);
+
+// bot create status
+enum class CreateResult : int32_t {
+  Success,
+  MaxPlayersReached,
+  GraphError,
+  TeamStacked
+};
+
+// shared team data for bot
+struct TeamData {
+  bool leader_choosen {}; // is team leader choose thees round
+  bool positive_eco {}; // is team able to buy anything
+  float last_radio_timestamp {}; // global radio time
+  RadioChat last_radio_slot = { RadioChat::Invalid }; // last radio message for team
+};
+
+// bot difficulty data
+struct DifficultyData {
+  float reaction[2] {};
+  int32_t headshot_pct {};
+  int32_t seen_thru_pct {};
+  int32_t hear_thru_pct {};
+  int32_t max_recoil {};
+  ystl::Vector aim_error {};
+};
+
 // bot creation tab
-struct BotRequest {
-   bool manual {};
-   int difficulty {};
-   int team {};
-   int skin {};
-   int personality {};
-   String name {};
+struct Request {
+  bool manual {};
+  int skin {};
+  Team team {};
+  Personality personality {};
+  Difficulty difficulty {};
+  ystl::String name {};
 };
 
 // manager class
-class BotManager final : public Singleton <BotManager> {
+class Manager final : public ystl::Singleton<Manager> {
 public:
-   using ForEachBot = const Lambda <bool (Bot *)> &;
-   using UniqueBot = UniquePtr <Bot>;
+  using ForEachBot = const ystl::Lambda<bool (Bot *)> &;
+  using UniqueBot = ystl::UniquePtr<Bot>;
 
 private:
-   float m_difficultyBalanceTime {}; // time to balance difficulties ?
-   float m_autoKillCheckTime {}; // time to kill all the bots ?
-   float m_maintainTime {}; // time to maintain bot creation
-   float m_quotaMaintainTime {}; // time to maintain bot quota
-   float m_plantSearchUpdateTime {}; // time to update for searching planted bomb
-   float m_lastChatTime {}; // global chat time timestamp
+  ystl::CountdownTimer difficulty_balance_timer_ {}; // time to balance difficulties ?
+  ystl::CountdownTimer auto_kill_timer_ {}; // time to kill all the bots ?
+  ystl::CountdownTimer maintain_timer_ {}; // time to maintain bot creation
+  ystl::CountdownTimer quota_maintain_timer_ {}; // time to maintain bot quota
+  ystl::CountdownTimer plant_search_update_timer_ {}; // time to update for searching planted bomb
+  ystl::IntervalTimer last_chat_timer_ {}; // global chat time timestamp
 
-   int m_lastWinner {}; // the team who won previous round
-   int m_lastDifficulty {}; // last bots difficulty
-   int m_bombSayStatus {}; // some bot is issued whine about bomb
-   int m_numPreviousPlayers {}; // number of players in game im previous player check
+  Team last_winner_ { Team::Invalid }; // the team who won previous round
+  Difficulty last_difficulty_ {}; // last bots difficulty
+  BombPlantedSay bomb_say_status_ {}; // some bot is issued whine about bomb
+  int num_previous_players_ {}; // number of players in game im previous player check
 
-   bool m_botsCanPause {}; // bots can do a little pause ?
+  bool enemy_spotted_ {}; // any bot has spotted an enemy this round ?
 
-   Deque <String> m_saveBotNames {}; // bots names that persist upon changelevel
-   Deque <BotRequest> m_addRequests {}; // bot creation tab
-   SmallArray <BotTask> m_filters {}; // task filters
-   SmallArray <UniqueBot> m_bots {}; // all available bots
+  ystl::Deque<Request> saved_bots_ {}; // bot data that persists upon changelevel
+  ystl::Deque<Request> add_requests_ {}; // bot creation tab
 
-   edict_t *m_killerEntity {}; // killer entity for bots
-   BotTeamData  m_teamData[kGameTeamNum] {}; // teams shared data
+private:
+  // queues the bot creation request, restoring saved bot data if needed
+  void QueueBotRequest (Request &&request);
 
-   CountdownTimer m_holdQuotaManagementTimer {}; // prevent from running quota management for some time
+  ystl::InlineList<Bot> bots_ {}; // live bots, intrusive links stay valid (no array invalidation)
+
+  // owns the bot objects; heap bots keep stable addresses across growth, unlink from bots_ first
+  ystl::Array<UniqueBot> owned_bots_ {};
+
+  Bot *bots_by_index_[kGameMaxPlayers] {}; // direct lookup by player index
+
+  edict_t *killer_entity_ {}; // killer entity for bots
+  ystl::FixedArray<TeamData, ystl::to_underlying (Team::Num)> team_data_ {}; // teams shared data
+
+  ystl::CountdownTimer hold_quota_management_timer_ {}; // prevent from running quota management for some time
 
 protected:
-   BotCreateResult create (StringRef name, int difficulty, int personality, int team, int skin);
+  CreateResult Create (ystl::StringRef name, Difficulty difficulty, Personality personality, Team team, int skin);
 
 public:
-   BotManager ();
-   ~BotManager () = default;
+  Manager ();
+  ~Manager ();
 
 public:
-   Twin <int, int> countTeamPlayers ();
+  ystl::Twin<int, int> CountTeamPlayers ();
 
-   Bot *findBotByIndex (int index);
-   Bot *findBotByEntity (edict_t *ent);
+  Bot *FindBotByIndex (int index);
+  Bot *FindBotByEntity (edict_t *ent);
 
-   Bot *findAliveBot ();
-   Bot *findHighestFragBot (int team);
+  Bot *FindAliveBot ();
+  Bot *FindHighestFragBot (Team team);
 
-   int getHumansCount (bool ignoreSpectators = false);
-   int getAliveHumansCount ();
-   int getPlayerPriority (edict_t *ent);
+  int GetHumansCount (bool ignore_spectators = false);
+  int GetAliveHumansCount ();
+  int GetPlayerPriority (edict_t *ent);
 
-   float getConnectionTimes (StringRef name, float original);
-   float getAverageTeamKPD (bool calcForBots);
+  float GetConnectionTimes (ystl::StringRef name, float original);
+  float GetAverageTeamKpd (bool calc_for_bots);
 
-   void frame ();
-   void createKillerEntity ();
-   void destroyKillerEntity ();
-   void touchKillerEntity (Bot *bot);
-   void destroy ();
-   void addbot (StringRef name, int difficulty, int personality, int team, int skin, bool manual);
-   void addbot (StringRef name, StringRef difficulty, StringRef personality, StringRef team, StringRef skin, bool manual);
-   void serverFill (int selection, int personality = Personality::Normal, int difficulty = -1, int numToAdd = -1);
-   void kickEveryone (bool instant = false, bool zeroQuota = true);
-   void kickBot (int index);
-   void kickFromTeam (Team team, bool removeAll = false);
-   void killAllBots (int team = Team::Invalid, bool silent = false);
-   void maintainQuota ();
-   void maintainAutoKill ();
-   void maintainLeaders ();
-   void maintainRoundRestart ();
-   void initQuota ();
-   void initRound ();
-   void decrementQuota (int by = 1);
-   void selectLeaders (int team, bool reset);
-   void listBots ();
-   void setWeaponMode (int selection);
-   void updateTeamEconomics (int team, bool setTrue = false);
-   void updateBotDifficulties ();
-   void balanceBotDifficulties ();
-   void reset ();
-   void initFilters ();
-   void resetFilters ();
-   void captureChatRadio (StringRef cmd, StringRef arg, edict_t *ent);
-   void notifyBombDefuse ();
-   void execGameEntity (edict_t *ent);
-   void forEach (ForEachBot handler);
-   void disconnectBot (Bot *bot);
-   void handleDeath (edict_t *killer, edict_t *victim);
-   void setLastWinner (int winner);
-   void checkBotModel (edict_t *ent, char *infobuffer);
-   void checkNeedsToBeKicked ();
-   void refreshCreatureStatus ();
+  void Frame ();
+  void CreateKillerEntity ();
+  void DestroyKillerEntity ();
+  void TouchKillerEntity (Bot *bot);
+  void Destroy ();
+  void Addbot (ystl::StringRef name, Difficulty difficulty, Personality personality, Team team, int skin, bool manual);
+  void Addbot (
+    ystl::StringRef name, ystl::StringRef difficulty, ystl::StringRef personality, ystl::StringRef team, ystl::StringRef skin, bool manual);
+  void ServerFill (CSTeam team, Personality personality = Personality::Normal, Difficulty difficulty = Difficulty::Invalid, int num_to_add = -1);
+  void KickEveryone (bool instant = false, bool zero_quota = true, bool silent = false);
+  void KickBot (int index);
+  void KickFromTeam (Team team, bool remove_all = false);
+  void KillAllBots (Team team = Team::Invalid, bool silent = false);
+  void MaintainQuota ();
+  void MaintainAutoKill ();
+  void MaintainLeaders ();
+  void MaintainRoundRestart ();
+  void InitQuota ();
+  void InitRound ();
+  void DecrementQuota (int by = 1);
+  void SelectLeaders (Team team, bool reset);
+  void ListBots ();
+  void SetWeaponMode (int selection);
+  void UpdateTeamEconomics (Team team, bool set_true = false);
+  void UpdateBotDifficulties ();
+  void BalanceBotDifficulties ();
+  void Reset ();
+  void CaptureChatRadio (ystl::StringRef cmd, ystl::StringRef arg, edict_t *ent);
+  void NotifyBombDefuse ();
+  void ExecGameEntity (edict_t *ent);
+  void ForEach (ForEachBot handler);
+  void DisconnectBot (Bot *bot);
+  void HandleDeath (edict_t *killer, edict_t *victim);
+  void SetLastWinner (Team winner);
+  void CheckBotModel (edict_t *ent, char *infobuffer);
+  void CheckNeedsToBeKicked ();
+  void RefreshCreatureStatus ();
 
-   bool isTeamStacked (int team);
-   bool kickRandom (bool decQuota = true, Team fromTeam = Team::Unassigned);
-   bool balancedKickRandom (bool decQuota);
-   bool hasCustomCSDMSpawnEntities ();
-   bool isFrameSkipDisabled ();
+  bool IsTeamStacked (Team team);
+  bool KickRandom (bool dec_quota = true, Team from_team = Team::Unassigned);
+  bool BalancedKickRandom (bool dec_quota);
+  bool HasCustomCsdmSpawnEntities ();
 
 public:
-   bool getTeamEconomics (int team) const {
-      return m_teamData[team].positiveEco;
-   }
+  bool GetTeamEconomics (Team team) const {
+    return team_data_[team].positive_eco;
+  }
 
-   int32_t getLastWinner () const {
-      return m_lastWinner;
-   }
+  Team GetLastWinner () const {
+    return last_winner_;
+  }
 
-   int32_t getBotCount () const {
-      return m_bots.length <int32_t> ();
-   }
+  int32_t GetBotCount () const {
+    return bots_.size<int32_t> ();
+  }
 
-   // get the list of filters
-   SmallArray <BotTask> &getFilters () {
-      return m_filters;
-   }
+  void CreateRandom (bool manual = false) {
+    Addbot ("", Difficulty::Invalid, Personality::Invalid, Team::Invalid, -1, manual);
+  }
 
-   void createRandom (bool manual = false) {
-      addbot ("", -1, -1, -1, -1, manual);
-   }
+  bool EnemySpotted () const {
+    return enemy_spotted_;
+  }
 
-   bool canPause () const {
-      return m_botsCanPause;
-   }
+  void SetEnemySpotted (const bool spotted) {
+    enemy_spotted_ = spotted;
+  }
 
-   void setCanPause (const bool pause) {
-      m_botsCanPause = pause;
-   }
+  bool HasBombSay (BombPlantedSay type) const {
+    return has_flag (bomb_say_status_, type);
+  }
 
-   bool hasBombSay (int type) const {
-      return (m_bombSayStatus & type) == type;
-   }
+  void ClearBombSay (BombPlantedSay type) {
+    bomb_say_status_ &= ~type;
+  }
 
-   void clearBombSay (int type) {
-      m_bombSayStatus &= ~type;
-   }
+  void SetPlantedBombSearchCooldown (const float duration) {
+    plant_search_update_timer_.start (duration);
+  }
 
-   void setPlantedBombSearchTimestamp (const float timestamp) {
-      m_plantSearchUpdateTime = timestamp;
-   }
+  bool HasPlantedBombSearchCooldown () const {
+    return !plant_search_update_timer_.elapsed ();
+  }
 
-   float getPlantedBombSearchTimestamp () const {
-      return m_plantSearchUpdateTime;
-   }
+  void SetLastRadioTimestamp (const Team team, const float timestamp) {
+    if (team == Team::CT || team == Team::Terrorist) {
+      team_data_[team].last_radio_timestamp = timestamp;
+    }
+  }
 
-   void setLastRadioTimestamp (const int team, const float timestamp) {
-      if (team == Team::CT || team == Team::Terrorist) {
-         m_teamData[team].lastRadioTimestamp = timestamp;
-      }
-   }
+  float GetLastRadioTimestamp (const Team team) const {
+    if (team == Team::CT || team == Team::Terrorist) {
+      return team_data_[team].last_radio_timestamp;
+    }
+    return 0.0f;
+  }
 
-   float getLastRadioTimestamp (const int team) const {
-      if (team == Team::CT || team == Team::Terrorist) {
-         return m_teamData[team].lastRadioTimestamp;
-      }
-      return 0.0f;
-   }
+  void SetLastRadio (const Team team, const RadioChat radio) {
+    team_data_[team].last_radio_slot = radio;
+  }
 
-   void setLastRadio (const int team, const int radio) {
-      m_teamData[team].lastRadioSlot = radio;
-   }
+  RadioChat GetLastRadio (const Team team) const {
+    return team_data_[team].last_radio_slot;
+  }
 
-   int getLastRadio (const int team) const {
-      return m_teamData[team].lastRadioSlot;
-   }
+  void MarkLastChatTime () {
+    last_chat_timer_.start ();
+  }
 
-   void setLastChatTimestamp (const float timestamp) {
-      m_lastChatTime = timestamp;
-   }
+  float GetLastChatElapsedTime () const {
+    return last_chat_timer_.elapsed_time ();
+  }
 
-   float getLastChatTimestamp () const {
-      return m_lastChatTime;
-   }
+  // some bots are online ?
+  bool HasBotsOnline () const {
+    return GetBotCount () > 0;
+  }
 
-   // some bots are online ?
-   bool hasBotsOnline () const {
-      return getBotCount () > 0;
-   }
-
-public:
-   Bot *operator [] (int index) {
-      return findBotByIndex (index);
-   }
-
-   Bot *operator [] (edict_t *ent) {
-      return findBotByEntity (ent);
-   }
+  void DisconnectAll () {
+    if (HasBotsOnline ()) {
+      KickEveryone (true);
+    }
+  }
 
 public:
-   UniqueBot *begin () {
-      return m_bots.begin ();
-   }
+  Bot *operator[] (int index) {
+    return FindBotByIndex (index);
+  }
 
-   UniqueBot *begin () const {
-      return m_bots.begin ();
-   }
+  Bot *operator[] (edict_t *ent) {
+    return FindBotByEntity (ent);
+  }
 
-   UniqueBot *end () {
-      return m_bots.end ();
-   }
+public:
+  ystl::InlineList<Bot>::iterator begin () {
+    return bots_.begin ();
+  }
 
-   UniqueBot *end () const {
-      return m_bots.end ();
-   }
+  ystl::InlineList<Bot>::const_iterator begin () const {
+    return bots_.begin ();
+  }
+
+  ystl::InlineList<Bot>::iterator end () {
+    return bots_.end ();
+  }
+
+  ystl::InlineList<Bot>::const_iterator end () const {
+    return bots_.end ();
+  }
 };
 
 // bot async worker wrapper
-class BotThreadWorker final : public Singleton <BotThreadWorker> {
+class ThreadWorker final : public ystl::Singleton<ThreadWorker> {
 private:
-   UniquePtr <ThreadPool> m_pool {};
+  ystl::UniquePtr<ystl::ThreadPool> pool_ {};
 
 public:
-   explicit BotThreadWorker () = default;
-   ~BotThreadWorker () = default;
+  explicit ThreadWorker () = default;
+  ~ThreadWorker () = default;
 
 public:
-   void shutdown ();
-   void startup (int workers);
+  void Shutdown ();
+  void Startup (int workers);
 
 public:
-   template <typename F> void enqueue (F &&fn) {
-      if (!available ()) {
-         fn (); // no threads, no fun, just run task in current thread
-         return;
-      }
-      m_pool->enqueue (cr::move (fn));
-   }
+  template <typename F> void Enqueue (F &&fn) {
+    if (!Available ()) {
+      fn (); // no threads, no fun, just run task in current thread
+      return;
+    }
+    pool_->enqueue (ystl::move (fn));
+  }
 
 public:
-   bool available () {
-      return m_pool && m_pool->threadCount () > 0;
-   }
+  bool Available () {
+    return pool_ && pool_->thread_count () > 0;
+  }
+};
+
+// bot tick scheduler, owns think rate and movement command issuing
+class TickManager final : public ystl::Singleton<TickManager> {
+public:
+  explicit TickManager () = default;
+  ~TickManager () = default;
+
+public:
+  void Frame (Bot *bot);
+  void OnBotRound (Bot *bot);
+  void RunCommand (Bot *bot);
+
+private:
+  bool IsFrameSkipDisabled ();
+  uint8_t ComputeMsec (const Bot *bot) const;
 };
 
 // expose global
-CR_EXPOSE_GLOBAL_SINGLETON (BotManager, bots);
+YSTL_EXPOSE_GLOBAL_SINGLETON (Manager, bots);
 
 // expose async worker
-CR_EXPOSE_GLOBAL_SINGLETON (BotThreadWorker, worker);
+YSTL_EXPOSE_GLOBAL_SINGLETON (ThreadWorker, worker);
+
+// expose tick scheduler
+YSTL_EXPOSE_GLOBAL_SINGLETON (TickManager, tickmgr);
+
+} // namespace bot
