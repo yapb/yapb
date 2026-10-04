@@ -252,6 +252,7 @@ jobs:
         env:
           CS_CERTIFICATE: ${{ secrets.CS_CERTIFICATE }}
           CS_CERTIFICATE_PASSWORD: ${{ secrets.CS_CERTIFICATE_PASSWORD }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
 
       - name: Purge old continuous build
         if: github.event_name == 'push'

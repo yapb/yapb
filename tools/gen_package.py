@@ -12,6 +12,7 @@ import sys
 import time
 import base64
 import shutil
+import tempfile
 import zipfile
 import tarfile
 import pathlib
@@ -83,6 +84,64 @@ class BotSign(object):
       return True
 
 
+class BotGpgSign(object):
+   def __init__(self):
+      self.signing = False
+      self.gpg = shutil.which('gpg')
+      self.key_id = None
+
+      if not self.gpg:
+         return
+
+      if 'GPG_PRIVATE_KEY' not in os.environ:
+         return
+
+      self.home = tempfile.mkdtemp(prefix='yapb-gpg-')
+      env = dict(os.environ, GNUPGHOME=self.home)
+
+      import_result = subprocess.run(
+         [self.gpg, '--batch', '--import'],
+         input=os.environ.get('GPG_PRIVATE_KEY').encode(),
+         env=env, capture_output=True)
+
+      if import_result.returncode != 0:
+         print('Damaged gpg key. GPG signing disabled.')
+         return
+
+      list_result = subprocess.run(
+         [self.gpg, '--batch', '--with-colons', '--list-secret-keys'],
+         env=env, capture_output=True, text=True)
+
+      for line in list_result.stdout.splitlines():
+         if line.startswith('sec:'):
+            self.key_id = line.split(':')[4]
+            break
+
+      if not self.key_id:
+         print('No gpg secret key. GPG signing disabled.')
+         return
+
+      self.signing = True
+
+   def has(self):
+      return self.signing
+
+   def sign_file(self, filename):
+      env = dict(os.environ, GNUPGHOME=self.home)
+
+      sign_result = subprocess.run(
+         [self.gpg, '--batch', '--yes', '--pinentry-mode', 'loopback',
+          '--armor', '--detach-sign', '--local-user', self.key_id,
+          '--output', filename + '.asc', filename],
+         env=env, capture_output=True, text=True)
+
+      if sign_result.returncode != 0:
+         print(f'GPG sign failed for {os.path.basename(filename)}.')
+         print(sign_result.stderr.strip())
+         return False
+      return True
+
+
 @dataclass
 class BotPackage:
    name: str
@@ -140,6 +199,13 @@ class BotRelease(object):
          print('Signing enabled')
       else:
          print('Signing disabled')
+
+      self.gpg = BotGpgSign()
+
+      if self.gpg.has():
+         print('GPG signing enabled')
+      else:
+         print('GPG signing disabled')
 
       os.makedirs(self.pkg_dir, exist_ok=True)
       self.http_pull(self.win32exe, 'botsetup.exe')
@@ -353,6 +419,10 @@ class BotRelease(object):
          self.convert_zip_txz(dest_tmp, dest)
 
       print('-> Success...')
+
+      if self.gpg.has():
+         self.gpg.sign_file(dest)
+
       self.unlink_binaries()
       self.unlink_amxx()
 
