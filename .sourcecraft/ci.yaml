@@ -71,7 +71,7 @@ tasks:
           - git submodule update --init --recursive
       - name: zig
         env:
-          ZIG_VERSION: "0.16.0"
+          ZIG_VERSION: "0.17.0"
         script:
           - |
             set -e
@@ -190,7 +190,7 @@ tasks:
             cmake --version
       - name: zig
         env:
-          ZIG_VERSION: "0.16.0"
+          ZIG_VERSION: "0.17.0"
         script:
           - |
             set -e
@@ -220,16 +220,13 @@ tasks:
           - ctest --test-dir build/linux-tests --output-on-failure
 
   - name: make-release
-    env:
-      CS_CERTIFICATE: ${{ secrets.CS_CERTIFICATE }}
-      CS_CERTIFICATE_PASSWORD: ${{ secrets.CS_CERTIFICATE_PASSWORD }}
     cubes:
       - name: submodules
         script:
           - git submodule update --init --recursive
       - name: zig
         env:
-          ZIG_VERSION: "0.16.0"
+          ZIG_VERSION: "0.17.0"
         script:
           - |
             set -e
