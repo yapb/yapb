@@ -121,6 +121,11 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 yapb_configure_target(${PROJECT_NAME} STRICT DIST)
 
+# undecorated stdcall export alias, main library only: amxx has no such symbol
+if(WIN32 AND IS_ZIG AND NOT YAPB_64BIT AND NOT CPU_NON_X86)
+  target_link_options(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/ext/ldscripts/yapb-x86.def)
+endif()
+
 # windows resource with version info, main library only
 if(WIN32 AND GIT_FOUND)
   if(IS_ZIG)
@@ -134,6 +139,8 @@ if(WIN32 AND GIT_FOUND)
       VERBATIM
     )
     target_sources(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/yapb.res)
+    # ninja with zig drops .res from the link, pass it explicitly
+    target_link_options(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/yapb.res)
   else()
     target_sources(${PROJECT_NAME} PRIVATE "vc/yapb.rc")
   endif()

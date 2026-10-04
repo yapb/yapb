@@ -78,17 +78,6 @@ if(CLANG_OR_GCC AND NOT ANDROID)
 
     list(APPEND _cflags -funroll-loops -fomit-frame-pointer -fno-stack-protector -fvisibility=hidden -fvisibility-inlines-hidden -fno-math-errno)
     list(APPEND _cflags -DNDEBUG)
-
-    if(YAPB_LTO AND NOT (APPLE AND IS_ZIG))
-      if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        set(_lto_flag -flto=auto)
-      else()
-        set(_lto_flag -flto)
-      endif()
-
-      list(APPEND _cflags ${_lto_flag})
-      list(APPEND _ldflags ${_lto_flag})
-    endif()
   else()
     list(APPEND _cflags -g3 -ggdb -DDEBUG)
 
@@ -151,9 +140,7 @@ if(CLANG_OR_GCC AND NOT ANDROID)
       list(APPEND _ldflags -Wl,--kill-at)
     endif()
 
-    if(IS_ZIG AND NOT YAPB_64BIT AND NOT CPU_NON_X86)
-      list(APPEND _ldflags ${PROJECT_SOURCE_DIR}/ext/ldscripts/yapb-x86.def)
-    endif()
+
 
     if(IS_ZIG)
       list(APPEND _ldflags -Wl,--allow-shlib-undefined)
@@ -247,9 +234,9 @@ target_compile_options(yapb_strict INTERFACE ${_strict_cflags})
 target_link_options(yapb_strict INTERFACE ${_strict_ldflags})
 target_link_options(yapb_dist INTERFACE ${_dist_ldflags})
 
-# usage: yapb_configure_target(<target> [STRICT] [DIST])
+# usage: yapb_configure_target(<target> [STRICT] [DIST] [NOLTO])
 function(yapb_configure_target _tgt)
-  cmake_parse_arguments(_YC "STRICT;DIST" "" "" ${ARGN})
+  cmake_parse_arguments(_YC "STRICT;DIST;NOLTO" "" "" ${ARGN})
 
   set_target_properties(${_tgt} PROPERTIES
     CXX_VISIBILITY_PRESET hidden
@@ -272,5 +259,18 @@ function(yapb_configure_target _tgt)
 
   if(_YC_DIST)
     target_link_libraries(${_tgt} PRIVATE yapb_dist)
+  endif()
+
+  # per-target so single-tu modules can opt out: lto codegen emits libcalls
+  # missing from 32-bit libc (wmem, long-double math) breaking the dll load
+  if(YAPB_LTO AND NOT _YC_NOLTO AND NOT CMAKE_BUILD_TYPE MATCHES "Debug" AND NOT (APPLE AND IS_ZIG))
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+      set(_lto_flag -flto=auto)
+    else()
+      set(_lto_flag -flto)
+    endif()
+
+    target_compile_options(${_tgt} PRIVATE ${_lto_flag})
+    target_link_options(${_tgt} PRIVATE ${_lto_flag})
   endif()
 endfunction()

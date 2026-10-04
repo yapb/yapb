@@ -17,7 +17,25 @@ set_target_properties(yapb_amxx PROPERTIES
   CXX_EXTENSIONS OFF
 )
 
-yapb_configure_target(yapb_amxx)
+yapb_configure_target(yapb_amxx NOLTO)
+
+# windows resource with version info, mirrors the main library
+if(WIN32 AND GIT_FOUND)
+  if(IS_ZIG)
+    add_custom_command(
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/yapb_amxx.res
+      COMMAND zig rc -DVERSION_GENERATED -I${PROJECT_BINARY_DIR} /fo${CMAKE_CURRENT_BINARY_DIR}/yapb_amxx.res -- ${CMAKE_CURRENT_SOURCE_DIR}/yapb_amxx.rc
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/yapb_amxx.rc ${VERSION_H}
+      COMMENT "Compiling Windows resource ext/amxx/yapb_amxx.rc"
+      VERBATIM
+    )
+    target_sources(yapb_amxx PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/yapb_amxx.res)
+    # ninja with zig drops .res from the link, pass it explicitly
+    target_link_options(yapb_amxx PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/yapb_amxx.res)
+  else()
+    target_sources(yapb_amxx PRIVATE "yapb_amxx.rc")
+  endif()
+endif()
 
 if(CLANG_OR_GCC)
   target_compile_options(yapb_amxx PRIVATE -Wall -Wextra -Wno-unused-parameter)

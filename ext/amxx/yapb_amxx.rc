@@ -1,0 +1,39 @@
+//
+// YaPB, started from PODBot by Count Floyd
+// Maintained by YaPB Team <yapb@jeefo.net>
+//
+// SPDX-License-Identifier: Unlicense
+//
+
+#include <winver.h>
+
+#ifdef VERSION_GENERATED
+#  define VERSION_HEADER <version.build.h>
+#else
+#  define VERSION_HEADER "../../inc/version.h"
+#endif
+
+#include VERSION_HEADER
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION MODULE_VERSION_FILE
+PRODUCTVERSION MODULE_VERSION_FILE
+FILEOS 0x40004
+FILETYPE 0x2 {
+    BLOCK "StringFileInfo" {
+      BLOCK "040904E4" {
+         VALUE "CompanyName",       "YaPB Team   "                                                               "\0"
+         VALUE "FileDescription",   "YaPB v" MODULE_VERSION "." MODULE_COMMIT_COUNT  " - AMX Mod X Module"        "\0"
+         VALUE "LegalCopyright",    "Copyright (c) 2004-2026 YaPB Team"                                          "\0"
+         VALUE "OriginalFilename",  "yapb_amxx.dll"                                                              "\0"
+         VALUE "ProductName",       "YaPB"                                                                       "\0"
+         VALUE "InternalName",      "YaPB AMXX"                                                                  "\0"
+         VALUE "FileVersion",       MODULE_VERSION "." MODULE_COMMIT_COUNT                                       "\0"
+         VALUE "ProductVersion",    MODULE_VERSION "." MODULE_COMMIT_COUNT                                       "\0"
+         VALUE "SpecialBuild",      MODULE_BUILD_ID                                                              "\0"
+      }
+    }
+    BLOCK "VarFileInfo" {
+       VALUE "Translation", 0x400, 1200
+    }
+}
