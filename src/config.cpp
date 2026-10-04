@@ -996,12 +996,12 @@ void Config::LoadDifficultyConfig () {
     }
     auto diff = &difficulty_[id];
 
-    if (auto *value = level->find ("reaction")) {
+    if (auto *value = level->find ("Reaction")) {
       const auto reaction = value->as_list ();
 
       if (reaction.size () != 2) {
         ystl::logger.error (
-          "difficulty.%s: 'reaction' of '%s' must contain two values. Entry ignored.", kConfigExtension, level->name ().chars ());
+          "difficulty.%s: 'Reaction' of '%s' must contain two values. Entry ignored.", kConfigExtension, level->name ().chars ());
       }
       else {
         diff->reaction[0] = reaction[0].as<float> ();
@@ -1018,7 +1018,7 @@ void Config::LoadDifficultyConfig () {
 
       if (aim_error.size () != 3) {
         ystl::logger.error (
-          "difficulty.%s: 'aimError' of '%s' must contain three values. Entry ignored.", kConfigExtension, level->name ().chars ());
+          "difficulty.%s: 'AimError' of '%s' must contain three values. Entry ignored.", kConfigExtension, level->name ().chars ());
       }
       else {
         diff->aim_error.x = aim_error[0].as<float> ();
@@ -1971,11 +1971,11 @@ void Config::ApplyWeaponDefs (const ystl::ConfNode *root) {
     }
     auto &weapon = FindWeaponById (id);
 
-    weapon.name = entry->get_string ("name", weapon.name);
-    weapon.model = entry->get_string ("model", weapon.model);
-    weapon.alias = entry->get_string ("alias", weapon.alias);
+    weapon.name = entry->get_string ("Name", weapon.name);
+    weapon.model = entry->get_string ("Model", weapon.model);
+    weapon.alias = entry->get_string ("Alias", weapon.alias);
     weapon.full_name = entry->get_string ("FullName", weapon.full_name);
-    weapon.price = entry->get_int ("price", weapon.price);
+    weapon.price = entry->get_int ("Price", weapon.price);
     weapon.min_primary_ammo = entry->get_int ("MinPrimaryAmmo", weapon.min_primary_ammo);
     weapon.buy_group = entry->get_int ("BuyGroup", weapon.buy_group);
     weapon.buy_select = entry->get_int ("BuySelect", weapon.buy_select);
@@ -1991,7 +1991,7 @@ void Config::ApplyWeaponDefs (const ystl::ConfNode *root) {
     if (auto *value = entry->find ("TeamAS")) {
       weapon.team_as = LookupWeaponTeam (value->value (), weapon.team_as);
     }
-    if (auto *value = entry->find ("type")) {
+    if (auto *value = entry->find ("Type")) {
       weapon.type = LookupWeaponType (value->value (), weapon.type);
     }
   }
@@ -2011,14 +2011,14 @@ void Config::ApplySoundDefs (const ystl::ConfNode *root) {
 
     // section name is the sound prefix; string storage is owned by m_gamedef
     tmpl.prefix = entry->name ().chars ();
-    tmpl.flags = LookupNoiseFlags (entry->get_string ("flags"));
+    tmpl.flags = LookupNoiseFlags (entry->get_string ("Flags"));
 
     if (tmpl.flags == Noise (0)) {
       ystl::logger.error ("gamedef.%s: sound template '%s' has no valid flags. Entry ignored.", kConfigExtension, entry->name ().chars ());
       continue;
     }
-    tmpl.base_radius = entry->get_float ("radius", 2048.0f);
-    tmpl.duration = entry->get_float ("duration", 2.0f);
+    tmpl.base_radius = entry->get_float ("Radius", 2048.0f);
+    tmpl.duration = entry->get_float ("Duration", 2.0f);
 
     templates.push (tmpl);
   }

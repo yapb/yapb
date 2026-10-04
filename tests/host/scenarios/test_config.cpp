@@ -164,7 +164,7 @@ TEST_CASE ("unit/config_lookups") {
     const int ak_before = conf.FindWeaponById (Weapon::AK47).price;
 
     ystl::ConfParser parser {};
-    HOST_REQUIRE (parser.parse ("AK47 { price = 1234 }\nBogus { price = 1 }\n"));
+    HOST_REQUIRE (parser.parse ("AK47 { Price = 1234 }\nBogus { Price = 1 }\n"));
 
     ConfigHook::ApplyWeapons (&parser.document ());
     CHECK (conf.FindWeaponById (Weapon::AK47).price == 1234);
@@ -179,14 +179,14 @@ TEST_CASE ("unit/config_lookups") {
 
   {
     ystl::ConfParser parser {};
-    HOST_REQUIRE (parser.parse ("Noisy { flags = BogusFlag }\n"));
+    HOST_REQUIRE (parser.parse ("Noisy { Flags = BogusFlag }\n"));
     ConfigHook::ApplySounds (&parser.document ());
     CHECK (ConfigHook::ClassifySound ("zzcfgtest-1.wav") == nullptr);
   }
 
   {
     ystl::ConfParser parser {};
-    HOST_REQUIRE (parser.parse ("zzcfgtest { flags = WeaponFire\n radius = 100.0\n duration = 0.5 }\n"));
+    HOST_REQUIRE (parser.parse ("zzcfgtest { Flags = WeaponFire\n Radius = 100.0\n Duration = 0.5 }\n"));
     ConfigHook::ApplySounds (&parser.document ());
 
     const SoundTemplate *tmpl = ConfigHook::ClassifySound ("zzcfgtest-1.wav");
