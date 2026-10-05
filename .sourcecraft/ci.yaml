@@ -211,6 +211,10 @@ tasks:
           - ctest --test-dir build/linux-tests --output-on-failure
 
   - name: make-release
+    env:
+      CS_CERTIFICATE: ${{ secrets.CS_CERTIFICATE }}
+      CS_CERTIFICATE_PASSWORD: ${{ secrets.CS_CERTIFICATE_PASSWORD }}
+      GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
     cubes:
       - name: submodules
         script:
@@ -282,11 +286,23 @@ tasks:
             TAG="$SOURCECRAFT_COMMIT_REF_NAME"
             REPO="$(echo "$SOURCECRAFT_REPO_URL" | sed -e 's|.*git.sourcecraft.dev/||' -e 's|\.git$||')"
             API="https://api.sourcecraft.tech/repos/$REPO/releases"
+            if git describe --tags --abbrev=0 >/dev/null 2>&1; then
+              base=$(git describe --tags --abbrev=0)
+              rev_range="$base..HEAD"
+            else
+              base="unreleased"
+              rev_range="HEAD~20..HEAD"
+            fi
+            notes=$(python3 tools/gen_release_notes.py --range "$rev_range" --since "$base" --fingerprint FC03F18A5E7DCE282A4B9D48194F2DA6C5F2FA24)
+            [ -n "$notes" ] || notes="Rolling build from master."
+            payload=$(python3 -c 'import json,sys; print(json.dumps({"tag":sys.argv[1],"title":sys.argv[1],"release_notes":sys.argv[2],"publish":True}))' "$TAG" "$notes")
             echo "Publishing $REPO@$TAG"
+            curl -fsSL -X DELETE "$API/tag/$TAG" \
+              -H "Authorization: Bearer $SOURCECRAFT_TOKEN" > /dev/null 2>&1 || echo "no previous release, fresh publish"
             curl -fsSL -X POST "$API" \
               -H "Authorization: Bearer $SOURCECRAFT_TOKEN" \
               -H 'Content-Type: application/json' \
-              -d "{\"tag\":\"$TAG\",\"title\":\"$TAG\",\"publish\":true}" > /dev/null || echo "release exists, attaching assets"
+              -d "$payload" > /dev/null
             for f in pkg/*; do
               [ -f "$f" ] || continue
               echo "Uploading $(basename "$f")"

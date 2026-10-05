@@ -252,22 +252,27 @@ jobs:
           CS_CERTIFICATE_PASSWORD: ${{ secrets.CS_CERTIFICATE_PASSWORD }}
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
 
-      - name: Purge old continuous build
-        if: github.event_name == 'push'
-        continue-on-error: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release delete continuous --cleanup-tag
-
-      - name: Wait for tag cleanup
-        if: github.event_name == 'push'
-        run: sleep 20s
-
       - name: Push continuous build
         if: github.event_name == 'push'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create continuous --generate-notes --prerelease --title "Continuous Build" ./pkg/*
+        run: |
+          last_tag=$(gh release list --json tagName,isPrerelease,isDraft --jq '[.[] | select(.isPrerelease == false and .isDraft == false)][0].tagName')
+          if [ -n "$last_tag" ] && [ "$last_tag" != "null" ] && git merge-base --is-ancestor "$last_tag" HEAD 2>/dev/null; then
+            rev_range="$last_tag..HEAD"
+          else
+            rev_range="HEAD~20..HEAD"
+          fi
+          notes=$(python3 tools/gen_release_notes.py --range "$rev_range" --repo "$GITHUB_REPOSITORY" --since "${last_tag:-unreleased}" --run-url "https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --fingerprint FC03F18A5E7DCE282A4B9D48194F2DA6C5F2FA24)
+          [ -n "$notes" ] || notes="Rolling build from master."
+          gh release view continuous >/dev/null 2>&1 || gh release create continuous --prerelease --title "Continuous Build" --notes "$notes"
+          gh release edit continuous --notes "$notes"
+          for asset in $(gh release view continuous --json assets --jq '.assets[]?.name'); do
+            if [ ! -e "pkg/$asset" ]; then
+              gh release delete-asset continuous "$asset" -y
+            fi
+          done
+          gh release upload continuous ./pkg/* --clobber
 
       - name: Publish release
         if: github.event_name == 'release' && startsWith(github.ref, 'refs/tags/')
