@@ -1546,9 +1546,9 @@ bool Bot::HandleTerroristHostagePickup (edict_t *ent, const ystl::Vector &origin
 
     const int index = FindDefendNode (origin);
 
-    StartTask (TaskId::Camp, TaskPri::camp, kInvalidNodeIndex,
+    StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex,
       game.Time () + rg (cv_camping_time_min.As<float> (), cv_camping_time_max.As<float> ()), true);
-    StartTask (TaskId::MoveTo, TaskPri::move_to, index, game.Time () + rg (3.0f, 6.0f), true);
+    StartTask (TaskId::MoveTo, TaskPri::kMoveTo, index, game.Time () + rg (3.0f, 6.0f), true);
 
     SelectCampButtons (index);
     defend_hostage_ = true;
@@ -1573,8 +1573,8 @@ bool Bot::HandleTerroristBombPickup (const ystl::Vector &origin) {
 
     if (time_mid_blowup > game.Time ()) {
       ClearTask (TaskId::MoveTo);
-      StartTask (TaskId::Camp, TaskPri::camp, kInvalidNodeIndex, time_mid_blowup, true);
-      StartTask (TaskId::MoveTo, TaskPri::move_to, index, time_mid_blowup, true);
+      StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, time_mid_blowup, true);
+      StartTask (TaskId::MoveTo, TaskPri::kMoveTo, index, time_mid_blowup, true);
 
       SelectCampButtons (index);
 
@@ -1625,7 +1625,7 @@ bool Bot::HandleCtBombPickup (const ystl::Vector &origin) {
 
   if (IsOutOfBombTimer ()) {
     CompleteTask ();
-    StartTask (TaskId::EscapeFromBomb, TaskPri::escape_from_bomb, kInvalidNodeIndex, 0.0f, true);
+    StartTask (TaskId::EscapeFromBomb, TaskPri::kEscapeFromBomb, kInvalidNodeIndex, 0.0f, true);
 
     return false;
   }
@@ -1645,8 +1645,8 @@ bool Bot::HandleCtBombPickup (const ystl::Vector &origin) {
       game_state.GetTimeBombPlanted () + mp_c4timer.As<float> () - graph.CalculateTravelTime (pev->maxspeed, pev->origin, path.origin);
 
     ClearTask (TaskId::MoveTo);
-    StartTask (TaskId::Camp, TaskPri::camp, kInvalidNodeIndex, time_to_explode, true);
-    StartTask (TaskId::MoveTo, TaskPri::move_to, index, time_to_explode, true);
+    StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, time_to_explode, true);
+    StartTask (TaskId::MoveTo, TaskPri::kMoveTo, index, time_to_explode, true);
 
     SelectCampButtons (index);
 
@@ -1665,9 +1665,9 @@ bool Bot::HandleCtDroppedC4 (edict_t *ent, const ystl::Vector &origin) {
   if (!defended_bomb_ && rg.chance (25 + Skill () / 2) && health_value_ < 60) {
     const int index = FindDefendNode (origin);
 
-    StartTask (TaskId::Camp, TaskPri::camp, kInvalidNodeIndex,
+    StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex,
       game.Time () + rg (cv_camping_time_min.As<float> (), cv_camping_time_max.As<float> ()), true);
-    StartTask (TaskId::MoveTo, TaskPri::move_to, index, game.Time () + rg (10.0f, 30.0f), true);
+    StartTask (TaskId::MoveTo, TaskPri::kMoveTo, index, game.Time () + rg (10.0f, 30.0f), true);
 
     SelectCampButtons (index);
     defended_bomb_ = true;

@@ -663,7 +663,7 @@ TEST_CASE ("unit/behavior_map") {
   bot->pev->origin = ystl::Vector (0.0f, 0.0f, 0.0f);
   CHECK (BehaviorHook::BombTimer (*bot));
 
-  bot->StartTask (TaskId::Normal, TaskPri::normal, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::Normal, TaskPri::kNormal, kInvalidNodeIndex, 0.0f, true);
   BehaviorHook::Override (*bot);
   CHECK (bot->GetTaskId () == TaskId::EscapeFromBomb);
 
@@ -672,7 +672,7 @@ TEST_CASE ("unit/behavior_map") {
   CHECK (!BehaviorHook::BombTimer (*bot));
 
   bot->ClearTasks ();
-  bot->StartTask (TaskId::Normal, TaskPri::normal, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::Normal, TaskPri::kNormal, kInvalidNodeIndex, 0.0f, true);
   BehaviorHook::Override (*bot);
   CHECK (bot->GetTaskId () == TaskId::Normal);
 
@@ -744,7 +744,7 @@ TEST_CASE ("unit/behavior_damage") {
   bot->agression_level_ = 0.0f;
   bot->fear_level_ = 0.5f;
   BehaviorHook::SetCurrent (*bot, 1);
-  bot->StartTask (TaskId::Camp, TaskPri::camp, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, 0.0f, true);
   HOST_REQUIRE (bot->GetTaskId () == TaskId::Camp);
   BehaviorHook::Damage (*bot, foe, 50, 0, 4);
   CHECK (bot->agression_level_ == 0.1f);
@@ -885,7 +885,7 @@ TEST_CASE ("unit/behavior_logic") {
   other->pev->deadflag = DEAD_NO;
   other->pev->movetype = MOVETYPE_WALK;
   other->pev->origin = ystl::Vector (50.0f, 0.0f, 0.0f);
-  other->StartTask (TaskId::DefuseBomb, TaskPri::defuse_bomb, kInvalidNodeIndex, 0.0f, true);
+  other->StartTask (TaskId::DefuseBomb, TaskPri::kDefuseBomb, kInvalidNodeIndex, 0.0f, true);
   clients.Update ();
 
   CHECK (BehaviorHook::IsDefusing (*bot, ystl::Vector (10.0f, 0.0f, 0.0f)));

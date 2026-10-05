@@ -992,7 +992,7 @@ void Bot::AttackMovement () {
     if (has_flag (states_, Sense::SeeingEnemy) && approach < 30 && !game_state.IsBombPlanted () && cover_search_timer_.elapsed () &&
         (is_enemy_cone || is_vip_ || reload_data_.is_reloading || infected_enemy_team_)) {
 
-      StartTask (TaskId::SeekCover, TaskPri::seek_cover, kInvalidNodeIndex, 0.0f, true);
+      StartTask (TaskId::SeekCover, TaskPri::kSeekCover, kInvalidNodeIndex, 0.0f, true);
 
       if (!CheckWallOnBehind ()) {
         move_speed_ = -pev->maxspeed;
@@ -1796,13 +1796,13 @@ void Bot::CheckGrenadesThrow () {
     const float max_throw_time = game.Time () + kGrenadeCheckTime * 3.6f;
 
     if (has_flag (states_, Sense::ThrowExplosive)) {
-      StartTask (TaskId::ThrowExplosive, TaskPri::Throw, kInvalidNodeIndex, max_throw_time, false);
+      StartTask (TaskId::ThrowExplosive, TaskPri::kThrow, kInvalidNodeIndex, max_throw_time, false);
     }
     else if (has_flag (states_, Sense::ThrowFlashbang)) {
-      StartTask (TaskId::ThrowFlashbang, TaskPri::Throw, kInvalidNodeIndex, max_throw_time, false);
+      StartTask (TaskId::ThrowFlashbang, TaskPri::kThrow, kInvalidNodeIndex, max_throw_time, false);
     }
     else if (has_flag (states_, Sense::ThrowSmoke)) {
-      StartTask (TaskId::ThrowSmoke, TaskPri::Throw, kInvalidNodeIndex, max_throw_time, false);
+      StartTask (TaskId::ThrowSmoke, TaskPri::kThrow, kInvalidNodeIndex, max_throw_time, false);
     }
   }
   else {

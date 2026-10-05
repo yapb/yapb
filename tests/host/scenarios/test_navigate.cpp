@@ -1164,7 +1164,7 @@ TEST_CASE ("unit/navigate_gaps") {
   prep_bot (mate, ystl::Vector (60.0f, 0.0f, 0.0f));
 
   // mate outranks us with a camp task, so avoidance tracks it
-  mate->StartTask (TaskId::Camp, TaskPri::camp, kInvalidNodeIndex, 0.0f, true);
+  mate->StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, 0.0f, true);
 
   // rush timing: fresh round state reads low, personalities split...
   NavigateHook::SetPersonality (*bot, Personality::Rusher);
@@ -2245,7 +2245,7 @@ TEST_CASE ("unit/navigate_bulk") {
   engine.AdvanceTime (0.15f);
 
   // avoidance tracks a camping mate, then releases it
-  mate->StartTask (TaskId::Camp, TaskPri::camp, kInvalidNodeIndex, 0.0f, true);
+  mate->StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, 0.0f, true);
   NavigateHook::Avoid (*bot, forward);
   CHECK (NavigateHook::Hindrance (*bot) != nullptr);
 
@@ -2287,7 +2287,7 @@ TEST_CASE ("unit/navigate_bulk") {
   CHECK (!NavigateHook::SelectNext (*bot)); // current node free, nothing to do
 
   NavigateHook::ChangeNode (*mate, 1);
-  mate->StartTask (TaskId::Camp, TaskPri::camp, kInvalidNodeIndex, 0.0f, true);
+  mate->StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, 0.0f, true);
   NavigateHook::SetCurrentRaw (*bot, kInvalidNodeIndex);
   CHECK (!NavigateHook::SelectNext (*bot)); // occupied but no prev to detour from
   mate->ClearTasks ();

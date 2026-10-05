@@ -179,7 +179,7 @@ void Bot::CheckRadioQueue () {
           if (tid == TaskId::Pause || tid == TaskId::Camp) {
             Task ()->time = game.Time ();
           }
-          StartTask (TaskId::FollowUser, TaskPri::follow_user, kInvalidNodeIndex, 0.0f, true);
+          StartTask (TaskId::FollowUser, TaskPri::kFollowUser, kInvalidNodeIndex, 0.0f, true);
         }
         else if (num_followers > allowed_followers) {
           for (int i = 0; (i < game.MaxClients () && num_followers > allowed_followers); ++i) {
@@ -212,7 +212,7 @@ void Bot::CheckRadioQueue () {
         PushRadioChat (RadioChat::RogerThat);
 
         camp_buttons_ = 0;
-        StartTask (TaskId::Pause, TaskPri::pause, kInvalidNodeIndex, game.Time () + rg (30.0f, 60.0f), false);
+        StartTask (TaskId::Pause, TaskPri::kPause, kInvalidNodeIndex, game.Time () + rg (30.0f, 60.0f), false);
       }
     }
     break;
@@ -315,7 +315,7 @@ void Bot::CheckRadioQueue () {
         position_ = radio_entity_->v.origin + radio_entity_->v.v_angle.forward () * rg (1024.0f, 2048.0f);
 
         ClearSearchNodes ();
-        StartTask (TaskId::MoveTo, TaskPri::move_to, kInvalidNodeIndex, 0.0f, true);
+        StartTask (TaskId::MoveTo, TaskPri::kMoveTo, kInvalidNodeIndex, 0.0f, true);
       }
     }
     else if (!game.IsNullEntity (double_jump_entity_)) {
@@ -335,7 +335,7 @@ void Bot::CheckRadioQueue () {
         ClearTask (TaskId::Camp);
       }
       target_entity_ = nullptr;
-      StartTask (TaskId::EscapeFromBomb, TaskPri::escape_from_bomb, kInvalidNodeIndex, 0.0f, true);
+      StartTask (TaskId::EscapeFromBomb, TaskPri::kEscapeFromBomb, kInvalidNodeIndex, 0.0f, true);
     }
     else if (rg.chance (radio_percent_)) {
       PushRadioChat (RadioChat::Negative);
@@ -349,7 +349,7 @@ void Bot::CheckRadioQueue () {
       ClearSearchNodes ();
 
       position_ = game_state.GetBombOrigin ();
-      StartTask (TaskId::MoveTo, TaskPri::move_to, kInvalidNodeIndex, 0.0f, true);
+      StartTask (TaskId::MoveTo, TaskPri::kMoveTo, kInvalidNodeIndex, 0.0f, true);
 
       PushRadioChat (RadioChat::RogerThat);
     }
@@ -370,7 +370,7 @@ void Bot::CheckRadioQueue () {
       position_ = radio_entity_->v.origin + radio_entity_->v.v_angle.forward () * rg (1024.0f, 2048.0f);
 
       ClearSearchNodes ();
-      StartTask (TaskId::MoveTo, TaskPri::move_to, kInvalidNodeIndex, 0.0f, true);
+      StartTask (TaskId::MoveTo, TaskPri::kMoveTo, kInvalidNodeIndex, 0.0f, true);
 
       fear_level_ -= 0.3f;
 
@@ -619,10 +619,10 @@ void Bot::CheckRadioQueue () {
         const int index = FindDefendNode (radio_entity_->v.origin);
 
         // add/update camp task
-        StartTask (TaskId::Camp, TaskPri::camp, kInvalidNodeIndex, game.Time () + rg (30.0f, 60.0f), true);
+        StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, game.Time () + rg (30.0f, 60.0f), true);
 
         // add/update move task
-        StartTask (TaskId::MoveTo, TaskPri::move_to, index, game.Time () + rg (30.0f, 60.0f), true);
+        StartTask (TaskId::MoveTo, TaskPri::kMoveTo, index, game.Time () + rg (30.0f, 60.0f), true);
 
         // decide to duck or not to duck
         SelectCampButtons (index);
@@ -814,7 +814,7 @@ void Bot::TryHeadTowardRadioMessage () {
     position_ = radio_entity_->v.origin;
 
     ClearSearchNodes ();
-    StartTask (TaskId::MoveTo, TaskPri::move_to, kInvalidNodeIndex, 0.0f, true);
+    StartTask (TaskId::MoveTo, TaskPri::kMoveTo, kInvalidNodeIndex, 0.0f, true);
   }
 }
 

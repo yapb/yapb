@@ -298,8 +298,8 @@ int Bot::FindBestGoalWhenBombAction () {
       if (time_mid_blowup > game.Time ()) {
         ClearTask (TaskId::MoveTo); // remove any move tasks
 
-        StartTask (TaskId::Camp, TaskPri::camp, kInvalidNodeIndex, time_mid_blowup, true); // add/update camp task
-        StartTask (TaskId::MoveTo, TaskPri::move_to, result, 0.0f, true); // add/update move task
+        StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, time_mid_blowup, true); // add/update camp task
+        StartTask (TaskId::MoveTo, TaskPri::kMoveTo, result, 0.0f, true); // add/update move task
 
         // decide to duck or not to duck
         SelectCampButtons (result);
@@ -900,7 +900,7 @@ bool Bot::DetectStuckStatus (const ystl::Vector &dir_normal) {
     if (blocker != nullptr && game.IsBreakableEntity (blocker)) {
       breakable_entity_ = blocker;
       breakable_origin_ = game.GetEntityOrigin (blocker);
-      StartTask (TaskId::ShootBreakable, TaskPri::shoot_breakable, kInvalidNodeIndex, 0.0f, false);
+      StartTask (TaskId::ShootBreakable, TaskPri::kShootBreakable, kInvalidNodeIndex, 0.0f, false);
       first_collide_timer_.invalidate ();
       return false;
     }
@@ -1600,7 +1600,7 @@ bool Bot::UpdateNavigation () {
 
         // cool down a little if next path after current will be jump
         if (jump_sequence_) {
-          StartTask (TaskId::Pause, TaskPri::pause, kInvalidNodeIndex, game.Time () + rg (0.75f, 1.25f) + frame_interval_, false);
+          StartTask (TaskId::Pause, TaskPri::kPause, kInvalidNodeIndex, game.Time () + rg (0.75f, 1.25f) + frame_interval_, false);
           jump_sequence_ = false;
         }
       }
@@ -1663,11 +1663,11 @@ bool Bot::UpdateNavigation () {
           if (graph.Exists (prev) && !has_flag (graph[prev].flags, NodeFlag::Ladder)) {
             const auto current_task = Task ();
 
-            if (current_task->id != TaskId::MoveTo || !ystl::fequal (current_task->desire, static_cast<float> (TaskPri::plant_bomb))) {
+            if (current_task->id != TaskId::MoveTo || !ystl::fequal (current_task->desire, static_cast<float> (TaskPri::kPlantBomb))) {
               if (graph.Exists (prev_node_index)) {
                 ChangeNodeIndex (prev_node_index);
               }
-              StartTask (TaskId::MoveTo, TaskPri::plant_bomb, prev, 0.0f, true);
+              StartTask (TaskId::MoveTo, TaskPri::kPlantBomb, prev, 0.0f, true);
             }
             break;
           }
@@ -1743,7 +1743,7 @@ bool Bot::UpdateNavigation () {
       // bot is blocked by the door, wait for it to open and retry
       if (pev->velocity.length_sq2d () < ystl::sqrf (10.0f) && door_open_timer_.elapsed ()) {
         if (!door_hit_timer_.elapsed ()) {
-          StartTask (TaskId::Pause, TaskPri::pause, kInvalidNodeIndex, game.Time () + 0.5f, false);
+          StartTask (TaskId::Pause, TaskPri::kPause, kInvalidNodeIndex, game.Time () + 0.5f, false);
         }
         door_open_timer_.start (1.0f); // retry in 1 sec until door is open
         ++try_open_door_;
@@ -3381,8 +3381,8 @@ bool Bot::AdvanceMovement () {
           const int index = FindDefendNode (graph[next_index].origin);
 
           if (base_agression_level_ < danger && HasPrimaryWeapon ()) {
-            StartTask (TaskId::Camp, TaskPri::camp, kInvalidNodeIndex, task_time, true);
-            StartTask (TaskId::MoveTo, TaskPri::move_to, index, 0.0f, true);
+            StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, task_time, true);
+            StartTask (TaskId::MoveTo, TaskPri::kMoveTo, index, 0.0f, true);
           }
         }
         else if (bots.EnemySpotted () && !IsOnLadder () && !IsInWater () && !jump_ahead && IsOnFloor ()) {
@@ -3496,7 +3496,7 @@ bool Bot::AdvanceMovement () {
 
             // if another bot uses this ladder, wait 3 secs
             if (&other != this && other.is_alive_ && other.current_node_index_ == dest_index && other.IsOnLadder ()) {
-              StartTask (TaskId::Pause, TaskPri::pause, kInvalidNodeIndex, game.Time () + 3.0f, false);
+              StartTask (TaskId::Pause, TaskPri::kPause, kInvalidNodeIndex, game.Time () + 3.0f, false);
               return true;
             }
           }

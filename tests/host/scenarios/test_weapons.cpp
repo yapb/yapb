@@ -511,7 +511,7 @@ TEST_CASE ("unit/weapons_arms") {
   CHECK (!!(bot->pev->button & IN_ATTACK2));
 
   // ...reloads refuse uninterruptible business, then refill dry guns...
-  bot->StartTask (TaskId::PlantBomb, TaskPri::plant_bomb, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::PlantBomb, TaskPri::kPlantBomb, kInvalidNodeIndex, 0.0f, true);
   WeaponsHook::SetReloadState (*bot, Reload::Primary);
   WeaponsHook::CheckReload (*bot);
   CHECK (WeaponsHook::ReloadState (*bot) == Reload::None);
@@ -580,7 +580,7 @@ TEST_CASE ("unit/weapons_pickup") {
   CHECK (WeaponsHook::PickupBlocked (*bot));
   bot->pev->movetype = MOVETYPE_WALK;
 
-  bot->StartTask (TaskId::EscapeFromBomb, TaskPri::escape_from_bomb, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::EscapeFromBomb, TaskPri::kEscapeFromBomb, kInvalidNodeIndex, 0.0f, true);
   CHECK (WeaponsHook::PickupBlocked (*bot));
   bot->ClearTasks ();
 

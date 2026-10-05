@@ -64,7 +64,7 @@ void Bot::FilterTasks () {
 
   // calculate desire to attack
   if (has_flag (states_, Sense::SeeingEnemy) && ReactOnEnemy ()) {
-    attack.desire = TaskPri::attack;
+    attack.desire = TaskPri::kAttack;
   }
   else {
     attack.desire = 0.0f;
@@ -146,7 +146,7 @@ void Bot::FilterTasks () {
 
   // zombie bots has more hunt desire
   if (is_creature_ && hunt_enemy_desire > 16.0f) {
-    hunt_enemy_desire = TaskPri::attack;
+    hunt_enemy_desire = TaskPri::kAttack;
     seek_cover_desire = 0.0f;
   }
 
@@ -156,7 +156,7 @@ void Bot::FilterTasks () {
   }
 
   // blinded behavior
-  blinded_desire = !blind_timer_.elapsed () ? TaskPri::blind : 0.0f;
+  blinded_desire = !blind_timer_.elapsed () ? TaskPri::kBlind : 0.0f;
 
   // desires are set, now filter all actions against each other
   // most values were tuned by trial and error, so expect roughness
@@ -295,7 +295,7 @@ Task *Bot::Task () {
   if (tasks_.Empty ()) [[unlikely]] {
 
     // push the base task directly, without the starttask () side effects
-    tasks_.Emplace (TaskHandler (TaskId::Normal), TaskId::Normal, TaskPri::normal, kInvalidNodeIndex, 0.0f, true);
+    tasks_.Emplace (TaskHandler (TaskId::Normal), TaskId::Normal, TaskPri::kNormal, kInvalidNodeIndex, 0.0f, true);
     IgnoreCollision ();
   }
   return &tasks_.Current ();
@@ -432,7 +432,7 @@ void Bot::TaskNormal () {
         pev->groundentity == game.GetStartEntity () && move_speed_ >= GetShiftSpeed () && game.IsNullEntity (pickup_item_)) {
 
       if (!(game.MapIs (MapFlags::Demolition) && game_state.IsBombPlanted () && team_ == Team::CT)) {
-        StartTask (TaskId::Spraypaint, TaskPri::spraypaint, kInvalidNodeIndex, game.Time () + 1.0f, false);
+        StartTask (TaskId::Spraypaint, TaskPri::kSpraypaint, kInvalidNodeIndex, game.Time () + 1.0f, false);
       }
     }
 
@@ -486,7 +486,7 @@ void Bot::TaskNormal () {
             reload_data_.state = Reload::Primary;
           }
           time_camping_ = game.Time () + rg (cv_camping_time_min.As<float> (), cv_camping_time_max.As<float> ());
-          StartTask (TaskId::Camp, TaskPri::camp, kInvalidNodeIndex, time_camping_, true);
+          StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, time_camping_, true);
 
           look_at_safe_ = path_origin_ + path_->start.forward () * 500.0f;
           aim_flags_ |= AimFlags::Camp;
@@ -518,8 +518,8 @@ void Bot::TaskNormal () {
         else if (team_ == Team::Terrorist && rg.chance (75) && !game.MapIs (MapFlags::Demolition)) {
           const int index = FindDefendNode (path_->origin);
 
-          StartTask (TaskId::Camp, TaskPri::camp, kInvalidNodeIndex, game.Time () + rg (60.0f, 120.0f), true); // add/update camp task
-          StartTask (TaskId::MoveTo, TaskPri::move_to, index, game.Time () + rg (5.0f, 10.0f), true); // add/update move task
+          StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, game.Time () + rg (60.0f, 120.0f), true); // add/update camp task
+          StartTask (TaskId::MoveTo, TaskPri::kMoveTo, index, game.Time () + rg (5.0f, 10.0f), true); // add/update move task
 
           // decide to duck or not to duck
           SelectCampButtons (index);
@@ -535,10 +535,10 @@ void Bot::TaskNormal () {
             PushRadioChat (RadioChat::NeedBackup);
             PushRadioChat (RadioChat::ScaredEmotion);
 
-            StartTask (TaskId::Camp, TaskPri::camp, kInvalidNodeIndex, game.Time () + rg (4.0f, 8.0f), true);
+            StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, game.Time () + rg (4.0f, 8.0f), true);
           }
           else {
-            StartTask (TaskId::PlantBomb, TaskPri::plant_bomb, kInvalidNodeIndex, 0.0f, true);
+            StartTask (TaskId::PlantBomb, TaskPri::kPlantBomb, kInvalidNodeIndex, 0.0f, true);
           }
         }
         else if (team_ == Team::CT) {
@@ -550,8 +550,8 @@ void Bot::TaskNormal () {
             if (personality_ == Personality::Rusher) {
               camp_time *= 0.5f;
             }
-            StartTask (TaskId::Camp, TaskPri::camp, kInvalidNodeIndex, game.Time () + camp_time, true); // add/update camp task
-            StartTask (TaskId::MoveTo, TaskPri::move_to, index, game.Time () + rg (5.0f, 11.0f), true); // add/update move task
+            StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, game.Time () + camp_time, true); // add/update camp task
+            StartTask (TaskId::MoveTo, TaskPri::kMoveTo, index, game.Time () + rg (5.0f, 11.0f), true); // add/update move task
 
             // decide to duck or not to duck
             SelectCampButtons (index);
@@ -750,7 +750,7 @@ void Bot::TaskSeekCover () {
     prev_goal_index_ = kInvalidNodeIndex;
 
     // start hide task
-    StartTask (TaskId::Hide, TaskPri::hide, kInvalidNodeIndex, game.Time () + rg (3.0f, 12.0f), false);
+    StartTask (TaskId::Hide, TaskPri::kHide, kInvalidNodeIndex, game.Time () + rg (3.0f, 12.0f), false);
 
     // get a valid look direction
     const ystl::Vector dest = GetCampDirection (last_enemy_origin_);
@@ -1186,10 +1186,10 @@ void Bot::TaskPlantBomb () {
     const auto guard_time = mp_c4timer.As<float> () * 0.5f + mp_c4timer.As<float> () * 0.25f;
 
     // add/update camp task
-    StartTask (TaskId::Camp, TaskPri::camp, kInvalidNodeIndex, game.Time () + guard_time, true);
+    StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, game.Time () + guard_time, true);
 
     // add/update move task
-    StartTask (TaskId::MoveTo, TaskPri::move_to, index, game.Time () + guard_time, true);
+    StartTask (TaskId::MoveTo, TaskPri::kMoveTo, index, game.Time () + guard_time, true);
 
     // decide to duck or not to duck
     SelectCampButtons (index);
@@ -1228,8 +1228,8 @@ void Bot::TaskDefuseBomb () {
       }
       auto defend_point = bot.FindFarestNode (bot.pev->origin);
 
-      bot.StartTask (TaskId::Camp, TaskPri::camp, kInvalidNodeIndex, game.Time () + rg (30.0f, 60.0f), true); // add/update camp task
-      bot.StartTask (TaskId::MoveTo, TaskPri::move_to, defend_point, game.Time () + rg (3.0f, 6.0f), true); // add/update move task
+      bot.StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, game.Time () + rg (30.0f, 60.0f), true); // add/update camp task
+      bot.StartTask (TaskId::MoveTo, TaskPri::kMoveTo, defend_point, game.Time () + rg (3.0f, 6.0f), true); // add/update move task
     }
     game_state.SetBombOrigin (true);
 
@@ -1812,7 +1812,7 @@ void Bot::TaskEscapeFromBomb () {
     }
 
     // we're reached destination point so just sit down and camp
-    StartTask (TaskId::Camp, TaskPri::camp, kInvalidNodeIndex, game.Time () + 10.0f, true);
+    StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, game.Time () + 10.0f, true);
   }
 
   // didn't choose goal node yet?
@@ -1843,7 +1843,7 @@ void Bot::TaskEscapeFromBomb () {
       CompleteTask (); // we're done
 
       // we have no destination point, so just sit down and camp
-      StartTask (TaskId::Camp, TaskPri::camp, kInvalidNodeIndex, game.Time () + 10.0f, true);
+      StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, game.Time () + 10.0f, true);
       return;
     }
     prev_goal_index_ = best_index;
@@ -2071,7 +2071,7 @@ void Bot::TaskPickupItem () {
       move_speed_ = 0.0f;
       strafe_speed_ = 0.0f;
 
-      StartTask (TaskId::DefuseBomb, TaskPri::defuse_bomb, kInvalidNodeIndex, 0.0f, true);
+      StartTask (TaskId::DefuseBomb, TaskPri::kDefuseBomb, kInvalidNodeIndex, 0.0f, true);
     }
     break;
 
@@ -2151,7 +2151,7 @@ void Bot::TaskPickupItem () {
 
         if (nearest_hostage_node_index != kInvalidNodeIndex) {
           ClearTask (TaskId::MoveTo); // remove any move tasks
-          StartTask (TaskId::MoveTo, TaskPri::move_to, nearest_hostage_node_index, 0.0f, true);
+          StartTask (TaskId::MoveTo, TaskPri::kMoveTo, nearest_hostage_node_index, 0.0f, true);
         }
       }
       IgnoreCollision (); // also don't consider being stuck

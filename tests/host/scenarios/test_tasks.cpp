@@ -209,8 +209,8 @@ TEST_CASE ("unit/tasks_core") {
 
   // priorities keeps the hottest desire current, pops restore it
   bot->ClearTasks ();
-  bot->StartTask (TaskId::Normal, TaskPri::normal, kInvalidNodeIndex, 0.0f, true);
-  bot->StartTask (TaskId::Camp, TaskPri::camp, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::Normal, TaskPri::kNormal, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, 0.0f, true);
   CHECK (bot->GetTaskId () == TaskId::Camp);
   TasksHook::Complete (*bot);
   CHECK (bot->GetTaskId () == TaskId::Normal);
@@ -238,7 +238,7 @@ TEST_CASE ("unit/tasks_basic") {
   bot->pev->maxspeed = 270.0f;
 
   // pausing parks until the timer lapses...
-  bot->StartTask (TaskId::Pause, TaskPri::pause, kInvalidNodeIndex, game.Time () + 60.0f, true);
+  bot->StartTask (TaskId::Pause, TaskPri::kPause, kInvalidNodeIndex, game.Time () + 60.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () == TaskId::Pause);
   CHECK (TasksHook::MoveSpeed (*bot) == 0.0f);
@@ -252,17 +252,17 @@ TEST_CASE ("unit/tasks_basic") {
   CHECK (TasksHook::BlindFired (*bot));
   bot->SetNewDifficulty (Difficulty::Normal);
 
-  bot->StartTask (TaskId::Pause, TaskPri::pause, kInvalidNodeIndex, game.Time () - 1.0f, true);
+  bot->StartTask (TaskId::Pause, TaskPri::kPause, kInvalidNodeIndex, game.Time () - 1.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () != TaskId::Pause);
 
   // spraying waits out the logo timer...
-  bot->StartTask (TaskId::Spraypaint, TaskPri::spraypaint, kInvalidNodeIndex, game.Time () + 60.0f, true);
+  bot->StartTask (TaskId::Spraypaint, TaskPri::kSpraypaint, kInvalidNodeIndex, game.Time () + 60.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () != TaskId::Spraypaint);
 
   // ...then aims the wall once the timer lapses
-  bot->StartTask (TaskId::Spraypaint, TaskPri::spraypaint, kInvalidNodeIndex, game.Time () + 60.0f, true);
+  bot->StartTask (TaskId::Spraypaint, TaskPri::kSpraypaint, kInvalidNodeIndex, game.Time () + 60.0f, true);
   TasksHook::LogoTimerInvalidate (*bot);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () == TaskId::Spraypaint);
@@ -273,7 +273,7 @@ TEST_CASE ("unit/tasks_basic") {
   // blind bots hold still with a grudge, then stand down on time
   // (the cover index defaults out of range, so no navigation kicks in)
   bot->ClearTasks ();
-  bot->StartTask (TaskId::Blind, TaskPri::blind, kInvalidNodeIndex, game.Time () + 60.0f, true);
+  bot->StartTask (TaskId::Blind, TaskPri::kBlind, kInvalidNodeIndex, game.Time () + 60.0f, true);
   bot->blind_timer_.start (10.0f);
   CHECK (bot->blind_node_index_ == kInvalidNodeIndex);
   bot->blind_move_speed_ = 50.0f;
@@ -290,27 +290,27 @@ TEST_CASE ("unit/tasks_basic") {
   CHECK (bot->GetTaskId () != TaskId::Blind);
 
   // hiding without a reason ends at once...
-  bot->StartTask (TaskId::Hide, TaskPri::hide, kInvalidNodeIndex, game.Time () + 60.0f, true);
+  bot->StartTask (TaskId::Hide, TaskPri::kHide, kInvalidNodeIndex, game.Time () + 60.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () != TaskId::Hide);
 
   // ...camping without a knife ends even faster...
   cv_jasonmode.Set (1);
-  bot->StartTask (TaskId::Camp, TaskPri::camp, kInvalidNodeIndex, game.Time () + 60.0f, true);
+  bot->StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, game.Time () + 60.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () != TaskId::Camp);
   cv_jasonmode.Set (0);
 
   // ...and so do unplanted escapes, unfollowed follows and unlit fuses
-  bot->StartTask (TaskId::EscapeFromBomb, TaskPri::escape_from_bomb, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::EscapeFromBomb, TaskPri::kEscapeFromBomb, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () != TaskId::EscapeFromBomb);
 
-  bot->StartTask (TaskId::FollowUser, TaskPri::follow_user, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::FollowUser, TaskPri::kFollowUser, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () != TaskId::FollowUser);
 
-  bot->StartTask (TaskId::DoubleJump, TaskPri::double_jump, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::DoubleJump, TaskPri::kDoubleJump, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () != TaskId::DoubleJump);
 
@@ -377,7 +377,7 @@ TEST_CASE ("unit/tasks_duty") {
   TasksHook::Execute (*bot); // empty stack keeps normal
   CHECK (bot->GetTaskId () == TaskId::Normal);
 
-  bot->StartTask (TaskId::PlantBomb, TaskPri::plant_bomb, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::PlantBomb, TaskPri::kPlantBomb, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () == TaskId::MoveTo);
 
@@ -385,7 +385,7 @@ TEST_CASE ("unit/tasks_duty") {
   bot->ClearTasks ();
   bot->has_c4_ = true;
   bot->in_bomb_zone_ = true;
-  bot->StartTask (TaskId::PlantBomb, TaskPri::plant_bomb, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::PlantBomb, TaskPri::kPlantBomb, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () == TaskId::PlantBomb);
   CHECK (!!(bot->pev->button & IN_ATTACK));
@@ -395,7 +395,7 @@ TEST_CASE ("unit/tasks_duty") {
 
   // defusing thin air ends at once...
   bot->ClearTasks ();
-  bot->StartTask (TaskId::DefuseBomb, TaskPri::defuse_bomb, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::DefuseBomb, TaskPri::kDefuseBomb, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () != TaskId::DefuseBomb);
 
@@ -405,7 +405,7 @@ TEST_CASE ("unit/tasks_duty") {
   bot->team_ = Team::CT;
   bot->has_progress_bar_ = true;
   bot->ClearTasks ();
-  bot->StartTask (TaskId::DefuseBomb, TaskPri::defuse_bomb, kInvalidNodeIndex, game.Time (), true);
+  bot->StartTask (TaskId::DefuseBomb, TaskPri::kDefuseBomb, kInvalidNodeIndex, game.Time (), true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () == TaskId::DefuseBomb);
   CHECK (!!(bot->pev->button & IN_USE));
@@ -416,7 +416,7 @@ TEST_CASE ("unit/tasks_duty") {
   game_state.SetBombPlanted (false);
   bot->team_ = Team::Terrorist;
   bot->ClearTasks ();
-  bot->StartTask (TaskId::FollowUser, TaskPri::follow_user, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::FollowUser, TaskPri::kFollowUser, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () != TaskId::FollowUser);
 
@@ -474,14 +474,14 @@ TEST_CASE ("unit/tasks_throw") {
 
   // self-blast guard stands down before any ballistics...
   TasksHook::SetThrow (*bot, ystl::Vector (150.0f, 0.0f, 0.0f));
-  bot->StartTask (TaskId::ThrowExplosive, TaskPri::Throw, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::ThrowExplosive, TaskPri::kThrow, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () != TaskId::ThrowExplosive);
   CHECK (!(TasksHook::GetAimFlags (*bot) & static_cast<int> (AimFlags::Grenade)));
 
   // ...far lobs raise the flag and park the motion...
   TasksHook::SetThrow (*bot, ystl::Vector (2000.0f, 0.0f, 0.0f));
-  bot->StartTask (TaskId::ThrowExplosive, TaskPri::Throw, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::ThrowExplosive, TaskPri::kThrow, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
   CHECK (!!(TasksHook::GetAimFlags (*bot) & static_cast<int> (AimFlags::Grenade)));
   CHECK (TasksHook::MoveSpeed (*bot) == 0.0f);
@@ -489,12 +489,12 @@ TEST_CASE ("unit/tasks_throw") {
 
   // ...flash and smoke ride the same rails
   bot->ClearTasks ();
-  bot->StartTask (TaskId::ThrowFlashbang, TaskPri::Throw, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::ThrowFlashbang, TaskPri::kThrow, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
   CHECK (!!(TasksHook::GetAimFlags (*bot) & static_cast<int> (AimFlags::Grenade)));
 
   bot->ClearTasks ();
-  bot->StartTask (TaskId::ThrowSmoke, TaskPri::Throw, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::ThrowSmoke, TaskPri::kThrow, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
   CHECK (!!(TasksHook::GetAimFlags (*bot) & static_cast<int> (AimFlags::Grenade)));
 
@@ -504,7 +504,7 @@ TEST_CASE ("unit/tasks_throw") {
   const int base = testhost::CsCalls (cs, "ClientCommand");
   bot->ClearTasks ();
   bot->pev->weapons = ystl::to_underlying (ystl::bit (Weapon::Explosive));
-  bot->StartTask (TaskId::ThrowExplosive, TaskPri::Throw, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::ThrowExplosive, TaskPri::kThrow, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () == TaskId::ThrowExplosive);
   CHECK (testhost::CsCalls (cs, "ClientCommand") == base + 1);
@@ -624,20 +624,20 @@ TEST_CASE ("unit/tasks_drills") {
 
   // no enemy to cover from: the task folds back to normal...
   TasksHook::SetLastEnemy (*bot, nullptr);
-  bot->StartTask (TaskId::SeekCover, TaskPri::seek_cover, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::SeekCover, TaskPri::kSeekCover, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () == TaskId::Normal);
 
   // ...no enemy to fight: last known origin becomes the destination...
   TasksHook::SetEnemy (*bot, nullptr);
   TasksHook::SetLastEnemyOrigin (*bot, ystl::Vector (300.0f, 0.0f, 0.0f));
-  bot->StartTask (TaskId::Attack, TaskPri::attack, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::Attack, TaskPri::kAttack, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
   CHECK (TasksHook::DestOrigin (*bot) == ystl::Vector (300.0f, 0.0f, 0.0f));
 
   // ...nobody to follow and no lift to catch...
   TasksHook::SetTargetEntity (*bot, nullptr);
-  bot->StartTask (TaskId::FollowUser, TaskPri::follow_user, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::FollowUser, TaskPri::kFollowUser, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () == TaskId::Normal);
 
@@ -653,7 +653,7 @@ TEST_CASE ("unit/tasks_drills") {
   TasksHook::SetCurrentNode (*bot, 1);
   TasksHook::SetTargetEntity (*bot, leader);
   bot->ClearTasks ();
-  bot->StartTask (TaskId::FollowUser, TaskPri::follow_user, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::FollowUser, TaskPri::kFollowUser, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () == TaskId::FollowUser);
   CHECK (TasksHook::MoveSpeed (*bot) == 0.0f);
@@ -661,22 +661,22 @@ TEST_CASE ("unit/tasks_drills") {
   TasksHook::SetTargetEntity (*bot, nullptr);
 
   TasksHook::SetDoubleJumpEntity (*bot, nullptr);
-  bot->StartTask (TaskId::DoubleJump, TaskPri::double_jump, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::DoubleJump, TaskPri::kDoubleJump, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () != TaskId::DoubleJump);
 
   // ...no bomb planted, nothing to pick up...
-  bot->StartTask (TaskId::EscapeFromBomb, TaskPri::escape_from_bomb, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::EscapeFromBomb, TaskPri::kEscapeFromBomb, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () != TaskId::EscapeFromBomb);
 
-  bot->StartTask (TaskId::PickupItem, TaskPri::normal, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::PickupItem, TaskPri::kNormal, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () == TaskId::Normal);
 
   // ...a full camp run watches a direction and holds the task...
   bot->ClearTasks ();
-  bot->StartTask (TaskId::Camp, TaskPri::camp, kInvalidNodeIndex, game.Time () + 100.0f, true);
+  bot->StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, game.Time () + 100.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () == TaskId::Camp);
   CHECK (!TasksHook::LookSafe (*bot).empty ());
@@ -684,7 +684,7 @@ TEST_CASE ("unit/tasks_drills") {
   // ...banned camp folds the same way...
   cv_camping_allowed.Set (0);
   bot->ClearTasks ();
-  bot->StartTask (TaskId::Camp, TaskPri::camp, kInvalidNodeIndex, game.Time () + 100.0f, true);
+  bot->StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, game.Time () + 100.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () == TaskId::Normal);
   cv_camping_allowed.Set (1);
@@ -692,7 +692,7 @@ TEST_CASE ("unit/tasks_drills") {
   // ...creatures never hide, blind bots without a node hold still...
   TasksHook::SetCreature (*bot, true);
   bot->ClearTasks ();
-  bot->StartTask (TaskId::Hide, TaskPri::hide, kInvalidNodeIndex, game.Time () + 100.0f, true);
+  bot->StartTask (TaskId::Hide, TaskPri::kHide, kInvalidNodeIndex, game.Time () + 100.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () == TaskId::Normal);
   TasksHook::SetCreature (*bot, false);
@@ -700,12 +700,12 @@ TEST_CASE ("unit/tasks_drills") {
   // ...with no enemy to remember, hiding ends at once...
   TasksHook::SetLastEnemyOrigin (*bot, ystl::Vector {});
   bot->ClearTasks ();
-  bot->StartTask (TaskId::Hide, TaskPri::hide, kInvalidNodeIndex, game.Time () + 100.0f, true);
+  bot->StartTask (TaskId::Hide, TaskPri::kHide, kInvalidNodeIndex, game.Time () + 100.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () != TaskId::Hide);
 
   bot->ClearTasks ();
-  bot->StartTask (TaskId::Blind, TaskPri::blind, kInvalidNodeIndex, game.Time () + 100.0f, true);
+  bot->StartTask (TaskId::Blind, TaskPri::kBlind, kInvalidNodeIndex, game.Time () + 100.0f, true);
   TasksHook::Execute (*bot);
   CHECK (TasksHook::MoveSpeed (*bot) == 0.0f);
 
@@ -718,21 +718,21 @@ TEST_CASE ("unit/tasks_drills") {
 
   // ...a named move target is adopted without a path yet...
   bot->ClearTasks ();
-  bot->StartTask (TaskId::MoveTo, TaskPri::move_to, 3, 0.0f, true);
+  bot->StartTask (TaskId::MoveTo, TaskPri::kMoveTo, 3, 0.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () == TaskId::MoveTo);
   CHECK (bot->Task ()->data == 3);
 
   // ...an expired spraycan stands down...
   bot->ClearTasks ();
-  bot->StartTask (TaskId::Spraypaint, TaskPri::spraypaint, kInvalidNodeIndex, 0.0f, false);
+  bot->StartTask (TaskId::Spraypaint, TaskPri::kSpraypaint, kInvalidNodeIndex, 0.0f, false);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () != TaskId::Spraypaint);
 
   // ...a hunt with no enemy to remember clears itself...
   TasksHook::SetLastEnemy (*bot, nullptr);
   bot->ClearTasks ();
-  bot->StartTask (TaskId::Hunt, TaskPri::normal, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::Hunt, TaskPri::kNormal, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () != TaskId::Hunt);
 
@@ -741,14 +741,14 @@ TEST_CASE ("unit/tasks_drills") {
   bot->ClearTask (TaskId::Hunt);
   CHECK (bot->GetTaskId () == TaskId::Normal);
 
-  bot->StartTask (TaskId::Hunt, TaskPri::normal, kInvalidNodeIndex, 0.0f, true);
-  bot->StartTask (TaskId::Camp, TaskPri::camp, kInvalidNodeIndex, game.Time () + 100.0f, true);
+  bot->StartTask (TaskId::Hunt, TaskPri::kNormal, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, game.Time () + 100.0f, true);
   bot->ClearTask (TaskId::Hunt);
   CHECK (bot->GetTaskId () == TaskId::Camp);
 
   // ...a defuse with no bomb is a no-op...
   bot->ClearTasks ();
-  bot->StartTask (TaskId::DefuseBomb, TaskPri::defuse_bomb, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::DefuseBomb, TaskPri::kDefuseBomb, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () != TaskId::DefuseBomb);
 
@@ -811,7 +811,7 @@ TEST_CASE ("unit/tasks_defuse_cleanup") {
   defuser->pickup_type_ = Pickup::PlantedC4;
 
   defuser->ClearTasks ();
-  defuser->StartTask (TaskId::DefuseBomb, TaskPri::defuse_bomb, kInvalidNodeIndex, game.Time (), true);
+  defuser->StartTask (TaskId::DefuseBomb, TaskPri::kDefuseBomb, kInvalidNodeIndex, game.Time (), true);
   TasksHook::Execute (*defuser);
   HOST_REQUIRE (defuser->GetTaskId () == TaskId::DefuseBomb);
 

@@ -164,7 +164,7 @@ TEST_CASE ("unit/radio_orders") {
   RadioHook::DrainQueue (*bot); // ctor leaves a Buy queued
 
   // busy states refuse orders outright
-  bot->StartTask (TaskId::DefuseBomb, TaskPri::defuse_bomb, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::DefuseBomb, TaskPri::kDefuseBomb, kInvalidNodeIndex, 0.0f, true);
   bot->radio_order_ = RadioChat::CoverMe;
   bot->radio_entity_ = human;
   RadioHook::CheckQueue (*bot);
@@ -264,7 +264,7 @@ TEST_CASE ("unit/radio_orders") {
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::RogerThat);
   CHECK (RadioHook::QueueLength (*bot) == go_base + 1);
 
-  bot->StartTask (TaskId::Pause, TaskPri::pause, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::Pause, TaskPri::kPause, kInvalidNodeIndex, 0.0f, true);
   bot->radio_order_ = RadioChat::GoGoGo;
   bot->radio_entity_ = human;
   RadioHook::CheckQueue (*bot);
@@ -331,28 +331,28 @@ TEST_CASE ("unit/radio_orders") {
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::ReportingIn);
 
   bot->ClearTasks ();
-  bot->StartTask (TaskId::PlantBomb, TaskPri::plant_bomb, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::PlantBomb, TaskPri::kPlantBomb, kInvalidNodeIndex, 0.0f, true);
   bot->radio_order_ = RadioChat::ReportInTeam;
   bot->radio_entity_ = human;
   RadioHook::CheckQueue (*bot);
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::PlantingBomb);
 
   bot->ClearTasks ();
-  bot->StartTask (TaskId::DefuseBomb, TaskPri::defuse_bomb, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::DefuseBomb, TaskPri::kDefuseBomb, kInvalidNodeIndex, 0.0f, true);
   bot->radio_order_ = RadioChat::ReportInTeam;
   bot->radio_entity_ = human;
   RadioHook::CheckQueue (*bot);
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::DefusingBomb);
 
   bot->ClearTasks ();
-  bot->StartTask (TaskId::Hide, TaskPri::hide, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::Hide, TaskPri::kHide, kInvalidNodeIndex, 0.0f, true);
   bot->radio_order_ = RadioChat::ReportInTeam;
   bot->radio_entity_ = human;
   RadioHook::CheckQueue (*bot);
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::SeekingEnemies);
 
   bot->ClearTasks ();
-  bot->StartTask (TaskId::FollowUser, TaskPri::follow_user, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::FollowUser, TaskPri::kFollowUser, kInvalidNodeIndex, 0.0f, true);
   bot->radio_order_ = RadioChat::ReportInTeam;
   bot->radio_entity_ = human;
   RadioHook::CheckQueue (*bot);
@@ -510,7 +510,7 @@ TEST_CASE ("unit/radio_chatter") {
 
   // heading needs a live human order-giver, movers never divert
   bot->radio_entity_ = human;
-  bot->StartTask (TaskId::MoveTo, TaskPri::move_to, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::MoveTo, TaskPri::kMoveTo, kInvalidNodeIndex, 0.0f, true);
   const ystl::Vector stayed = bot->position_;
   RadioHook::HeadToward (*bot);
   CHECK (bot->position_ == stayed);
@@ -656,7 +656,7 @@ TEST_CASE ("unit/radio_chance") {
 
   // pass: combat call
   bot->ClearTasks ();
-  bot->StartTask (TaskId::Attack, TaskPri::attack, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::Attack, TaskPri::kAttack, kInvalidNodeIndex, 0.0f, true);
   bot->radio_order_ = RadioChat::ReportInTeam;
   RadioHook::DrainQueue (*bot);
   rng.force_chance (true);
@@ -666,7 +666,7 @@ TEST_CASE ("unit/radio_chance") {
 
   // fail (mode 2): headcount default with no enemies near
   bot->ClearTasks ();
-  bot->StartTask (TaskId::Attack, TaskPri::attack, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::Attack, TaskPri::kAttack, kInvalidNodeIndex, 0.0f, true);
   bot->radio_order_ = RadioChat::ReportInTeam;
   RadioHook::DrainQueue (*bot);
   rng.force_chance (false);
@@ -676,7 +676,7 @@ TEST_CASE ("unit/radio_chance") {
 
   // mode 1 reports a generic enemy-spotted on a failed roll
   bot->ClearTasks ();
-  bot->StartTask (TaskId::Attack, TaskPri::attack, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::Attack, TaskPri::kAttack, kInvalidNodeIndex, 0.0f, true);
   bot->radio_order_ = RadioChat::ReportInTeam;
   RadioHook::DrainQueue (*bot);
 

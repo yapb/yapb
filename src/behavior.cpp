@@ -181,7 +181,7 @@ void Bot::CheckBreakable (edict_t *touch) {
     return;
   }
   camp_buttons_ = pev->button & IN_DUCK;
-  StartTask (TaskId::ShootBreakable, TaskPri::shoot_breakable, kInvalidNodeIndex, 0.0f, false);
+  StartTask (TaskId::ShootBreakable, TaskPri::kShootBreakable, kInvalidNodeIndex, 0.0f, false);
 }
 
 void Bot::CheckBreakablesAround () {
@@ -251,7 +251,7 @@ void Bot::CheckBreakablesAround () {
       breakable_entity_ = breakable;
       camp_buttons_ = pev->button & IN_DUCK;
 
-      StartTask (TaskId::ShootBreakable, TaskPri::shoot_breakable, kInvalidNodeIndex, 0.0f, false);
+      StartTask (TaskId::ShootBreakable, TaskPri::kShootBreakable, kInvalidNodeIndex, 0.0f, false);
       break;
     }
   }
@@ -615,7 +615,7 @@ void Bot::OverrideConditions () {
     CompleteTask (); // complete current task
 
     // then start escape from bomb immediate
-    StartTask (TaskId::EscapeFromBomb, TaskPri::escape_from_bomb, kInvalidNodeIndex, 0.0f, true);
+    StartTask (TaskId::EscapeFromBomb, TaskPri::kEscapeFromBomb, kInvalidNodeIndex, 0.0f, true);
   }
   float reach_enemy_knife_distance_sq = ystl::sqrf (128.0f);
 
@@ -636,12 +636,12 @@ void Bot::OverrideConditions () {
 
         const float task_time = game.Time () + distance_sq2d / ystl::sqrf (move_speed_) * 2.0f;
 
-        if (tid != TaskId::MoveTo && !ystl::fequal (Task ()->desire, TaskPri::hide)) {
-          StartTask (TaskId::MoveTo, TaskPri::hide, nearest_to_enemy_point, task_time, true);
+        if (tid != TaskId::MoveTo && !ystl::fequal (Task ()->desire, TaskPri::kHide)) {
+          StartTask (TaskId::MoveTo, TaskPri::kHide, nearest_to_enemy_point, task_time, true);
         }
         else if (tid == TaskId::MoveTo && Task ()->data != nearest_to_enemy_point) {
           ClearTask (TaskId::MoveTo);
-          StartTask (TaskId::MoveTo, TaskPri::hide, nearest_to_enemy_point, task_time, true);
+          StartTask (TaskId::MoveTo, TaskPri::kHide, nearest_to_enemy_point, task_time, true);
         }
       }
     }
@@ -1074,7 +1074,7 @@ void Bot::SlowFrame () {
           near_bomb_timer_.start (rg (2.0f, 4.0f));
         }
         else if (near_bomb_timer_.elapsed ()) {
-          StartTask (TaskId::DefuseBomb, TaskPri::defuse_bomb, kInvalidNodeIndex, 0.0f, true);
+          StartTask (TaskId::DefuseBomb, TaskPri::kDefuseBomb, kInvalidNodeIndex, 0.0f, true);
         }
       }
       else {
@@ -1270,7 +1270,7 @@ void Bot::CheckSpawnConditions () {
   // switch to knife if time to do this
   if (check_knife_switch_ && buying_finished_ && spawn_timer_.greater_than (rg (5.0f, 7.5f))) {
     if (rg (1, 100) < cv_spraypaints.As<int> () && pev->groundentity == game.GetStartEntity ()) {
-      StartTask (TaskId::Spraypaint, TaskPri::spraypaint, kInvalidNodeIndex, game.Time () + 1.0f, false);
+      StartTask (TaskId::Spraypaint, TaskPri::kSpraypaint, kInvalidNodeIndex, game.Time () + 1.0f, false);
     }
 
     // keep an active reload, only a pending scan may be interrupted
@@ -1827,7 +1827,7 @@ void Bot::StartDoubleJump (edict_t *ent) {
   double_jump_origin_ = ent->v.origin;
   double_jump_entity_ = ent;
 
-  StartTask (TaskId::DoubleJump, TaskPri::double_jump, kInvalidNodeIndex, game.Time (), true);
+  StartTask (TaskId::DoubleJump, TaskPri::kDoubleJump, kInvalidNodeIndex, game.Time (), true);
   SendToChat (ystl::strings.format ("Ok %s, i will help you!", ent->v.netname.str ()), true);
 }
 
@@ -1837,7 +1837,7 @@ void Bot::SendBotToOrigin (const ystl::Vector &origin) {
 
   Task ()->data = chosen_goal_index_;
 
-  StartTask (TaskId::MoveTo, TaskPri::hide, chosen_goal_index_, 0.0f, true);
+  StartTask (TaskId::MoveTo, TaskPri::kHide, chosen_goal_index_, 0.0f, true);
 }
 
 void Bot::ResetDoubleJump () {
@@ -2368,7 +2368,7 @@ void Bot::DecideFollowUser () {
   target_entity_ = users.random ();
 
   PushRadioChat (RadioChat::LeadOnSir);
-  StartTask (TaskId::FollowUser, TaskPri::follow_user, kInvalidNodeIndex, 0.0f, true);
+  StartTask (TaskId::FollowUser, TaskPri::kFollowUser, kInvalidNodeIndex, 0.0f, true);
 }
 
 } // namespace bot

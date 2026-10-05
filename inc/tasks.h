@@ -38,22 +38,22 @@ YSTL_ENABLE_ENUM_HASH (TaskId);
 
 // some hard-coded desire defines used to override calculated ones
 namespace TaskPri {
-constexpr auto normal { 35.0f };
-constexpr auto pause { 36.0f };
-constexpr auto camp { 37.0f };
-constexpr auto spraypaint { 38.0f };
-constexpr auto follow_user { 39.0f };
-constexpr auto move_to { 50.0f };
-constexpr auto defuse_bomb { 88.0f };
-constexpr auto plant_bomb { 89.0f };
-constexpr auto attack { 90.0f };
-constexpr auto seek_cover { 91.0f };
-constexpr auto hide { 92.0f };
-constexpr auto Throw { 99.0f };
-constexpr auto double_jump { 99.0f };
-constexpr auto blind { 100.0f };
-constexpr auto shoot_breakable { 100.0f };
-constexpr auto escape_from_bomb { 100.0f };
+constexpr auto kNormal { 35.0f };
+constexpr auto kPause { 36.0f };
+constexpr auto kCamp { 37.0f };
+constexpr auto kSpraypaint { 38.0f };
+constexpr auto kFollowUser { 39.0f };
+constexpr auto kMoveTo { 50.0f };
+constexpr auto kDefuseBomb { 88.0f };
+constexpr auto kPlantBomb { 89.0f };
+constexpr auto kAttack { 90.0f };
+constexpr auto kSeekCover { 91.0f };
+constexpr auto kHide { 92.0f };
+constexpr auto kThrow { 99.0f };
+constexpr auto kDoubleJump { 99.0f };
+constexpr auto kBlind { 100.0f };
+constexpr auto kShootBreakable { 100.0f };
+constexpr auto kEscapeFromBomb { 100.0f };
 }
 
 // tasks definition

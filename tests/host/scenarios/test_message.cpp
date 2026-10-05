@@ -491,7 +491,7 @@ TEST_CASE ("unit/message_round") {
 
   // the plant flips the bomb state and clears camp tasks
   CHECK (!game_state.IsBombPlanted ());
-  a->StartTask (TaskId::Camp, TaskPri::camp, kInvalidNodeIndex, 0.0f, true);
+  a->StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, 0.0f, true);
   HOST_REQUIRE (a->GetTaskId () == TaskId::Camp);
   a->is_alive_ = true;
   b->is_alive_ = true;

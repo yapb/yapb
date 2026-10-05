@@ -490,7 +490,7 @@ TEST_CASE ("unit/manager_teams") {
   a->has_c4_ = true;
   CHECK (bots.GetPlayerPriority (a->Ent ()) == a->Entindex () + 1024);
   a->has_c4_ = false;
-  a->StartTask (TaskId::MoveTo, TaskPri::move_to, kInvalidNodeIndex, 0.0f, true);
+  a->StartTask (TaskId::MoveTo, TaskPri::kMoveTo, kInvalidNodeIndex, 0.0f, true);
   CHECK (a->GetTaskId () == TaskId::MoveTo);
   CHECK (bots.GetPlayerPriority (a->Ent ()) == a->Entindex () + 1024);
   a->is_vip_ = true;

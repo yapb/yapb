@@ -1896,7 +1896,7 @@ void Bot::NewRound () {
 
   // and put buying into its message queue
   PushMsgQueue (Msg::Buy);
-  StartTask (TaskId::Normal, TaskPri::normal, kInvalidNodeIndex, 0.0f, true);
+  StartTask (TaskId::Normal, TaskPri::kNormal, kInvalidNodeIndex, 0.0f, true);
 
   // restore fake client bit, just in case
   pev->flags |= FL_CLIENT | FL_FAKECLIENT;
@@ -2173,7 +2173,7 @@ void Manager::NotifyBombDefuse () {
         bot.position_ = bomb_pos;
         bot.defuse_notified_ = true;
 
-        bot.StartTask (TaskId::MoveTo, TaskPri::move_to, kInvalidNodeIndex, 0.0f, true);
+        bot.StartTask (TaskId::MoveTo, TaskPri::kMoveTo, kInvalidNodeIndex, 0.0f, true);
       }
     }
   }

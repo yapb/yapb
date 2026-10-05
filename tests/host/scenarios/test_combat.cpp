@@ -536,10 +536,10 @@ TEST_CASE ("unit/combat_fire") {
   CHECK (!CombatHook::Threat (*bot));
   CombatHook::SetStates (*bot, Sense::Invalid);
 
-  bot->StartTask (TaskId::SeekCover, TaskPri::seek_cover, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::SeekCover, TaskPri::kSeekCover, kInvalidNodeIndex, 0.0f, true);
   CHECK (!CombatHook::Threat (*bot));
 
-  bot->StartTask (TaskId::Camp, TaskPri::camp, kInvalidNodeIndex, 0.0f, true);
+  bot->StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, 0.0f, true);
   CHECK (!CombatHook::Threat (*bot));
 
   bot->ClearTasks ();
