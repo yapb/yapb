@@ -72,6 +72,18 @@ private:
   ystl::Array<ystl::Array<ChatterItem>> chatter_ {};
 
   ystl::Array<Name> bot_names_ {};
+
+  // game name aliases for the %d chat placeholder
+  struct GameNames {
+    ystl::Array<ystl::String> cz {};
+    ystl::Array<ystl::String> cs {};
+
+    void clear () {
+      cz.clear ();
+      cs.clear ();
+    }
+  } game_names_ {};
+
   ystl::Array<ChatKeywords> replies_ {};
   ystl::HashMap<uint32_t, ystl::SmallArray<size_t>> keyword_index_ {}; // keyword hash -> reply indices for fast lookup
   ystl::SmallArray<WeaponInfo> weapons_ {};
@@ -279,6 +291,9 @@ public:
 
   // pick random phrase from chat bank (shuffled cycle, no repeats until exhausted)
   ystl::StringRef PickRandomFromChatBank (Chat chat_type);
+
+  // game name alias for the %d chat placeholder, from the GameNames section
+  ystl::StringRef GetGameName () const;
 
   // pick random phrase from chatter bank
   const ChatterItem &PickRandomFromChatterBank (RadioChat type) {

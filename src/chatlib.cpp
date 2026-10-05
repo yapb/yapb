@@ -349,29 +349,6 @@ void Bot::PrepareChatMessage (ystl::StringRef message) {
     return humanized_name (game.IndexOfPlayer (last_victim_));
   };
 
-  // get the game name alias
-  auto get_game_name = [] () -> ystl::String {
-    ystl::String game_name {};
-
-    if (game.Is (GameFlags::ConditionZero)) {
-      if (ystl::rg.chance (30)) {
-        game_name = "CZ";
-      }
-      else {
-        game_name = "Condition Zero";
-      }
-    }
-    else if (game.Is (GameFlags::Modern) || game.Is (GameFlags::Legacy)) {
-      if (ystl::rg.chance (30)) {
-        game_name = "CS";
-      }
-      else {
-        game_name = "Counter-Strike";
-      }
-    }
-    return game_name;
-  };
-
   // get enemy or teammate alive
   auto get_player_alive = [&] (bool needs_enemy) -> ystl::String {
     for (const auto &client : clients) {
@@ -442,7 +419,7 @@ void Bot::PrepareChatMessage (ystl::StringRef message) {
 
       // game name
     case 'd':
-      chat_buffer_.append (get_game_name ());
+      chat_buffer_.append (conf.GetGameName ());
       break;
 
       // teammate alive

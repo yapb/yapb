@@ -42,6 +42,28 @@ ystl::StringRef Config::PickRandomFromChatBank (Chat chat_type) {
   return bank[order[pos++]];
 }
 
+ystl::StringRef Config::GetGameName () const {
+  const bool cz = game.Is (GameFlags::ConditionZero);
+
+  if (!cz && !game.Is (GameFlags::Modern) && !game.Is (GameFlags::Legacy)) {
+    return "";
+  }
+  const auto &bank = cz ? game_names_.cz : game_names_.cs;
+
+  // configs without the section behave exactly like before
+  if (bank.empty ()) {
+    if (cz) {
+      return ystl::rg.chance (30) ? "CZ" : "Condition Zero";
+    }
+    return ystl::rg.chance (30) ? "CS" : "Counter-Strike";
+  }
+
+  if (bank.size () == 1 || ystl::rg.chance (30)) {
+    return bank[0];
+  }
+  return bank[ystl::rg.get (1, static_cast<int32_t> (bank.size ()) - 1)];
+}
+
 void Config::LoadConfigs () {
   SetupMemoryFiles ();
 
@@ -712,6 +734,7 @@ void Config::LoadChatConfig () {
   for (auto &item : chat_) {
     item.clear ();
   }
+  game_names_.clear ();
   replies_.clear ();
   keyword_index_.clear ();
 
@@ -765,6 +788,21 @@ void Config::LoadChatConfig () {
           else if (!ystl::strings.matches (entry->name ().chars (), "key")) {
             ystl::logger.error ("chat.%s: unexpected entry '%s' in reply group. Entry ignored.", kConfigExtension, entry->name ().chars ());
           }
+        }
+      }
+      continue;
+    }
+
+    if (ystl::strings.matches (node->name ().chars (), "GameNames")) {
+      for (const auto &entry : node->children ()) {
+        if (ystl::strings.matches (entry->name ().chars (), "CZ")) {
+          game_names_.cz = entry->as_list ();
+        }
+        else if (ystl::strings.matches (entry->name ().chars (), "CS")) {
+          game_names_.cs = entry->as_list ();
+        }
+        else {
+          ystl::logger.error ("chat.%s: unexpected entry '%s' in GameNames. Entry ignored.", kConfigExtension, entry->name ().chars ());
         }
       }
       continue;
