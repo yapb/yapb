@@ -128,32 +128,23 @@ tasks:
             fi
             echo "Checking ABI: $so (i386, max glibc 2.17)"
             python3 tools/check_abi.py "$so" --arch i386 --max-glibc 2.17
-      - name: check-glibc
+      - name: check-abi
         if: contains(env.ARCH, "linux-") && env.ARCH != "linux-x86" && env.ARCH != "linux-x86-nosimd"
         script:
           - |
             set -e
-            if ! command -v objdump >/dev/null 2>&1; then
-              if command -v sudo >/dev/null 2>&1; then
-                sudo apt-get update && sudo apt-get install -y --no-install-recommends binutils
-              else
-                apt-get update && apt-get install -y --no-install-recommends binutils
-              fi
-            fi
             so=$(find "build/ci-$ARCH" -maxdepth 1 -type f -name 'yapb*.so' ! -name '*amxx*' | head -1)
             if [ -z "$so" ]; then
               echo "No YAPB shared library found in build/ci-$ARCH"
               exit 1
             fi
-            echo "Checking build/ci-$ARCH/$so"
-            max=$(objdump -T "$so" | grep -oE 'GLIBC_2\.[0-9]+' | sort -Vu | tail -1)
-            echo "Max GLIBC: $max"
-            if [ "$ARCH" = "linux-riscv64" ]; then limit=GLIBC_2.27; else limit=GLIBC_2.17; fi
-            top=$(printf '%s\n%s\n' "$limit" "$max" | sort -Vu | tail -1)
-            if [ "$top" != "$limit" ]; then
-              echo "glibc baseline $max exceeds $limit"
-              exit 1
-            fi
+            case "$ARCH" in
+              linux-amd64) arch=amd64 ;;
+              linux-arm64) arch=arm64 ;;
+              linux-riscv64) arch=riscv64 ;;
+            esac
+            if [ "$ARCH" = "linux-riscv64" ]; then limit=2.27; else limit=2.17; fi
+            python3 tools/check_abi.py "$so" --arch "$arch" --max-glibc "$limit"
       - name: collect
         script:
           - |

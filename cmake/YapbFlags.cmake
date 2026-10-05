@@ -99,13 +99,17 @@ if(CLANG_OR_GCC AND NOT ANDROID)
 
   if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
+      if(NOT YAPB_STATIC_LINKENT)
+        list(APPEND _dist_ldflags -Wl,--version-script=${PROJECT_SOURCE_DIR}/ext/ldscripts/version.lds)
+      endif()
+
+      # x86-only codegen: cf-protection and section gc have no arm counterparts
       if(NOT _PROC STREQUAL "aarch64" AND NOT CPU_NON_X86)
         if(NOT YAPB_STATIC_LINKENT)
           list(APPEND _cflags -fdata-sections -ffunction-sections -fcf-protection=none)
           if(IS_ZIG OR NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR NOT YAPB_LTO)
             list(APPEND _cflags -Wa,--noexecstack)
           endif()
-          list(APPEND _dist_ldflags -Wl,--version-script=${PROJECT_SOURCE_DIR}/ext/ldscripts/version.lds)
           list(APPEND _ldflags -Wl,--gc-sections -Wl,-z,noexecstack)
         else()
           list(APPEND _cflags -DLINKENT_STATIC)

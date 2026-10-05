@@ -149,20 +149,18 @@ jobs:
           so=$(ls $BUILD_DIR/ | grep -E '^yapb.*\.so$' | grep -v 'amxx' | head -1)
           python3 tools/check_abi.py "$BUILD_DIR/$so" --arch i386 --max-glibc 2.17
 
-      - name: Check glibc baseline (linux)
+      - name: Check ABI (linux)
         if: startsWith(matrix.arch, 'linux-') && matrix.arch != 'linux-x86' && matrix.arch != 'linux-x86-nosimd'
         shell: bash
         run: |
           so=$(ls $BUILD_DIR/ | grep -E '^yapb.*\.so$' | grep -v 'amxx' | head -1)
-          echo "Checking $BUILD_DIR/$so"
-          max=$(objdump -T "$BUILD_DIR/$so" | grep -oE 'GLIBC_2\.[0-9]+' | sort -Vu | tail -1)
-          echo "Max GLIBC: $max"
-          if [[ "${{ matrix.arch }}" == "linux-riscv64" ]]; then limit=GLIBC_2.27; else limit=GLIBC_2.17; fi
-          top=$(printf '%s\n%s\n' "$limit" "$max" | sort -Vu | tail -1)
-          if [[ "$top" != "$limit" ]]; then
-            echo "::error::glibc baseline $max exceeds $limit"
-            exit 1
-          fi
+          case "${{ matrix.arch }}" in
+            linux-amd64) arch=amd64 ;;
+            linux-arm64) arch=arm64 ;;
+            linux-riscv64) arch=riscv64 ;;
+          esac
+          if [[ "${{ matrix.arch }}" == "linux-riscv64" ]]; then limit=2.27; else limit=2.17; fi
+          python3 tools/check_abi.py "$BUILD_DIR/$so" --arch $arch --max-glibc $limit
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7

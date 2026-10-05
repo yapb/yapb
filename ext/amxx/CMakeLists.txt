@@ -19,6 +19,11 @@ set_target_properties(yapb_amxx PROPERTIES
 
 yapb_configure_target(yapb_amxx NOLTO)
 
+# hide everything but the amxx entry points, like version.lds does for the core
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT CMAKE_BUILD_TYPE MATCHES "Debug")
+  target_link_options(yapb_amxx PRIVATE -Wl,--version-script=${PROJECT_SOURCE_DIR}/ext/ldscripts/amxx.lds)
+endif()
+
 # windows resource with version info, mirrors the main library
 if(WIN32 AND GIT_FOUND)
   if(IS_ZIG)
