@@ -128,7 +128,7 @@ tasks:
             fi
             echo "Checking ABI: $so (i386, max glibc 2.17)"
             python3 tools/check_abi.py "$so" --arch i386 --max-glibc 2.17
-      - name: check-abi
+      - name: check-abi-cross
         if: contains(env.ARCH, "linux-") && env.ARCH != "linux-x86" && env.ARCH != "linux-x86-nosimd"
         script:
           - |
