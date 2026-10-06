@@ -158,6 +158,8 @@ def parse_natives(lines):
             continue
 
         proto = match.group(1).rstrip(';').strip()
+        if proto.count('(') != proto.count(')') or not proto.endswith(')'):
+            raise SystemExit('truncated @native prototype (must be a single line ending in ")"): %s' % proto)
         name = re.match(r'(?:\w+\s*:\s*)?(\w+)\s*\(', proto)
         natives.append((name.group(1) if name else proto, proto, preceding_doc(lines, i)))
     return natives
