@@ -128,7 +128,7 @@ native yb_get_bot_count();
  *
  * @return              1 if the request is queued, 0 otherwise.
  */
-native bool:yb_add_bot(Difficulty:difficulty = Difficulty:Normal, Personality:personality = Personality:Normal, CsTeams:team =;
+native bool:yb_add_bot(Difficulty:difficulty = Difficulty:Normal, Personality:personality = Personality:Normal, CsTeams:team = CS_TEAM_UNASSIGNED);
 
 /**
  * Checks whether the player is a YaPB bot.

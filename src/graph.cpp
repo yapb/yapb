@@ -1351,7 +1351,10 @@ ystl::String GraphUrlResolver::CollectUrl (ystl::StringRef have_csv) {
   }
   root.rtrim ("/");
 
-  return ystl::HttpUrl::join (root, ystl::strings.format ("collect?have=%s", have_csv.chars ()));
+  ystl::String query = "collect?have=";
+  query.append (have_csv);
+
+  return ystl::HttpUrl::join (root, query);
 }
 
 bool GraphUrlResolver::CanDownload () {
