@@ -159,6 +159,13 @@ class BotRelease(object):
       ('riscv64', '_riscv64d'),
    )
 
+   # artifact dir fallbacks when the primary dir is absent. sourcecraft
+   # runners have no msvc, so the default windows package takes the clang
+   # cross build there, while github keeps using the msvc one.
+   ARTIFACT_FALLBACKS = {
+      'windows-x86': ('windows-x86-clang',),
+   }
+
    def __init__(self):
       if len(sys.argv) < 2:
          raise Exception('Missing required parameters.')
@@ -346,12 +353,25 @@ class BotRelease(object):
 
       return self.project
 
+   def resolve_artifact(self, artifact: str):
+      if os.path.isdir(os.path.join(self.artifacts, artifact)):
+         return artifact
+
+      for fallback in self.ARTIFACT_FALLBACKS.get(artifact, ()):
+         if os.path.isdir(os.path.join(self.artifacts, fallback)):
+            print(f'[{artifact} -> {fallback}]', end=' ')
+            return fallback
+
+      return artifact
+
    def install_binary(self, pkg: BotPackage):
       num_artifacts_errors = 0
       num_artifacts = len(pkg.artifact)
 
       for artifact in pkg.artifact:
-         binary = os.path.join(self.artifacts, artifact, f'{self.binary_name(artifact)}.{pkg.artifact[artifact]}')
+         ext = pkg.artifact[artifact]
+         resolved = self.resolve_artifact(artifact)
+         binary = os.path.join(self.artifacts, resolved, f'{self.binary_name(resolved)}.{ext}')
          binary_base = os.path.basename(binary)
 
          if not os.path.exists(binary):
@@ -364,7 +384,7 @@ class BotRelease(object):
          if num_artifacts == 1:
             self.unlink_binaries()
 
-         self.copy_binary(binary, artifact if pkg.extra else None)
+         self.copy_binary(binary, resolved if pkg.extra else None)
 
       return num_artifacts_errors < num_artifacts
 
@@ -373,7 +393,7 @@ class BotRelease(object):
       os.makedirs(dest_dir, exist_ok=True)
 
       for artifact, filename in pkg.amxx.items():
-         binary = os.path.join(self.artifacts, artifact, filename)
+         binary = os.path.join(self.artifacts, self.resolve_artifact(artifact), filename)
          binary_base = os.path.basename(binary)
 
          if not os.path.exists(binary):
