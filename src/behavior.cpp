@@ -1877,8 +1877,8 @@ void Bot::DebugMsgInternal (ystl::StringRef str) {
     return;
   }
 
-  // output to logger (which also prints to the server console for levels 3+)
-  ystl::logger.message (print_buf.chars ());
+  // output to logger, never pass player text as a format string
+  ystl::logger.message ("%s", print_buf.chars ());
 
   // output to chat area for non-dedicated servers, so players see it ingame
   if (!game.IsDedicatedServer ()) {

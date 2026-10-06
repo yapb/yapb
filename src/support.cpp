@@ -123,10 +123,14 @@ void Support::CheckWelcome () {
         author_str.appendf (" (Modified by: %s)", graph_modified);
       }
     }
-    ystl::StringRef modern_welcome_message = ystl::strings.format (
-      "\nHello! You are playing with %s v%s\nDevised by %s\n\n%s", product.name, product.version, product.author, author_str);
-    ystl::StringRef modern_chat_welcome_message =
-      ystl::strings.format ("----- %s v%s {%s}, by %s (%s)-----", product.name, product.version, product.date, product.author, product.url);
+    // dynamic buffer, graph author is unbounded
+    ystl::String modern_welcome_message {};
+    modern_welcome_message.assignf ("\nHello! You are playing with %s v%s\nDevised by %s\n\n%s", product.name, product.version,
+      product.author, author_str);
+
+    ystl::String modern_chat_welcome_message {};
+    modern_chat_welcome_message.assignf ("----- %s v%s {%s}, by %s (%s)-----", product.name, product.version, product.date,
+      product.author, product.url);
 
     // send a chat-position message
     MessageWriter (MSG_ONE, msgs.Id (NetMsg::TextMsg), nullptr, receive_ent)

@@ -1174,7 +1174,11 @@ public:
 
   // print formatted debug message
   template <typename... Args> void DebugMsg (const char *fmt, Args &&...args) {
-    DebugMsgInternal (ystl::strings.format (fmt, ystl::forward<Args> (args)...));
+    // dynamic buffer, debug text is unbounded
+    ystl::String formatted {};
+    formatted.assignf (fmt, ystl::forward<Args> (args)...);
+
+    DebugMsgInternal (formatted);
   }
 
   // execute client command with format
