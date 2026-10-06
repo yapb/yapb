@@ -382,8 +382,7 @@ ystl::String Storage::BuildPath (StorageFile file, bool is_memory_load, bool wit
     { StorageFile::PodbotPWF,  FilePath (folders.podbot, "pwf")   }
   };
 
-  static ystl::Array<ystl::String> path {};
-  path.clear ();
+  ystl::Array<ystl::String> path {};
 
   // if not memory file we're don't need game dir
   if (is_memory_load) {
