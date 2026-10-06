@@ -112,12 +112,16 @@ else()
 endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
-  PREFIX ""
   OUTPUT_NAME "${TARGET_NAME}"
   CXX_STANDARD 20
   CXX_STANDARD_REQUIRED ON
   CXX_EXTENSIONS OFF
 )
+
+# android expects lib<name>.so, keep the default prefix (libyapb_android_<arch>.so)
+if(NOT ANDROID)
+  set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
+endif()
 
 yapb_configure_target(${PROJECT_NAME} STRICT DIST)
 
