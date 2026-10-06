@@ -1030,8 +1030,7 @@ bool Bot::TryTeleportToSealedBomb () {
   pev->velocity.clear ();
 
   ClearSearchNodes ();
-  path_walk_.Clear ();
-  current_node_index_ = graph.GetNearest (dest);
+  ChangeNodeIndex (graph.GetNearest (dest)); // node with path context, no-op when far from graph
   prev_origin_ = dest;
   dest_origin_ = dest;
   stuck_timer_.invalidate ();
@@ -1331,6 +1330,12 @@ void Bot::Logic () {
 
   ResetMovement ();
 
+  // broken origin from the outside (nan from bad teleport math upstream):
+  // hold still instead of pushing it into traces and engine calls
+  if (!::isfinite (pev->origin.x + pev->origin.y + pev->origin.z)) {
+    return;
+  }
+
   // increase reaction time
   actual_reaction_time_ += 0.3f;
   moved_distance_ = kMinMovedDistance + 0.1f; // length of different vector (distance bot moved)
@@ -1352,6 +1357,17 @@ void Bot::Logic () {
   move_speed_ = pev->maxspeed;
 
   if (prev_timer_.elapsed ()) {
+    // yanked by an outside teleport (portal guns, admin mods): no legit
+    // movement covers this distance, drop the stale nav state like our own teleports do
+    if (prev_origin_.distance_sq (pev->origin) > ystl::sqrf (512.0f)) {
+      ClearSearchNodes ();
+
+      stuck_timer_.invalidate ();
+      nav_timer_.reset ();
+
+      // refreshes node with path context, no-op when far from graph
+      ChangeNodeIndex (graph.GetNearest (pev->origin));
+    }
 
     // see how far bot has moved since the previous position
     moved_distance_ = prev_origin_.distance_sq (pev->origin);
