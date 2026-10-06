@@ -4,6 +4,10 @@ on:
       filter:
         branches: [master, main, dev, sourcecraft-ci]
         paths: ["**", "!**.md"]
+    - workflows: [release-continuous]
+      filter:
+        branches: [master]
+        paths: ["**", "!**.md"]
     - workflows: [release]
       filter:
         tags: ["**"]
@@ -48,6 +52,13 @@ workflows:
         env: { ARCH: windows-amd64 }
 
   release:
+    settings:
+      max_cube_duration: 60m
+    tasks:
+      - name: release
+        uses: make-release
+
+  release-continuous:
     settings:
       max_cube_duration: 60m
     tasks:
@@ -283,7 +294,10 @@ tasks:
         script:
           - |
             set -e
-            TAG="$SOURCECRAFT_COMMIT_REF_NAME"
+            case "$SOURCECRAFT_COMMIT_REF_NAME" in
+              master|main) TAG="continuous" ;;
+              *) TAG="$SOURCECRAFT_COMMIT_REF_NAME" ;;
+            esac
             REPO="$(echo "$SOURCECRAFT_REPO_URL" | sed -e 's|.*git.sourcecraft.dev/||' -e 's|\.git$||')"
             API="https://api.sourcecraft.tech/repos/$REPO/releases"
             if git describe --tags --abbrev=0 >/dev/null 2>&1; then
