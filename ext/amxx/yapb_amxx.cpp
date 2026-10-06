@@ -110,8 +110,7 @@ cell AMX_NATIVE_CALL yb_get_bot_count (AMX *amx, cell *params) {
  *
  * @return              1 if the request is queued, 0 otherwise.
  */
-// @native bool:yb_add_bot(Difficulty:difficulty = Difficulty:Normal, Personality:personality = Personality:Normal, CsTeams:team =
-// CS_TEAM_UNASSIGNED);
+// @native bool:yb_add_bot(Difficulty:difficulty = Difficulty:Normal, Personality:personality = Personality:Normal, CsTeams:team = CS_TEAM_UNASSIGNED);
 cell AMX_NATIVE_CALL yb_add_bot (AMX *amx, cell *params) {
   auto api = yapb.Api ();
 
