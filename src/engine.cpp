@@ -1651,7 +1651,7 @@ bool Game::IsPlayerEntity (edict_t *ent) const {
 }
 
 bool Game::IsBombEntity (edict_t *ent) const {
-  if (!game.MapIs (MapFlags::Demolition)) {
+  if (!game.MapIs (MapFlags::Demolition) || IsNullEntity (ent)) {
     return false;
   }
   const auto classname = ent->v.classname.str ();
@@ -1677,7 +1677,7 @@ bool Game::IsMonsterEntity (edict_t *ent) const {
 }
 
 bool Game::IsItemEntity (edict_t *ent) const {
-  return ent && ent->v.classname.str ().contains ("item_");
+  return !IsNullEntity (ent) && ent->v.classname.str ().contains ("item_");
 }
 
 bool Game::IsPlayerVip (edict_t *ent) const {

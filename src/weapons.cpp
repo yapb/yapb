@@ -1207,6 +1207,11 @@ void Bot::UpdatePickups () {
   // iterate through interesting entities to find best pickup
   for (const auto &item : interesting) {
     const auto ent = item.ent;
+
+    // entity may have been freed since the cache was built (round restart), skip before touching strings
+    if (game.IsNullEntity (ent)) {
+      continue;
+    }
     const ystl::Vector origin = game.GetEntityOrigin (ent);
     const bool is_bomb = game.IsBombEntity (ent);
 
