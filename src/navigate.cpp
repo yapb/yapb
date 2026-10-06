@@ -653,8 +653,7 @@ void Bot::IgnoreCollision () {
 }
 
 void Bot::DoPlayerAvoidance (const ystl::Vector &normal) {
-  if (IsOnLadder () || pev->solid == SOLID_NOT || cv_has_team_semiclip || game.Is (GameFlags::FreeForAll) ||
-      GetTaskId () == TaskId::PickupItem) {
+  if (IsOnLadder () || pev->solid == SOLID_NOT || cv_has_team_semiclip || game.Is (GameFlags::FreeForAll) || HasUninterruptibleTask ()) {
     return; // no player avoiding when with semiclip plugin
   }
 

@@ -1002,11 +1002,9 @@ int Bot::GetBestOwnedPistolIndex () const {
 
 void Bot::CheckReload () {
   // check the reload state
-  const auto tid = GetTaskId ();
 
   // we're should not reload, while doing next tasks
-  const bool uninterruptible_task = (tid == TaskId::PlantBomb || tid == TaskId::DefuseBomb || tid == TaskId::PickupItem ||
-                                     tid == TaskId::ThrowExplosive || tid == TaskId::ThrowFlashbang || tid == TaskId::ThrowSmoke);
+  const bool uninterruptible_task = HasUninterruptibleTask ();
 
   // do not check for reload
   if (uninterruptible_task || is_using_grenade_ || UsesKnife ()) {

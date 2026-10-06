@@ -1149,6 +1149,21 @@ public:
     return Task ()->id;
   }
 
+  // tasks that must not be disturbed once started (plant/defuse, pickups, grenade throws)
+  bool HasUninterruptibleTask () {
+    const auto tid = GetTaskId ();
+
+    return tid == TaskId::PlantBomb || tid == TaskId::DefuseBomb || tid == TaskId::PickupItem || tid == TaskId::ThrowExplosive ||
+      tid == TaskId::ThrowFlashbang || tid == TaskId::ThrowSmoke;
+  }
+
+  // bomb handling tasks (plant/defuse pair)
+  bool HasBombTask () {
+    const auto tid = GetTaskId ();
+
+    return tid == TaskId::PlantBomb || tid == TaskId::DefuseBomb;
+  }
+
   // get bot entity pointer
   edict_t *Ent () const {
     return pev->pContainingEntity;

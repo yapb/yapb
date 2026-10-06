@@ -1173,7 +1173,7 @@ void Bot::Update () {
       vote_map_ = 0;
     }
   }
-  else if (IsMoveAllowed () && buying_finished_ && !(pev->maxspeed < 10.0f && tid != TaskId::PlantBomb && tid != TaskId::DefuseBomb) &&
+  else if (IsMoveAllowed () && buying_finished_ && !(pev->maxspeed < 10.0f && !HasBombTask ()) &&
            !cv_freeze_bots && !graph.HasChanged ()) {
 
     bot_movement_ = true;

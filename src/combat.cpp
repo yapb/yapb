@@ -1529,10 +1529,8 @@ edict_t *Bot::SetCorrectGrenadeVelocity (ystl::StringRef model) {
 }
 
 void Bot::CheckGrenadesThrow () {
-  const auto tid = GetTaskId ();
-
   // do not check cancel if we have grenade in out hands
-  const bool preventible_tasks = tid == TaskId::PlantBomb || tid == TaskId::DefuseBomb;
+  const bool preventible_tasks = HasBombTask ();
   const bool is_grenade_mode = IsGrenadeWar ();
 
   auto clear_throw_states = [] (Sense &states) {
