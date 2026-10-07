@@ -347,12 +347,7 @@ void Bot::SetIdealReactionTimers (bool actual) {
 }
 
 bool Bot::IsIgnoredItem (edict_t *ent) {
-  for (const auto &ignored : ignored_items_) {
-    if (ignored == ent) {
-      return true;
-    }
-  }
-  return false;
+  return ignored_items_.contains (ent);
 }
 
 ystl::Vector Bot::GetCampDirection (const ystl::Vector &dest) {
