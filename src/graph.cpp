@@ -2774,7 +2774,7 @@ void Graph::Frame () {
   }
 
   // draw a paths, camplines and danger directions for nearest node
-  if (nearest_distance_sq < ystl::clamp (paths_[nearest_index].radius, ystl::sqrf (56.0f), ystl::sqrf (90.0f)) &&
+  if (nearest_distance_sq < ystl::sqrf (ystl::clamp (paths_[nearest_index].radius, 56.0f, 90.0f)) &&
       path_display_timer_.elapsed ()) {
     constexpr float kPathDisplayRefresh = 0.96f;
     constexpr float kPathDisplayHold = kPathDisplayRefresh * 2.0f;
