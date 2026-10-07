@@ -788,6 +788,11 @@ bool Bot::RateGroundWeapon (edict_t *ent) {
     has_weapon = GetBestPrimaryCarriedIndex ();
   }
 
+  // never re-pick a weapon dropped dry in favor of the current one
+  if (has_flag (dropped_dry_weapons_mask_, ystl::bit (tab[ground_table_index].id))) {
+    return false;
+  }
+
   if (ground_index > has_weapon) {
     return true;
   }

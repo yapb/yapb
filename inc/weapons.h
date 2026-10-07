@@ -215,6 +215,7 @@ public:
   Pickup pickup_type_ {}; // type of entity which needs to be used/picked up
   edict_t *pickup_item_ {}; // pointer to entity of item to use/pickup
   ystl::Array<edict_t *> ignored_items_ {}; // list of pointers to entity to ignore for pickup
+  uint32_t dropped_dry_weapons_mask_ {}; // dry weapons swapped away, never worth re-picking
 
   // ammo
   ystl::FixedArray<int32_t, kMaxWeapons> ammo_in_clip_ {}; // ammo in clip for each weapons

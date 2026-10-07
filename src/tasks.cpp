@@ -2002,6 +2002,12 @@ void Bot::TaskPickupItem () {
         }
 
         if (weapon_index > 0) {
+          const auto old_id = tab[weapon_index].id;
+
+          // remember dry swaps so the dropped gun is never re-picked
+          if (ammo_in_clip_[old_id] <= 0 && GetAmmo (old_id) <= 0) {
+            dropped_dry_weapons_mask_ |= static_cast<uint32_t> (ystl::bit (old_id));
+          }
           SelectWeaponByIndex (weapon_index);
           DropCurrentWeapon ();
 
@@ -2017,6 +2023,12 @@ void Bot::TaskPickupItem () {
         const bool nice_weapon = RateGroundWeapon (pickup_item_);
 
         if ((weapon_index >= kPrimaryWeaponMinIndex || tab[weapon_index].id == Weapon::Shield || HasShield ()) && nice_weapon) {
+          const auto old_id = tab[weapon_index].id;
+
+          // remember dry swaps so the dropped gun is never re-picked
+          if (old_id != Weapon::Shield && ammo_in_clip_[old_id] <= 0 && GetAmmo (old_id) <= 0) {
+            dropped_dry_weapons_mask_ |= static_cast<uint32_t> (ystl::bit (old_id));
+          }
           SelectWeaponByIndex (weapon_index);
           DropCurrentWeapon ();
         }

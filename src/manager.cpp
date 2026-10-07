@@ -1885,6 +1885,7 @@ void Bot::NewRound () {
   msg_queue_.clear ();
   goal_history_.clear ();
   ignored_breakable_.clear ();
+  dropped_dry_weapons_mask_ = 0;
 
   // ignore enemies for some time if needed
   if (cv_ignore_enemies_after_spawn_time.As<float> () > 0.0f) {
