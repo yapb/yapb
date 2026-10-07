@@ -1766,12 +1766,17 @@ bool Bot::IsLineBlockedBySmoke (const ystl::Vector &from, const ystl::Vector &to
   if (!game_state.HasActiveGrenades ()) {
     return false;
   }
+  const ystl::Vector delta = to - from;
+  const float seg_length_sq = delta.length_sq ();
 
-  // distance along line of sight covered by smoke
-  float total_smoked_length = 0.0f;
+  if (ystl::fzero (seg_length_sq)) {
+    return false;
+  }
+  const float smoke_radius = cv_smoke_grenade_radius.As<float> ();
+  const float smoke_radius_sq = ystl::sqrf (smoke_radius);
 
-  ystl::Vector sight_dir = to - from;
-  const float sight_length = sight_dir.normalize_in_place ();
+  // sight length covered by smoke clouds
+  float smoked_length = 0.0f;
 
   for (const auto &grenade : game_state.GetActiveGrenades ()) {
     if (grenade.kind != GrenadeKind::Smoke) {
@@ -1779,12 +1784,7 @@ bool Bot::IsLineBlockedBySmoke (const ystl::Vector &from, const ystl::Vector &to
     }
     const auto pent = grenade.ent;
 
-    if (game.IsNullEntity (pent)) {
-      continue;
-    }
-
-    // check if sgtracked
-    if (!sgtrack.Has (pent)) {
+    if (game.IsNullEntity (pent) || !sgtrack.Has (pent)) {
       continue;
     }
 
@@ -1797,83 +1797,27 @@ bool Bot::IsLineBlockedBySmoke (const ystl::Vector &from, const ystl::Vector &to
     if (!(pent->v.flags & FL_ONGROUND)) {
       continue;
     }
-
-    const float smoke_radius_sq = ystl::sqrf (cv_smoke_grenade_radius.As<float> ());
     const auto &smoke_origin = sgtrack.Find (pent);
 
-    ystl::Vector to_grenade = smoke_origin - from;
-    float along_dist = to_grenade | sight_dir;
+    // chord of the sight segment inside the smoke sphere
+    const ystl::Vector rel = from - smoke_origin;
+    const float proj = rel | delta;
+    const float disc = proj * proj - seg_length_sq * (rel.length_sq () - smoke_radius_sq);
 
-    // compute closest point to grenade along line of sight ray
-    ystl::Vector close {};
-
-    // constrain closest point to line segment
-    if (along_dist < 0.0f) {
-      close = from;
+    if (disc <= 0.0f) {
+      continue;
     }
-    else if (along_dist >= sight_length) {
-      close = to;
-    }
-    else {
-      close = from + sight_dir * along_dist;
-    }
+    const float root = ystl::sqrtf (disc);
+    const float enter = ystl::max ((-proj - root) / seg_length_sq, 0.0f);
+    const float exit = ystl::min ((-proj + root) / seg_length_sq, 1.0f);
 
-    // if closest point is within smoke radius, the line overlaps the smoke cloud
-    ystl::Vector to_close = close - smoke_origin;
-    float length_sq = to_close.length_sq ();
-
-    if (length_sq < smoke_radius_sq) {
-      // some portion of the ray intersects the cloud
-
-      const float from_sq = to_grenade.length_sq ();
-      const float to_sq = (smoke_origin - to).length_sq ();
-
-      if (from_sq < smoke_radius_sq) {
-        if (to_sq < smoke_radius_sq) {
-          // both 'from' and 'to' lie within the cloud entire length is smoked
-          total_smoked_length += (to - from).length ();
-        }
-        else {
-          // from is inside the cloud, to is outside, add half smoked length
-          float half_smoked_length = ystl::sqrtf (smoke_radius_sq - length_sq);
-
-          if (along_dist > 0.0f) {
-            // ray goes thru 'close'
-            total_smoked_length += half_smoked_length + (close - from).length ();
-          }
-          else {
-            // ray starts after 'close'
-            total_smoked_length += half_smoked_length - (close - from).length ();
-          }
-        }
-      }
-      else if (to_sq < smoke_radius_sq) {
-        // from is outside the cloud, to is inside, add half smoked length
-        const float half_smoked_length = ystl::sqrtf (smoke_radius_sq - length_sq);
-        ystl::Vector v = to - smoke_origin;
-
-        if ((v | sight_dir) > 0.0f) {
-          // ray goes thru 'close'
-          total_smoked_length += half_smoked_length + (close - to).length ();
-        }
-        else {
-          // ray ends before 'close'
-          total_smoked_length += half_smoked_length - (close - to).length ();
-        }
-      }
-      else {
-        // both ends are outside the cloud, so the ray fully crosses it
-        const float smoked_length = 2.0f * ystl::sqrtf (smoke_radius_sq - length_sq);
-        total_smoked_length += smoked_length;
-      }
+    if (exit > enter) {
+      smoked_length += (exit - enter) * ystl::sqrtf (seg_length_sq);
     }
   }
 
-  // define how much smoke a bot can see thru
-  const float max_smoked_length = 0.7f * cv_smoke_grenade_radius.As<float> ();
-
-  // return true if the total length of smoke-covered line-of-sight is too much
-  return total_smoked_length > max_smoked_length;
+  // bots see thru a short smoked stretch
+  return smoked_length > 0.7f * smoke_radius;
 }
 
 } // namespace bot
