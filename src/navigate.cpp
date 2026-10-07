@@ -2548,11 +2548,14 @@ bool Bot::FindNextBestNodeEx (const ystl::Array<int32_t> &data, bool handle_fail
     selected = FindNearestNode ();
   }
 
-  // start timer based on estimated travel time to the selected node
-  if (selected != kInvalidNodeIndex && graph.Exists (selected)) {
-    const float travel_time = pev->origin.distance_sq (graph[selected].origin) / ystl::sqrf (pev->maxspeed) * 4.0f;
-    lost_reachable_node_timer_.start (travel_time);
+  // nothing usable found
+  if (selected == kInvalidNodeIndex || !graph.Exists (selected)) {
+    return false;
   }
+
+  // start timer based on estimated travel time to the selected node
+  const float travel_time = pev->origin.distance_sq (graph[selected].origin) / ystl::sqrf (pev->maxspeed) * 4.0f;
+  lost_reachable_node_timer_.start (travel_time);
 
   ChangeNodeIndex (selected);
   return true;
@@ -2593,7 +2596,16 @@ void Bot::FindValidNode () {
   // checks if the last node the bot was heading for is still valid
 
   auto try_select_new_goal = [&] () {
-    if (rechoice_goal_count_ > 1) {
+    if (rechoice_goal_count_ <= 1) {
+      ClearSearchNodes ();
+
+      if (FindNextBestNode ()) {
+        ++rechoice_goal_count_;
+        return;
+      }
+      rechoice_goal_count_ = 2; // local recovery failed, escalate to a far goal below
+    }
+    {
       const int new_goal = FindBestGoal ();
 
       prev_goal_index_ = new_goal;
@@ -2605,12 +2617,6 @@ void Bot::FindValidNode () {
         FindPath (current_node_index_, new_goal, path_type_);
       }
       rechoice_goal_count_ = 0;
-    }
-    else {
-      ClearSearchNodes ();
-      FindNextBestNode ();
-
-      ++rechoice_goal_count_;
     }
   };
 
