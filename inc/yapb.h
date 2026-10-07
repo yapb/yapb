@@ -1169,6 +1169,11 @@ public:
     return !game.IsNullEntity (ent) && ignored_breakable_.contains (ent);
   }
 
+  // no smashing decor while frozen or right after spawn
+  bool IsBreakableAllowed () const {
+    return pev->maxspeed >= 10.0f && spawn_timer_.greater_than (5.0f);
+  }
+
   // get bot entity pointer
   edict_t *Ent () const {
     return pev->pContainingEntity;

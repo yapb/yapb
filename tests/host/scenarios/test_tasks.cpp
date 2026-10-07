@@ -576,10 +576,14 @@ TEST_CASE ("unit/tasks_break") {
   msgs.Stop ();
   HOST_REQUIRE (conf.GetWeaponProp (Weapon::AK47).id == Weapon::AK47);
 
+  // past the post-spawn decor grace period
+  engine.AdvanceTime (6.0f);
+
   for (auto bot : { armed, dry }) {
     bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
     bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
     bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+    bot->pev->maxspeed = 270.0f;
     TasksHook::CheckBreakable (*bot, brk);
     HOST_REQUIRE (bot->GetTaskId () == TaskId::ShootBreakable);
   }

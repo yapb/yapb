@@ -643,6 +643,9 @@ TEST_CASE ("unit/behavior_map") {
   CHECK (!BehaviorHook::Hostage (*bot));
 
   // explicit touch tracks a breakable straight into the shooting task
+  // (past the post-spawn decor grace period, moving at full speed)
+  bot->pev->maxspeed = 270.0f;
+  engine.AdvanceTime (6.0f);
   BehaviorHook::SetBreakable (*bot, nullptr);
   BehaviorHook::CheckBreakable (*bot, brk);
   CHECK (bot->GetTaskId () == TaskId::ShootBreakable);

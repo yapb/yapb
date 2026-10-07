@@ -1014,7 +1014,9 @@ TEST_CASE ("unit/navigate_move") {
   CHECK (ever_stuck);
 
   // breakable ahead schedules shooting instead of stuck
-  engine.AdvanceTime (0.2f);
+  // (past the post-spawn decor grace period, moving at full speed)
+  bot->pev->maxspeed = 270.0f;
+  engine.AdvanceTime (6.0f);
   engine.SetTraceLineHook ([&] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
     (void)v2;
     (void)no_monsters;
