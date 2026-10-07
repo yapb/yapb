@@ -1857,8 +1857,8 @@ void Bot::TaskShootBreakable () {
   // yield only to a visible enemy, not a suspect thru-wall one
   const bool has_visible_enemy = !game.IsNullEntity (enemy_) && has_flag (states_, Sense::SeeingEnemy);
 
-  // breakable destroyed?
-  if (has_visible_enemy || !game.IsBreakableEntity (breakable_entity_)) {
+  // breakable destroyed or gave up on it?
+  if (has_visible_enemy || !game.IsBreakableEntity (breakable_entity_) || IsIgnoredBreakable (breakable_entity_)) {
     CompleteTask ();
     return;
   }

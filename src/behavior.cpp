@@ -169,6 +169,10 @@ void Bot::CheckBreakable (edict_t *touch) {
       breakable_origin_.clear ();
     }
   }
+  else if (IsIgnoredBreakable (touch)) {
+    breakable_entity_ = nullptr;
+    breakable_origin_.clear ();
+  }
   else {
     if (breakable_entity_ != touch) {
       breakable_entity_ = touch;
@@ -198,18 +202,9 @@ void Bot::CheckBreakablesAround () {
       continue;
     }
     const auto breakable = item.ent;
-    bool ignore_breakable = false;
 
-    // check if it's blacklisted
-    for (const auto &ignored : ignored_breakable_) {
-      if (ignored == breakable) {
-        ignore_breakable = true;
-        break;
-      }
-    }
-
-    // keep searching
-    if (ignore_breakable) {
+    // skip blacklisted ones, keep searching
+    if (IsIgnoredBreakable (breakable)) {
       continue;
     }
 
@@ -266,14 +261,9 @@ edict_t *Bot::LookupBreakable () {
       breakable_entity_ = nullptr;
       breakable_origin_.clear ();
     }
-    else {
-      for (const auto &br : ignored_breakable_) {
-        if (br == breakable_entity_) {
-          breakable_entity_ = nullptr;
-          breakable_origin_.clear ();
-          break;
-        }
-      }
+    else if (IsIgnoredBreakable (breakable_entity_)) {
+      breakable_entity_ = nullptr;
+      breakable_origin_.clear ();
     }
 
     if (!game.IsNullEntity (breakable_entity_)) {
@@ -310,10 +300,8 @@ edict_t *Bot::LookupBreakable () {
       return false;
     }
 
-    for (const auto &br : ignored_breakable_) {
-      if (br == ent) {
-        return false;
-      }
+    if (IsIgnoredBreakable (ent)) {
+      return false;
     }
     return true;
   };

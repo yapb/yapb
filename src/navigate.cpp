@@ -896,7 +896,7 @@ bool Bot::DetectStuckStatus (const ystl::Vector &dir_normal) {
     auto blocker = IsBlockedForward (dir_normal);
 
     // if blocked by a breakable, schedule shooting instead of stuck
-    if (blocker != nullptr && game.IsBreakableEntity (blocker)) {
+    if (blocker != nullptr && game.IsBreakableEntity (blocker) && !IsIgnoredBreakable (blocker)) {
       breakable_entity_ = blocker;
       breakable_origin_ = game.GetEntityOrigin (blocker);
       StartTask (TaskId::ShootBreakable, TaskPri::kShootBreakable, kInvalidNodeIndex, 0.0f, false);

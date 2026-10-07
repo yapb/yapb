@@ -1164,6 +1164,11 @@ public:
     return tid == TaskId::PlantBomb || tid == TaskId::DefuseBomb;
   }
 
+  // breakables the bot gave up on (unbreakable, blocked or timed out)
+  bool IsIgnoredBreakable (edict_t *ent) {
+    return !game.IsNullEntity (ent) && ignored_breakable_.contains (ent);
+  }
+
   // get bot entity pointer
   edict_t *Ent () const {
     return pev->pContainingEntity;
