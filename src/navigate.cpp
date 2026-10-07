@@ -2763,6 +2763,11 @@ int Bot::FindNearestNode () {
       continue;
     }
 
+    // same bar as the main pass, no camping bots as a last resort either
+    if (IsOccupiedNode (node_index, true)) {
+      continue;
+    }
+
     Trace::Result tr {};
     trace.Line (GetEyesPos (), graph[node_index].origin, TraceIgnore::Monsters, Ent (), &tr);
 
