@@ -4282,8 +4282,8 @@ bool Bot::IsReachableNode (int index) {
   Trace::Result tr {};
   trace.Line (src, dst, TraceIgnore::Monsters, Ent (), &tr);
 
-  // if node is visible from current position (even behind head)
-  return tr.fraction >= 1.0f;
+  // endpoint must be truly clear, a trace starting inside solid still reports full fraction
+  return trace.IsEndpointClear (tr);
 }
 
 bool Bot::IsPreviousLadder () const {
