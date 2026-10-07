@@ -197,8 +197,8 @@ void Bot::CheckBreakable (edict_t *touch) {
 }
 
 void Bot::CheckBreakablesAround () {
-  if (!buying_finished_ || !cv_destroy_breakables_around || UsesKnife () || UsesSniper () || IsOnLadder () || rg.chance (25) ||
-      !game.HasBreakables () || see_enemy_timer_.less_than (4.0f) || !game.IsNullEntity (enemy_) ||
+  if (!buying_finished_ || GetTaskId () == TaskId::ShootBreakable || !cv_destroy_breakables_around || UsesKnife () || UsesSniper () ||
+      IsOnLadder () || rg.chance (25) || !game.HasBreakables () || see_enemy_timer_.less_than (4.0f) || !game.IsNullEntity (enemy_) ||
       has_flag (aim_flags_, AimFlags::PredictPath | AimFlags::Danger) || !HasPrimaryWeapon () || !IsBreakableAllowed ()) {
     return;
   }
