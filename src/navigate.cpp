@@ -2665,6 +2665,11 @@ void Bot::FindValidNode () {
     if (!graph.IsConnected (first_node, next_node) || !vistab.VisibleBothSides (first_node, next_node)) {
       break;
     }
+
+    // adopt it only when truly reachable from here, never through walls
+    if (!IsReachableNode (next_node)) {
+      break;
+    }
     path_walk_.Shift ();
 
     if (path_walk_.First () != current_node_index_) {
