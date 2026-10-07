@@ -2463,7 +2463,7 @@ bool Graph::IsNodeReacheableEx (const ystl::Vector &src, const ystl::Vector &des
   const bool is_door = game.IsDoorEntity (tr.hit);
 
   // if node is visible from current position (even behind head)
-  if (tr.fraction >= 1.0f || is_door) {
+  if (trace.IsEndpointClear (tr) || is_door) {
     // if it's a door check if nothing blocks behind
     if (is_door) {
       trace.Line (tr.end_pos, destination, TraceIgnore::Monsters, tr.hit, &tr);
