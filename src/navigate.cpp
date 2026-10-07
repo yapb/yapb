@@ -2645,6 +2645,32 @@ void Bot::FindValidNode () {
     }
     try_select_new_goal ();
   }
+
+  // drop route nodes left behind during unwaypointed detours, so the bot
+  // resumes forward instead of backtracking through them
+  while (path_walk_.HasNext ()) {
+    const int32_t first_node = path_walk_.First ();
+    const int32_t next_node = path_walk_.Next ();
+
+    if (!graph.Exists (first_node) || !graph.Exists (next_node)) {
+      break;
+    }
+    const float first_sq = pev->origin.distance_sq (graph[first_node].origin);
+    const float next_sq = pev->origin.distance_sq (graph[next_node].origin);
+
+    if (first_sq <= next_sq || first_sq <= ystl::sqrf (48.0f)) {
+      break;
+    }
+
+    if (!graph.IsConnected (first_node, next_node) || !vistab.VisibleBothSides (first_node, next_node)) {
+      break;
+    }
+    path_walk_.Shift ();
+
+    if (path_walk_.First () != current_node_index_) {
+      ChangeNodeIndex (path_walk_.First ());
+    }
+  }
 }
 
 int Bot::ChangeNodeIndex (int index) {
