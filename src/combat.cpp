@@ -1820,92 +1820,61 @@ bool Bot::IsEnemyInSight (ystl::Vector &end_pos) {
 }
 
 bool Bot::IsEnemyNoticeable (float range) {
-  // this function is back ported from regamedll with small changes
-
+  // no attention to spare while climbing
   if (IsOnLadder ()) {
     return false;
   }
+  const float speed_sq = enemy_->v.velocity.length_sq ();
 
-  // determine percentage of player that is visible
-  float cover_ratio = 0.0f;
+  // sprinting enemies give themselves away at any distance
+  if (speed_sq > ystl::sqrf (200.0f)) {
+    return true;
+  }
+
+  // spotting odds {near, far} by gait and posture
+  struct GaitOdds {
+    float near_chance;
+    float far_chance;
+  };
+
+  static constexpr GaitOdds kOdds[2][2] = {
+    { { 100.0f, 10.0f }, { 80.0f, 5.0f } },
+    { { 100.0f, 75.0f }, { 90.0f, 60.0f } },
+  };
+
+  const bool walking = speed_sq > ystl::sqrf (30.0f);
+  const bool crouching = (enemy_->v.flags & FL_DUCKING) == FL_DUCKING;
+  const auto odds = kOdds[walking][crouching];
+
+  // obvious up close, fading with distance
+  const float distance_share = ystl::clamp ((range - 300.0f) / 700.0f, 0.0f, 1.0f);
+  float chance = odds.near_chance + (odds.far_chance - odds.near_chance) * distance_share;
+
+  // only the visible share of the target counts
+  float shown = 0.0f;
 
   if (has_flag (enemy_parts_, Visibility::Body)) {
-    cover_ratio += 40.0f;
+    shown += 40.0f;
   }
 
   if (has_flag (enemy_parts_, Visibility::Head)) {
-    cover_ratio += 10.0f;
+    shown += 10.0f;
   }
 
   if (has_flag (enemy_parts_, Visibility::Other)) {
-    cover_ratio += rg (10.0f, 25.0f);
+    shown += rg (10.0f, 25.0f);
   }
-  constexpr float kCloseRange = 300.0f;
-  constexpr float kFarRange = 1000.0f;
+  chance *= shown / 100.0f;
 
-  float range_modifier {};
+  // skill sets the floor, alertness raises the ceiling
+  chance += 0.5f + 0.5f * static_cast<float> (Skill ());
 
-  if (range < kCloseRange) {
-    range_modifier = 0.0f;
-  }
-  else if (range > kFarRange) {
-    range_modifier = 1.0f;
-  }
-  else {
-    range_modifier = (range - kCloseRange) / (kFarRange - kCloseRange);
-  }
-
-  // harder to notice when crouched
-  bool is_crouching = (enemy_->v.flags & FL_DUCKING) == FL_DUCKING;
-
-  // moving players are easier to spot
-  float player_speed_sq = enemy_->v.velocity.length_sq ();
-  float far_chance {}, close_chance {};
-
-  constexpr float kRunSpeed = ystl::sqrf (200.0f);
-  constexpr float kWalkSpeed = ystl::sqrf (30.0f);
-
-  if (player_speed_sq > kRunSpeed) {
-    return true; // running players are always easy to spot (must be standing to run)
-  }
-  else if (player_speed_sq > kWalkSpeed) {
-    // walking players are less noticeable far away
-    if (is_crouching) {
-      close_chance = 90.0f;
-      far_chance = 60.0f;
-    }
-    // standing
-    else {
-      close_chance = 100.0f;
-      far_chance = 75.0f;
-    }
-  }
-  else {
-    // motionless players are hard to notice
-    if (is_crouching) {
-      // crouching and motionless - very tough to notice
-      close_chance = 80.0f;
-      far_chance = 5.0f; // takes about three seconds to notice (50% chance)
-    }
-    // standing
-    else {
-      close_chance = 100.0f;
-      far_chance = 10.0f;
-    }
-  }
-
-  const float disposition_chance = close_chance + (far_chance - close_chance) * range_modifier; // combine posture, speed, and range chances
-  float notice_chance = disposition_chance * cover_ratio / 100.0f; // determine actual chance of noticing player
-
-  notice_chance += (0.5f + 0.5f * (static_cast<float> (difficulty_) * 25.0f));
-
-  // if we are alert, our chance of noticing is much higher
   if (agression_level_ > fear_level_) {
-    notice_chance += 50.0f;
+    chance += 50.0f;
   }
-  notice_chance = ystl::max (0.1f, notice_chance * ystl::abs (agression_level_ - fear_level_));
+  chance = ystl::max (0.1f, chance * ystl::abs (agression_level_ - fear_level_));
 
-  return rg (0.0f, 100.0f) < notice_chance;
+  return rg (0.0f, 100.0f) < chance;
 }
 
 bool Bot::IsEnemyThreat () {
