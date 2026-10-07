@@ -4221,8 +4221,11 @@ bool Bot::IsReachableNode (int index) {
   const auto &src = pev->origin;
   const auto &dst = graph[index].origin;
 
+  // recovery scan radius, matches the fallback search range
+  constexpr auto kReachableNodeDistance = 1024.0f;
+
   // is the destination close enough?
-  if (dst.distance_sq (src) > ystl::sqrf (600.0f)) {
+  if (dst.distance_sq (src) > ystl::sqrf (kReachableNodeDistance)) {
     return false;
   }
 
