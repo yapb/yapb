@@ -1507,6 +1507,126 @@ TEST_CASE ("unit/navigate_gaps") {
   testhost::CloseFakeCs (cs);
 }
 
+TEST_CASE ("unit/navigate_avoid_commit") {
+  testhost::FakeEngine engine;
+  engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
+
+  testhost::FakeCSApi cs {};
+  HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
+  cs.reset ();
+
+  GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
+  HOST_REQUIRE (cs.entered () != 0);
+
+  gamefuncs_t table {};
+  HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
+
+  game.Precache ();
+  table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
+
+  if (analyzer.IsAnalyzing ()) {
+    analyzer.Suspend (); // autostart would block bot creation below
+  }
+  BuildNavGraph ();
+  planner.Init ();
+
+  bots.InitQuota ();
+  cv_quota.Set (10);
+
+  bots.Addbot ("AvoA", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("AvoB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("AvoC", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+
+  Bot *bot = nullptr, *mate_a = nullptr, *mate_b = nullptr;
+
+  for (int i = 0; i < 40 && (bot == nullptr || mate_a == nullptr || mate_b == nullptr); ++i) {
+    engine.AdvanceTime (0.2f);
+    bots.MaintainQuota ();
+
+    bots.ForEach ([&] (Bot *candidate) {
+      if (ystl::StringRef (candidate->pev->netname.chars ()) == "AvoA") {
+        bot = candidate;
+      }
+      else if (ystl::StringRef (candidate->pev->netname.chars ()) == "AvoB") {
+        mate_a = candidate;
+      }
+      else if (ystl::StringRef (candidate->pev->netname.chars ()) == "AvoC") {
+        mate_b = candidate;
+      }
+      return false;
+    });
+  }
+  HOST_REQUIRE (bot != nullptr && mate_a != nullptr && mate_b != nullptr);
+
+  // isolate the trio, quota top-ups must not photobomb the hindrance scan
+  bots.ForEach ([&] (Bot *candidate) {
+    if (candidate != bot && candidate != mate_a && candidate != mate_b) {
+      candidate->pev->origin = ystl::Vector (5000.0f, 0.0f, 0.0f);
+    }
+    return false;
+  });
+
+  bot->team_ = Team::CT;
+  mate_a->team_ = Team::CT;
+  mate_b->team_ = Team::CT;
+
+  // client teams only arrive via TeamInfo messages, publish them here
+  clients[bot->Ent ()].team = Team::CT;
+  clients[mate_a->Ent ()].team = Team::CT;
+  clients[mate_b->Ent ()].team = Team::CT;
+
+  auto prep_bot = [] (Bot *target, const ystl::Vector &pos) {
+    target->pev->origin = pos;
+    target->pev->velocity = ystl::Vector (0.0f, 0.0f, 0.0f);
+    target->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+    target->pev->angles = ystl::Vector (0.0f, 0.0f, 0.0f);
+    target->pev->health = 100.0f;
+    target->pev->max_health = 100.0f;
+    target->pev->deadflag = DEAD_NO;
+    target->pev->takedamage = DAMAGE_YES;
+    target->pev->solid = SOLID_BBOX;
+    target->pev->movetype = MOVETYPE_WALK;
+    target->pev->maxspeed = 270.0f;
+    target->pev->flags |= FL_ONGROUND;
+    target->is_alive_ = true;
+  };
+  prep_bot (bot, ystl::Vector (0.0f, 0.0f, 0.0f));
+  prep_bot (mate_a, ystl::Vector (60.0f, 0.0f, 0.0f));
+  prep_bot (mate_b, ystl::Vector (500.0f, 0.0f, 0.0f));
+
+  // low maxspeed keeps the movement prediction near the body
+  bot->pev->maxspeed = 100.0f;
+
+  // mates outrank us with camp tasks, so avoidance tracks them, not the reverse
+  mate_a->StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, 0.0f, true);
+  mate_b->StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, 0.0f, true);
+
+  NavigateHook::SetMoveAngles (*bot, ystl::Vector (0.0f, 0.0f, 0.0f));
+  NavigateHook::SetStrafe (*bot, 0.0f);
+  NavigateHook::SetMoveSpeed (*bot, 0.0f);
+  clients.Update ();
+
+  // head-on mate commits a slide to one side...
+  NavigateHook::Avoid (*bot, ystl::Vector (1.0f, 0.0f, 0.0f));
+  HOST_REQUIRE (NavigateHook::Hindrance (*bot) == mate_a->Ent ());
+
+  const float first = NavigateHook::StrafeSpeed (*bot);
+  HOST_REQUIRE (first != 0.0f);
+
+  // ...swapping the hindrance mid-commit must hold the slide, not flip it
+  mate_a->pev->origin = ystl::Vector (500.0f, 0.0f, 0.0f);
+  mate_b->pev->origin = ystl::Vector (45.0f, -45.0f, 0.0f);
+  clients.Update ();
+
+  NavigateHook::Avoid (*bot, ystl::Vector (1.0f, 0.0f, 0.0f));
+  CHECK (NavigateHook::Hindrance (*bot) == mate_b->Ent ());
+  CHECK (NavigateHook::StrafeSpeed (*bot) == first);
+
+  bots.Destroy ();
+  table.pfnServerDeactivate ();
+  testhost::CloseFakeCs (cs);
+}
+
 TEST_CASE ("unit/navigate_cover") {
   testhost::FakeEngine engine;
   engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");

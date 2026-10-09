@@ -727,8 +727,9 @@ void Bot::DoPlayerAvoidance (const ystl::Vector &normal) {
     }
   }
 
-  // if hindrance changed, reset avoidance commitment
-  if (hindrance_ != new_hindrance) {
+  // hold the committed slide across hindrance swaps in a crowd, only losing
+  // everybody releases it (recomputing on every swap jitters side to side)
+  if (new_hindrance == nullptr) {
     avoid_strafe_dir_ = 0.0f;
     avoid_commit_timer_.invalidate ();
   }
@@ -841,11 +842,8 @@ void Bot::DoPlayerAvoidance (const ystl::Vector &normal) {
     first_collide_timer_.invalidate ();
     ResetCollision ();
   }
-  else {
-    // clear commitment when no longer avoiding
-    avoid_strafe_dir_ = 0.0f;
-    avoid_commit_timer_.invalidate ();
-  }
+  // when the steer condition flickers for a frame, hold the committed slide and
+  // let the timer release it on its own once the way is truly clear
 }
 
 bool Bot::DetectStuckStatus (const ystl::Vector &dir_normal) {
