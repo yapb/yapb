@@ -165,8 +165,21 @@ endif()
 
 # without mbedtls https requests cleanly report HttpOnly
 if(YAPB_WITH_TLS AND NOT VITA AND NOT YAPB_WINXP AND NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+  if(POLICY CMP0218)
+    cmake_policy(SET CMP0218 NEW)
+  endif()
+
   add_subdirectory(ext/ystl/ext/mbedtls)
   target_link_libraries(${PROJECT_NAME} PRIVATE ystl_mbedtls)
+
+  # vendored tls: -w shuts its warnings up (no unity: upstream relies on
+  # per-tu MBEDTLS_ALLOW_PRIVATE_ACCESS, blobs don't compile)
+  foreach(_tls_tgt mbedtls mbedx509 tfpsacrypto)
+    if(TARGET ${_tls_tgt})
+      target_compile_options(${_tls_tgt} PRIVATE -w)
+    endif()
+  endforeach()
+  unset(_tls_tgt)
 endif()
 
 # no %n by design; winxp toolchain predates <stdbool.h>

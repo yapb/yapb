@@ -11,7 +11,7 @@
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/${presetName}",
       "warnings": {
-        "deprecated": true,
+        "deprecated": false,
         "dev": true,
         "systemVars": true,
         "uninitialized": false,
