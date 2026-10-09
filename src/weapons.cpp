@@ -306,7 +306,13 @@ bool Bot::IsPenetrableObstacle4 (const ystl::Vector &dest, int penetrate_power) 
     if (thickness >= max_march) {
       return false; // solid all the way into the enemy
     }
-    power *= power_mult (conf.GetMaterialType (engfuncs.pfnTraceTexture (tr.hit != nullptr ? tr.hit : game.GetStartEntity (), cursor, entry)));
+    // old engines may not export TraceTexture, then everything counts as concrete
+    const char *texture = nullptr;
+
+    if (engfuncs.pfnTraceTexture != nullptr) {
+      texture = engfuncs.pfnTraceTexture (tr.hit != nullptr ? tr.hit : game.GetStartEntity (), cursor, entry);
+    }
+    power *= power_mult (conf.GetMaterialType (texture));
 
     // grinding a thick wall eats one count per power of thickness
     const int steps = static_cast<int> (ystl::ceilf (thickness / power));

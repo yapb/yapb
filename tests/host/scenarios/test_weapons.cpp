@@ -398,6 +398,31 @@ TEST_CASE ("unit/weapons_fire") {
   });
   CHECK (WeaponsHook::Penetrable (*bot, ystl::Vector (400.0f, 0.0f, 28.0f)));
 
+  // ...engines without TraceTexture count everything as concrete, a wooden
+  // slab this thick stops punching through then...
+  engine.AdvanceTime (0.3f);
+  engine.SetTraceLineHook ([] (const float *v1, const float *, int, edict_t *, TraceResult *out) {
+    if (v1[0] < 240.0f) {
+      out->flFraction = 0.5f;
+      out->vecEndPos[0] = 240.0f;
+      out->vecEndPos[1] = 0.0f;
+      out->vecEndPos[2] = 28.0f;
+    }
+    else {
+      out->flFraction = 1.0f;
+    }
+  });
+  engine.SetPointContentsHook ([] (const float *v) {
+    return (v[0] >= 240.0f && v[0] <= 264.0f) ? CONTENTS_SOLID : CONTENTS_EMPTY;
+  });
+  engine.SetTraceTextureHook ([] (edict_t *, const float *, const float *) -> const char * {
+    return "WOOD";
+  });
+  const auto saved_trace_texture = engfuncs.pfnTraceTexture;
+  engfuncs.pfnTraceTexture = nullptr;
+  CHECK (!WeaponsHook::Penetrable (*bot, ystl::Vector (400.0f, 0.0f, 28.0f)));
+  engfuncs.pfnTraceTexture = saved_trace_texture;
+
   // ...and walls past the weapon's penetration range stop the bullet
   bot->current_weapon_ = Weapon::USP;
   engine.AdvanceTime (0.3f);
