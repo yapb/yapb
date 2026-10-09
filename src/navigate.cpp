@@ -2666,6 +2666,26 @@ void Bot::FindValidNode () {
       break;
     }
 
+    // never shortcut action links or posture nodes, jumping and ducking need their exact entry
+    constexpr auto kActionFlags = NodeFlag::Button | NodeFlag::Lift | NodeFlag::Crouch | NodeFlag::Ladder | NodeFlag::DoubleJump | NodeFlag::Narrow;
+
+    if (has_flag (graph[first_node].flags, kActionFlags) || has_flag (graph[next_node].flags, kActionFlags)) {
+      break;
+    }
+
+    bool jump_link = false;
+
+    for (const auto &link : graph[first_node].links) {
+      if (link.index == next_node) {
+        jump_link = has_flag (link.flags, PathFlag::Jump);
+        break;
+      }
+    }
+
+    if (jump_link) {
+      break;
+    }
+
     // adopt it only when truly reachable from here, never through walls
     if (!IsReachableNode (next_node)) {
       break;
