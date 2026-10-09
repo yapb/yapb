@@ -562,9 +562,10 @@ void Bot::CheckRadioQueue () {
       // mark this node as restricted point
       if (bomb_point != kInvalidNodeIndex && !graph.IsVisited (bomb_point)) {
         // does this bot want to defuse?
-        if (GetTaskId () == TaskId::Normal) {
-          // is he approaching this goal?
-          if (Task ()->data == bomb_point) {
+        if (GetTaskId () == TaskId::Normal && graph.Exists (Task ()->data)) {
+          // is he approaching the reported site (not just the exact node)?
+          if (Task ()->data == bomb_point ||
+              graph[Task ()->data].origin.distance_sq (graph[bomb_point].origin) < ystl::sqrf (kBombSiteGoalRadius)) {
             Task ()->data = kInvalidNodeIndex;
             PushRadioChat (RadioChat::RogerThat);
           }

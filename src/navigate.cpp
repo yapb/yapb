@@ -1930,7 +1930,7 @@ bool Bot::UpdateNavigation () {
     if (Task ()->data == current_node_index_) {
       // cts searching a planted bomb count a reached site as searched (keeps the search moving)
       if (game_state.IsBombPlanted () && team_ == Team::CT && GetTaskId () != TaskId::EscapeFromBomb && !graph.IsVisited (current_node_index_)) {
-        if (rg.chance (50)) {
+        if (rg.chance (50 + Skill () / 2)) {
           PushRadioChat (RadioChat::SectorClear);
         }
         MarkBombSiteVisited (current_node_index_);
