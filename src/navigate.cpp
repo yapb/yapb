@@ -2665,7 +2665,8 @@ void Bot::FindValidNode () {
     }
 
     // never shortcut action links or posture nodes, jumping and ducking need their exact entry
-    constexpr auto kActionFlags = NodeFlag::Button | NodeFlag::Lift | NodeFlag::Crouch | NodeFlag::Ladder | NodeFlag::DoubleJump | NodeFlag::Narrow;
+    constexpr auto kActionFlags =
+      NodeFlag::Button | NodeFlag::Lift | NodeFlag::Crouch | NodeFlag::Ladder | NodeFlag::DoubleJump | NodeFlag::Narrow;
 
     if (has_flag (graph[first_node].flags, kActionFlags) || has_flag (graph[next_node].flags, kActionFlags)) {
       break;

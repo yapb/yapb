@@ -1838,7 +1838,7 @@ bool Bot::IsEnemyNoticeable (float range) {
   };
 
   static constexpr GaitOdds kOdds[2][2] = {
-    { { 100.0f, 10.0f }, { 80.0f, 5.0f } },
+    { { 100.0f, 10.0f }, { 80.0f, 5.0f }  },
     { { 100.0f, 75.0f }, { 90.0f, 60.0f } },
   };
 

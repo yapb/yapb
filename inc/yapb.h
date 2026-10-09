@@ -1157,7 +1157,7 @@ public:
     const auto tid = GetTaskId ();
 
     return tid == TaskId::PlantBomb || tid == TaskId::DefuseBomb || tid == TaskId::PickupItem || tid == TaskId::ThrowExplosive ||
-      tid == TaskId::ThrowFlashbang || tid == TaskId::ThrowSmoke;
+           tid == TaskId::ThrowFlashbang || tid == TaskId::ThrowSmoke;
   }
 
   // bomb handling tasks (plant/defuse pair)
