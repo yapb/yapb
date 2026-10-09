@@ -32,6 +32,9 @@ bool Bot::IsPenetrableObstacle (const ystl::Vector &dest) {
 
   case 3:
     return IsPenetrableObstacle3 (dest, penetrate_power);
+
+  case 4:
+    return IsPenetrableObstacle4 (dest, penetrate_power);
   };
   return false;
 }
@@ -173,6 +176,146 @@ bool Bot::IsPenetrableObstacle3 (const ystl::Vector &dest, int penetrate_power) 
       }
       source = tr.end_pos + dir;
     }
+  }
+  return false;
+}
+
+bool Bot::IsPenetrableObstacle4 (const ystl::Vector &dest, int penetrate_power) const {
+  // game-faithful wallbang check, mirrors FireBullets3 penetration: every wall
+  // eats penetration counts by its thickness over the current power, power
+  // shrinks per surface material, walls past the weapon's range stop the bullet
+  (void)penetrate_power; // method reads game ballistics per weapon instead
+
+  // per-weapon (penetration count, power, range), buckshot and blades never punch
+  struct BulletParams {
+    Weapon id {};
+    int count {};
+    float power {};
+    float distance {};
+  };
+
+  static constexpr BulletParams kBulletParams[] = {
+    { Weapon::Glock18,   1, 21.0f, 800.0f  },
+    { Weapon::USP,       1, 15.0f, 500.0f  },
+    { Weapon::P228,      1, 25.0f, 800.0f  },
+    { Weapon::Deagle,    2, 30.0f, 1000.0f },
+    { Weapon::Elite,     1, 21.0f, 800.0f  },
+    { Weapon::FiveSeven, 1, 30.0f, 2000.0f },
+    { Weapon::MAC10,     1, 15.0f, 500.0f  },
+    { Weapon::UMP45,     1, 15.0f, 500.0f  },
+    { Weapon::MP5,       1, 21.0f, 800.0f  },
+    { Weapon::TMP,       1, 21.0f, 800.0f  },
+    { Weapon::P90,       1, 30.0f, 2000.0f },
+    { Weapon::AK47,      2, 39.0f, 5000.0f },
+    { Weapon::SG552,     2, 35.0f, 4000.0f },
+    { Weapon::M4A1,      2, 35.0f, 4000.0f },
+    { Weapon::Galil,     2, 35.0f, 4000.0f },
+    { Weapon::Famas,     2, 35.0f, 4000.0f },
+    { Weapon::AUG,       2, 35.0f, 4000.0f },
+    { Weapon::Scout,     3, 39.0f, 5000.0f },
+    { Weapon::AWP,       3, 45.0f, 8000.0f },
+    { Weapon::G3SG1,     3, 39.0f, 5000.0f },
+    { Weapon::SG550,     2, 35.0f, 4000.0f },
+    { Weapon::M249,      2, 35.0f, 4000.0f },
+  };
+
+  // power multiplier per surface material, mirrors FireBullets3
+  auto power_mult = [] (char type) {
+    switch (type) {
+    case 'M':
+      return 0.15f;
+    case 'C':
+      return 0.25f;
+    case 'G':
+      return 0.5f;
+    case 'V':
+      return 0.5f;
+    case 'T':
+      return 0.65f;
+    case 'P':
+      return 0.4f;
+    default:
+      return 1.0f; // wood, dirt and the rest punch at full power
+    }
+  };
+
+  const BulletParams *params = nullptr;
+
+  for (const auto &entry : kBulletParams) {
+    if (entry.id == current_weapon_) {
+      params = &entry;
+      break;
+    }
+  }
+
+  if (params == nullptr || params->count <= 0) {
+    return false;
+  }
+  constexpr float kMarchStep = 4.0f;
+  constexpr int kMaxWalls = 8;
+
+  const ystl::Vector source = GetEyesPos ();
+  const ystl::Vector direction = (dest - source).normalize ();
+
+  float power = params->power;
+  int walls = 0;
+
+  ystl::Vector cursor = source;
+
+  for (int wall = 0; wall < kMaxWalls; ++wall) {
+    Trace::Result tr {};
+
+    trace.Line (cursor, dest, TraceIgnore::Everything, Ent (), &tr);
+
+    if (tr.start_solid) {
+      if (tr.all_solid || wall == 0) {
+        return false;
+      }
+
+      // jump landed inside solid, grind one power forward like the game does
+      if (walls >= params->count) {
+        return false;
+      }
+      ++walls;
+      cursor = cursor + direction * power;
+      continue;
+    }
+
+    // open air: punch-through only if at least one wall was spent
+    if (ystl::fequal (tr.fraction, 1.0f)) {
+      return walls > 0;
+    }
+    const ystl::Vector entry = tr.end_pos;
+
+    // walls past the weapon's penetration range stop the bullet
+    if (source.distance_sq (entry) > ystl::sqrf (params->distance)) {
+      return false;
+    }
+
+    // measure the wall marching forward from the entry face, walls can't
+    // hide past the enemy
+    const float max_march = entry.distance (dest);
+    float thickness = 1.0f;
+    ystl::Vector point = entry + direction;
+
+    while (thickness < max_march && engfuncs.pfnPointContents (point) == CONTENTS_SOLID) {
+      point = point + direction * kMarchStep;
+      thickness += kMarchStep;
+    }
+
+    if (thickness >= max_march) {
+      return false; // solid all the way into the enemy
+    }
+    power *= power_mult (conf.GetMaterialType (engfuncs.pfnTraceTexture (tr.hit != nullptr ? tr.hit : game.GetStartEntity (), cursor, entry)));
+
+    // grinding a thick wall eats one count per power of thickness
+    const int steps = static_cast<int> (ystl::ceilf (thickness / power));
+
+    if (walls + steps > params->count) {
+      return false;
+    }
+    walls += steps;
+    cursor = point + direction;
   }
   return false;
 }

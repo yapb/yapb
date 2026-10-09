@@ -356,6 +356,8 @@ void FakeEngine::Initialise (const char *game_dir, int max_clients) {
 
   trace_line_hook_ = nullptr;
   trace_hull_hook_ = nullptr;
+  point_contents_hook_ = nullptr;
+  trace_texture_hook_ = nullptr;
 
   memset (info_buffer_, 0, sizeof (info_buffer_));
   memset (pvs, 0xff, sizeof (pvs));
@@ -842,9 +844,9 @@ void FakeEngine::ThunkTraceModel (const float *v1, const float *v2, int hull, ed
 }
 
 const char *FakeEngine::ThunkTraceTexture (edict_t *ent, const float *v1, const float *v2) {
-  (void)ent;
-  (void)v1;
-  (void)v2;
+  if (s_active->trace_texture_hook_ != nullptr) {
+    return s_active->trace_texture_hook_ (ent, v1, v2);
+  }
   return nullptr;
 }
 
@@ -914,7 +916,9 @@ int FakeEngine::ThunkDecalIndex (const char *name) {
 }
 
 int FakeEngine::ThunkPointContents (const float *v) {
-  (void)v;
+  if (s_active->point_contents_hook_ != nullptr) {
+    return s_active->point_contents_hook_ (v);
+  }
   return CONTENTS_EMPTY;
 }
 

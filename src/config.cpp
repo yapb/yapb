@@ -1194,6 +1194,78 @@ void Config::LoadLogosConfig () {
   }
 }
 
+void Config::LoadMaterialTypes () {
+  // mirrors TEXTURETYPE_Init: type char, then texture name, comments skipped
+  if (material_types_loaded_) {
+    return;
+  }
+  material_types_loaded_ = true;
+
+  ystl::MemFile file ("sound/materials.txt");
+
+  if (!file) {
+    return; // missing file means everything counts as concrete, like the game
+  }
+  ystl::String line {};
+
+  while (file.get_line (line)) {
+    line.trim ();
+
+    if (line.empty () || IsCommentLine (line)) {
+      continue;
+    }
+    // single alpha char type, then the texture name up to the next whitespace
+    const auto type = line.substr (0, 1);
+    auto name = line.substr (1);
+
+    name.trim ();
+
+    const auto name_end = name.find_first_of (" \t");
+
+    if (name_end != ystl::String::InvalidIndex) {
+      name = name.substr (0, name_end);
+    }
+
+    if (name.empty ()) {
+      continue;
+    }
+    char type_char = type[0];
+
+    if (type_char >= 'a' && type_char <= 'z') {
+      type_char = static_cast<char> (type_char - ('a' - 'A')); // game uppercases the type
+    }
+    else if (!(type_char >= 'A' && type_char <= 'Z')) {
+      continue;
+    }
+    material_types_.push (MaterialEntry { type_char, name });
+  }
+}
+
+char Config::GetMaterialType (const char *texture) {
+  LoadMaterialTypes ();
+
+  if (texture == nullptr) {
+    return 'C';
+  }
+  // strip engine prefixes exactly like the game does
+  const char *name = texture;
+
+  if ((*name == '-' || *name == '+') && name[1] != '\0') {
+    name += 2;
+  }
+
+  if ((*name == '{' || *name == '!' || *name == '~' || *name == ' ') && name[1] != '\0') {
+    name += 1;
+  }
+
+  for (const auto &entry : material_types_) {
+    if (ystl::strings.matches (entry.name.chars (), name)) {
+      return entry.type;
+    }
+  }
+  return 'C'; // unknown textures count as concrete, like the game
+}
+
 void Config::SetupMemoryFiles () {
   static bool set_memory_pointers = true;
 

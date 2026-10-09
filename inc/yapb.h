@@ -263,6 +263,9 @@ private:
   // check penetrability using method 3 (multiple traces)
   bool IsPenetrableObstacle3 (const ystl::Vector &dest, int penetrate_power) const;
 
+  // check penetrability using method 4 (game-faithful FireBullets3 penetration)
+  bool IsPenetrableObstacle4 (const ystl::Vector &dest, int penetrate_power) const;
+
   // check if enemy is using riot shield
   bool IsEnemyBehindShield (edict_t *enemy);
 

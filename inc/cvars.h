@@ -81,7 +81,7 @@ inline ConVar cv_smoke_grenade_checks ("smoke_grenade_checks", "2", "Affects the
 inline ConVar cv_smoke_grenade_radius ("smoke_grenade_radius", "240", "Radius to check for smoke clouds around a detonated grenade.", true, 32.0f, 320.0f);
 
 // combat
-inline ConVar cv_shoots_thru_walls ("shoots_thru_walls", "2", "Specifies whether bots are able to fire at enemies behind the wall, if they hear or suspect them.", true, 0.0f, 3.0f);
+inline ConVar cv_shoots_thru_walls ("shoots_thru_walls", "4", "Specifies whether bots are able to fire at enemies behind the wall, if they hear or suspect them.", true, 0.0f, 4.0f);
 inline ConVar cv_ignore_enemies ("ignore_enemies", "0", "Enables or disables searching the world for enemies.");
 inline ConVar cv_check_enemy_rendering ("check_enemy_rendering", "0", "Enables or disables checking enemy rendering flags. Useful for some mods.");
 inline ConVar cv_check_enemy_invincibility ("check_enemy_invincibility", "0", "Enables or disables checking enemy invincibility. Useful for some mods.");

@@ -305,6 +305,128 @@ TEST_CASE ("unit/weapons_fire") {
   engine.AdvanceTime (0.3f);
   CHECK (!WeaponsHook::PenetrableCached (*bot, ystl::Vector (400.0f, 0.0f, 28.0f)));
 
+  // ...method four mirrors FireBullets3 penetration: counts per wall over
+  // the current power, power shrinks per surface material...
+  cv_shoots_thru_walls.Set (4);
+  conf.SetupMemoryFiles ();
+
+  // material types fixture, resolved through pfnLoadFileForMe like on a server
+  // (entries mirror the real cstrike file: comments, prefixed and lowercase names)
+  ystl::File::make_path ("sound");
+  {
+    ystl::File mat {};
+
+    HOST_REQUIRE (mat.open ("sound/materials.txt", "wb"));
+
+    constexpr char kMaterials[] = "// real-file sample\nC CONCRETE\nW WOOD\nM -0cstrike_ME1Pl\nN znow1\n";
+    mat.write (kMaterials, sizeof (kMaterials) - 1);
+    mat.close ();
+  }
+  engine.AdvanceTime (0.3f);
+  engine.SetTraceLineHook ([] (const float *, const float *, int, edict_t *, TraceResult *out) {
+    out->flFraction = 1.0f;
+  });
+  CHECK (!WeaponsHook::Penetrable (*bot, ystl::Vector (400.0f, 0.0f, 28.0f)));
+
+  // ...a thin wooden slab punches through...
+  engine.AdvanceTime (0.3f);
+  engine.SetTraceLineHook ([] (const float *v1, const float *, int, edict_t *, TraceResult *out) {
+    if (v1[0] < 240.0f) {
+      out->flFraction = 0.5f;
+      out->vecEndPos[0] = 240.0f;
+      out->vecEndPos[1] = 0.0f;
+      out->vecEndPos[2] = 28.0f;
+    }
+    else {
+      out->flFraction = 1.0f;
+    }
+  });
+  engine.SetPointContentsHook ([] (const float *v) {
+    return (v[0] >= 240.0f && v[0] <= 256.0f) ? CONTENTS_SOLID : CONTENTS_EMPTY;
+  });
+  engine.SetTraceTextureHook ([] (edict_t *, const float *, const float *) -> const char * {
+    return "{WOOD";
+  });
+  CHECK (WeaponsHook::Penetrable (*bot, ystl::Vector (400.0f, 0.0f, 28.0f)));
+
+  // ...a thick concrete slab exhausts an ak...
+  engine.AdvanceTime (0.3f);
+  engine.SetTraceLineHook ([] (const float *v1, const float *, int, edict_t *, TraceResult *out) {
+    if (v1[0] < 150.0f) {
+      out->flFraction = 0.5f;
+      out->vecEndPos[0] = 150.0f;
+      out->vecEndPos[1] = 0.0f;
+      out->vecEndPos[2] = 28.0f;
+    }
+    else {
+      out->flFraction = 1.0f;
+    }
+  });
+  engine.SetPointContentsHook ([] (const float *v) {
+    return (v[0] >= 150.0f && v[0] <= 350.0f) ? CONTENTS_SOLID : CONTENTS_EMPTY;
+  });
+  engine.SetTraceTextureHook ([] (edict_t *, const float *, const float *) -> const char * {
+    return "-0CONCRETE";
+  });
+  CHECK (!WeaponsHook::Penetrable (*bot, ystl::Vector (400.0f, 0.0f, 28.0f)));
+
+  // ...the same slab in wood still doesn't (wood punches at full power, not bonus)...
+  engine.AdvanceTime (0.3f);
+  engine.SetTraceTextureHook ([] (edict_t *, const float *, const float *) -> const char * {
+    return "WOOD";
+  });
+  CHECK (!WeaponsHook::Penetrable (*bot, ystl::Vector (400.0f, 0.0f, 28.0f)));
+
+  // ...a thin concrete one does, power covers it...
+  engine.AdvanceTime (0.3f);
+  engine.SetTraceLineHook ([] (const float *v1, const float *, int, edict_t *, TraceResult *out) {
+    if (v1[0] < 240.0f) {
+      out->flFraction = 0.5f;
+      out->vecEndPos[0] = 240.0f;
+      out->vecEndPos[1] = 0.0f;
+      out->vecEndPos[2] = 28.0f;
+    }
+    else {
+      out->flFraction = 1.0f;
+    }
+  });
+  engine.SetPointContentsHook ([] (const float *v) {
+    return (v[0] >= 240.0f && v[0] <= 248.0f) ? CONTENTS_SOLID : CONTENTS_EMPTY;
+  });
+  engine.SetTraceTextureHook ([] (edict_t *, const float *, const float *) -> const char * {
+    return "CONCRETE";
+  });
+  CHECK (WeaponsHook::Penetrable (*bot, ystl::Vector (400.0f, 0.0f, 28.0f)));
+
+  // ...and walls past the weapon's penetration range stop the bullet
+  bot->current_weapon_ = Weapon::USP;
+  engine.AdvanceTime (0.3f);
+  engine.SetTraceLineHook ([] (const float *v1, const float *, int, edict_t *, TraceResult *out) {
+    if (v1[0] < 610.0f) {
+      out->flFraction = 0.5f;
+      out->vecEndPos[0] = 610.0f;
+      out->vecEndPos[1] = 0.0f;
+      out->vecEndPos[2] = 28.0f;
+    }
+    else {
+      out->flFraction = 1.0f;
+    }
+  });
+  engine.SetPointContentsHook ([] (const float *v) {
+    return (v[0] >= 610.0f && v[0] <= 618.0f) ? CONTENTS_SOLID : CONTENTS_EMPTY;
+  });
+  engine.SetTraceTextureHook ([] (edict_t *, const float *, const float *) -> const char * {
+    return "WOOD";
+  });
+  CHECK (!WeaponsHook::Penetrable (*bot, ystl::Vector (900.0f, 0.0f, 28.0f)));
+  bot->current_weapon_ = Weapon::AK47;
+
+  engine.SetTraceLineHook (nullptr);
+  engine.SetPointContentsHook (nullptr);
+  engine.SetTraceTextureHook (nullptr);
+  ::remove ("sound/materials.txt");
+  cv_shoots_thru_walls.Set (2);
+
   // firing pauses only for real recoil at range...
   CHECK (!WeaponsHook::PauseFiring (*bot, 0.0f));
   CHECK (!WeaponsHook::PauseFiring (*bot, 100.0f));

@@ -89,6 +89,15 @@ private:
   ystl::SmallArray<WeaponInfo> weapons_ {};
   ystl::SmallArray<WeaponProp> weapon_props_ {};
 
+  // material types from sound/materials.txt, texture name -> type char
+  struct MaterialEntry {
+    char type {};
+    ystl::String name {};
+  };
+
+  ystl::Array<MaterialEntry> material_types_ {};
+  bool material_types_loaded_ {};
+
   ystl::Array<int32_t> logos_indices_ {};
   ystl::Array<ystl::String> avatars_ {};
 
@@ -162,6 +171,12 @@ public:
 
   // loads weapons config
   void LoadWeaponsConfig ();
+
+  // loads material types from sound/materials.txt, once
+  void LoadMaterialTypes ();
+
+  // material type char for a texture name, concrete when unknown
+  char GetMaterialType (const char *texture);
 
   // loads chatter config
   void LoadChatterConfig ();

@@ -55,6 +55,12 @@ public:
   // trace script invoked instead of the default no-hit response
   using TraceHook = ystl::Lambda<void (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out)>;
 
+  // point contents script invoked instead of the default empty response
+  using ContentsHook = ystl::Lambda<int (const float *v)>;
+
+  // trace texture script invoked instead of the default null response
+  using TextureHook = ystl::Lambda<const char * (edict_t *ent, const float *v1, const float *v2)>;
+
 public:
   FakeEngine ();
   ~FakeEngine () = default;
@@ -95,6 +101,12 @@ public:
   }
   void SetTraceHullHook (TraceHook hook) {
     trace_hull_hook_ = hook;
+  }
+  void SetPointContentsHook (ContentsHook hook) {
+    point_contents_hook_ = hook;
+  }
+  void SetTraceTextureHook (TextureHook hook) {
+    trace_texture_hook_ = hook;
   }
   static void TraceNoHit (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out);
 
@@ -189,6 +201,8 @@ private:
 
   TraceHook trace_line_hook_ {};
   TraceHook trace_hull_hook_ {};
+  ContentsHook point_contents_hook_ {};
+  TextureHook trace_texture_hook_ {};
 
   char info_buffer_[1024] {};
   uint8_t pvs[1024] {};
