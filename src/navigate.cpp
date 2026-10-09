@@ -2676,8 +2676,8 @@ void Bot::FindValidNode () {
     bool jump_link = false;
 
     for (const auto &link : graph[first_node].links) {
-      if (link.index == next_node) {
-        jump_link = has_flag (link.flags, PathFlag::Jump);
+      if (link.index == next_node && has_flag (link.flags, PathFlag::Jump)) {
+        jump_link = true;
         break;
       }
     }
