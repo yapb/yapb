@@ -52,6 +52,9 @@ struct WeaponsHook {
   static bool JumpDrawn (Bot &bot) {
     return bot.jump_knife_drawn_;
   }
+  static ystl::RWrand &Rng (Bot &bot) {
+    return bot.rg;
+  }
   static bool Penetrable (Bot &bot, const ystl::Vector &dest) {
     return bot.IsPenetrableObstacle (dest);
   }
@@ -539,6 +542,33 @@ TEST_CASE ("unit/weapons_arms") {
   WeaponsHook::SetJumpDrawn (*bot, true);
   WeaponsHook::RestoreJump (*bot);
   CHECK (!WeaponsHook::JumpDrawn (*bot));
+
+  // ...a failed roll keeps the knife out instead of swapping back like clockwork
+  WeaponsHook::SetStates (*bot, Sense::Invalid);
+  WeaponsHook::SetReloading (*bot, false);
+  bot->pev->weapons |= ystl::to_underlying (ystl::bit (Weapon::AK47));
+  bot->current_weapon_ = Weapon::Knife;
+  bot->weapon_type_ = WeaponType::Melee;
+  WeaponsHook::SetJumpDrawn (*bot, true);
+  WeaponsHook::Rng (*bot).force_chance (false);
+
+  const int swap_base = testhost::CsCalls (cs, "ClientCommand");
+  WeaponsHook::RestoreJump (*bot);
+  CHECK (testhost::CsCalls (cs, "ClientCommand") == swap_base);
+
+  WeaponsHook::Rng (*bot).clear_forced ();
+  CHECK (!WeaponsHook::JumpDrawn (*bot));
+  CHECK (bot->weapon_type_ == WeaponType::Melee);
+
+  // ...while a passed roll orders the gun back (hands follow via engine ack)
+  bot->current_weapon_ = Weapon::Knife;
+  bot->weapon_type_ = WeaponType::Melee;
+  WeaponsHook::SetJumpDrawn (*bot, true);
+  WeaponsHook::Rng (*bot).force_chance (true);
+  WeaponsHook::RestoreJump (*bot);
+  WeaponsHook::Rng (*bot).clear_forced ();
+  CHECK (!WeaponsHook::JumpDrawn (*bot));
+  CHECK (testhost::CsCalls (cs, "ClientCommand") == swap_base + 1);
 
   WeaponsHook::SetJumpDrawn (*bot, false);
   WeaponsHook::SetReloading (*bot, false);

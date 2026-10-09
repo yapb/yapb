@@ -959,6 +959,11 @@ void Bot::RestoreAfterJump () {
   }
   jump_knife_drawn_ = false;
 
+  // no machine-precision swaps back, sometimes the knife simply stays out for a while
+  if (!rg.chance (90)) {
+    return;
+  }
+
   if (!IsKnifeMode () && HasAnyAmmo () && GetTaskId () != TaskId::EscapeFromBomb) {
     SelectBestWeapon ();
   }
