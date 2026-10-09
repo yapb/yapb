@@ -1803,11 +1803,22 @@ TEST_CASE ("unit/navigate_bomb") {
   game_state.SetBombPlanted (true);
   game_state.SetBombOrigin (false, ystl::Vector (100.0f, 0.0f, 0.0f));
 
-  // both sites unvisited: the near one must remain selectable. filtering it out
-  // (distance to bot) made the bot head to the far site and ping-pong halfway
+  // both sites unvisited: a bot that doesn't deduce keeps the near one selectable
+  NavigateHook::Rng (*bot).force_chance (false);
+  NavigateHook::Rng (*bot).force_int (1);
+
   for (int i = 0; i < 5; ++i) {
     CHECK (NavigateHook::BombNode (*bot) == 2);
   }
+  NavigateHook::Rng (*bot).clear_forced ();
+
+  // ...while a deducing bot skips its already clear surroundings and rotates off-site
+  NavigateHook::Rng (*bot).force_chance (true);
+
+  for (int i = 0; i < 5; ++i) {
+    CHECK (NavigateHook::BombNode (*bot) == 0);
+  }
+  NavigateHook::Rng (*bot).clear_forced ();
 
   // area marking: a goal point on the same site as the checked one is covered too
   Path secondary {};

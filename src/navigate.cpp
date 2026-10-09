@@ -2915,7 +2915,7 @@ int Bot::FindBombNode () {
 
   struct Candidate {
     int index { kInvalidNodeIndex };
-    float distance_sq { kInfiniteDistance };
+    float distance_sq { ystl::sqrf (kInfiniteDistance) }; // squared units, plain range is too small here
   };
   Candidate candidates[kTopCandidates] {};
 
@@ -2951,9 +2951,17 @@ int Bot::FindBombNode () {
     return graph.GetNearest (bomb_origin, 512.0f);
   }
 
+  // a plant at our own site would be audible, so hearing nothing means our
+  // surroundings are already clear - sharper bots skip them and rotate off-site
+  const bool deducing = rg.chance (Skill ());
+
   // collect unvisited bombsites, nearest to the bot first (may be the wrong one, that's intended)
   for (const int goal_index : goals) {
     if (!graph.Exists (goal_index) || graph.IsVisited (goal_index)) {
+      continue;
+    }
+
+    if (deducing && pev->origin.distance_sq2d (graph[goal_index].origin) < ystl::sqrf (kBombHearDistance)) {
       continue;
     }
     const float distance_sq = pev->origin.distance_sq (graph[goal_index].origin);
