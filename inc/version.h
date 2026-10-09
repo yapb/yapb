@@ -16,3 +16,8 @@
 #define MODULE_VERSION "4.8"
 #define MODULE_VERSION_FILE 4,8,0,000
 #define MODULE_BUILD_ID "0:0"
+
+// fallback for non-git builds (has __DATE__, so no pch under clang)
+#define MODULE_BUILD_DATE __DATE__
+#define MODULE_BUILD_TIME __TIME__
+#define MODULE_BUILD_YEAR &__DATE__[7]

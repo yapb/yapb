@@ -125,6 +125,12 @@ endif()
 
 yapb_configure_target(${PROJECT_NAME} STRICT DIST)
 
+# unity + pch: every src/*.cpp starts with <yapb.h>, parse it once (off for Debug and Android)
+if(NOT ANDROID AND (CMAKE_CONFIGURATION_TYPES OR NOT CMAKE_BUILD_TYPE MATCHES "Debug"))
+  set_target_properties(${PROJECT_NAME} PROPERTIES UNITY_BUILD ON UNITY_BUILD_BATCH_SIZE 8)
+  target_precompile_headers(${PROJECT_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/inc/yapb.h")
+endif()
+
 # undecorated stdcall export alias, main library only: amxx has no such symbol
 if(WIN32 AND IS_ZIG AND NOT YAPB_64BIT AND NOT CPU_NON_X86)
   target_link_options(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/ext/ldscripts/yapb-x86.def)

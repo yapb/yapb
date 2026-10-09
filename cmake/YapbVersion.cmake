@@ -20,6 +20,11 @@ execute_process(COMMAND git -C ${PROJECT_SOURCE_DIR} log --pretty="%ae" -1 OUTPU
 set(BUILD_COMPILER ${CMAKE_CXX_COMPILER_ID}\ ${CMAKE_CXX_COMPILER_VERSION})
 set(BUILD_VERSION ${PROJECT_VERSION})
 
+# configure-time stamp (keeps __DATE__ out of headers, clang pch-safe)
+string(TIMESTAMP BUILD_DATE "%b %d %Y")
+string(TIMESTAMP BUILD_TIME "%H:%M:%S")
+string(TIMESTAMP BUILD_YEAR "%Y")
+
 if(WIN32)
   string(REPLACE . , BUILD_WINVER ${PROJECT_VERSION})
 else()
