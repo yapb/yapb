@@ -446,16 +446,19 @@ TEST_CASE ("unit/engine_state [modern]") {
   CHECK (saw_monster);
   cv_attack_monsters.Set (0.0f);
 
-  // detonation tracker is a plain entity map
-  CHECK (!sgtrack.Has (nade));
-  sgtrack.Acquire (nade, ystl::Vector (1.0f, 2.0f, 3.0f));
-  CHECK (sgtrack.Has (nade));
+  // smoke detonation sticks to the tracked grenade record
+  HOST_REQUIRE (!game_state.GetActiveGrenades ().empty ());
+  CHECK (game_state.GetActiveGrenades ()[0].origin.empty ());
 
-  const ystl::Vector &pos = sgtrack.Find (nade);
-  CHECK (pos.x == 1.0f && pos.y == 2.0f && pos.z == 3.0f);
+  game_state.TrackSmokeDetonation (nade, ystl::Vector (1.0f, 2.0f, 3.0f));
+  CHECK (game_state.GetActiveGrenades ()[0].origin.x == 1.0f && game_state.GetActiveGrenades ()[0].origin.z == 3.0f);
 
-  sgtrack.Clear ();
-  CHECK (!sgtrack.Has (nade));
+  // ...and survives the next sweep rebuild
+  engine.AdvanceTime (0.3f);
+  game_state.UpdateActiveGrenade ();
+  HOST_REQUIRE (!game_state.GetActiveGrenades ().empty ());
+  CHECK (game_state.GetActiveGrenades ()[0].ent == nade);
+  CHECK (game_state.GetActiveGrenades ()[0].origin.y == 2.0f);
 
   // hitbox enumeration without studio data falls back to origin math
   // and clears the studio-models flag (single failure disables it)

@@ -166,9 +166,10 @@ x64. No std::* in harness code (ystl only).
      arrives via WeaponList — publish it or getWeaponProp defaults
      (id Invalid) silently break reloads; `weapon_shield` never
      enters the interesting list so shield pickup is only reachable
-     via direct classify; smoke needs FL_ONGROUND plus sgtrack (via
-      the sg_explode sample) plus model match; interesting refresh
-      (0.5s) and active-grenade refresh (0.25s) need time advances.
+     via direct classify; smoke needs FL_ONGROUND plus a detonation
+      point (via the sg_explode sample) plus model match; interesting
+      refresh (0.5s) and active-grenade refresh (0.25s) need time
+      advances.
       Regression guards for fixed prod bugs: wallEntry was a
       reference into the trace result that the second trace overwrote;
       weapon_shield is collected into the interesting list (was

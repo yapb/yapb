@@ -824,8 +824,7 @@ public:
   }
 };
 
-// tracked entity shape shared by both registries below. kept distinct types on purpose:
-// update cadence and consumer sets differ, so no common container
+// shape for the interesting-entity registry below
 template <typename Kind> struct TrackedEntity {
   edict_t *ent {};
   Kind kind {};
@@ -849,7 +848,18 @@ enum class GrenadeKind : uint8_t {
   Other
 };
 
-using ActiveGrenade = TrackedEntity<GrenadeKind>;
+struct ActiveGrenade {
+  edict_t *ent {};
+  GrenadeKind kind {};
+  ystl::Vector origin {}; // smoke detonation point, frozen as the cloud never moves, empty until it pops
+};
+
+// hashes an edict by its entity index for the detonation stash
+struct EdictHash {
+  uint32_t operator() (const edict_t *key) const noexcept {
+    return Game::instance ().IndexOfEntity (key);
+  }
+};
 
 // offload bot manager class from things it shouldn't do
 class GameState final : public ystl::Singleton<GameState> {
@@ -868,6 +878,9 @@ private:
 
   ystl::Array<ActiveGrenade> active_grenades_ {}; // holds currently active grenades on the map
   ystl::Array<InterestingEntity> interesting_entities_ {}; // holds currently interesting entities on the map
+
+  // frozen smoke detonation points, folded onto the grenade record each sweep
+  ystl::HashMap<edict_t *, ystl::Vector, EdictHash> smoke_detonations_ {};
 
   bool has_breakables_ {}; // set by the sweep below, breakables change rarely
 
@@ -963,46 +976,15 @@ public:
   void RoundStart ();
   void UpdateActiveGrenade ();
   void UpdateInterestingEntities ();
+
+  // records a smoke detonation point on its grenade, stashing it until the sweep sees it
+  void TrackSmokeDetonation (edict_t *ent, const ystl::Vector &pos);
   bool IsEarlyRound (const float timestamp) const;
-};
-
-// sg detonation tracking
-struct EdictHash {
-  uint32_t operator() (const edict_t *key) const noexcept {
-    return Game::instance ().IndexOfEntity (key);
-  }
-};
-
-class SGDetonateTrack final : public ystl::Singleton<SGDetonateTrack> {
-private:
-  ystl::HashMap<edict_t *, ystl::Vector, EdictHash> positions_ {};
-
-public:
-  SGDetonateTrack () = default;
-  ~SGDetonateTrack () = default;
-
-public:
-  void Acquire (edict_t *ent, const ystl::Vector &pos) {
-    positions_[ent] = pos;
-  }
-
-  const ystl::Vector &Find (edict_t *ent) {
-    return positions_[ent];
-  }
-
-  bool Has (edict_t *ent) const {
-    return positions_.exists (ent);
-  }
-
-  void Clear () {
-    positions_.clear ();
-  }
 };
 
 // expose globals
 YSTL_EXPOSE_GLOBAL_SINGLETON (Game, game);
 YSTL_EXPOSE_GLOBAL_SINGLETON (GameState, game_state);
 YSTL_EXPOSE_GLOBAL_SINGLETON (LightMeasure, illum);
-YSTL_EXPOSE_GLOBAL_SINGLETON (SGDetonateTrack, sgtrack);
 
 } // namespace bot

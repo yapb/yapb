@@ -2137,13 +2137,12 @@ void GameState::RoundStart () {
 
   interesting_entities_.clear ();
   active_grenades_.clear ();
+  smoke_detonations_.clear ();
 
   active_grenades_update_time_.reset ();
   interesting_entities_update_time_.reset ();
 
   mode_walls.OnRoundStart ();
-
-  sgtrack.Clear ();
 }
 
 bool GameState::IsEarlyRound (const float timestamp) const {
@@ -2197,11 +2196,29 @@ void GameState::UpdateActiveGrenade () {
       else if (model == kSmokeModelName) {
         kind = GrenadeKind::Smoke;
       }
-      active_grenades_.push (ActiveGrenade { e, kind });
+
+      // attach the frozen detonation point once the smoke has popped
+      ystl::Vector origin {};
+
+      if (smoke_detonations_.exists (e)) {
+        origin = smoke_detonations_[e];
+      }
+      active_grenades_.push (ActiveGrenade { e, kind, origin });
     }
     return EntitySearchResult::Continue; // continue iteration
   });
   active_grenades_update_time_.start ();
+}
+
+void GameState::TrackSmokeDetonation (edict_t *ent, const ystl::Vector &pos) {
+  smoke_detonations_[ent] = pos;
+
+  for (auto &grenade : active_grenades_) {
+    if (grenade.ent == ent) {
+      grenade.origin = pos; // keep consumers current before the next sweep
+      return;
+    }
+  }
 }
 
 void GameState::UpdateInterestingEntities () {

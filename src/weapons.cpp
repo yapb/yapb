@@ -1938,7 +1938,8 @@ bool Bot::IsLineBlockedBySmoke (const ystl::Vector &from, const ystl::Vector &to
     }
     const auto pent = grenade.ent;
 
-    if (game.IsNullEntity (pent) || !sgtrack.Has (pent)) {
+    // empty origin means it has not detonated yet, so no cloud to block sight
+    if (game.IsNullEntity (pent) || grenade.origin.empty ()) {
       continue;
     }
 
@@ -1951,7 +1952,7 @@ bool Bot::IsLineBlockedBySmoke (const ystl::Vector &from, const ystl::Vector &to
     if (!(pent->v.flags & FL_ONGROUND)) {
       continue;
     }
-    const auto &smoke_origin = sgtrack.Find (pent);
+    const auto &smoke_origin = grenade.origin;
 
     // chord of the sight segment inside the smoke sphere
     const ystl::Vector rel = from - smoke_origin;

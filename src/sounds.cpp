@@ -104,7 +104,7 @@ void Sounds::Acquire (edict_t *ent, ystl::StringRef sample, float volume, float 
 
   // keep track of smoke grenade detonation positions
   if (has_flag (tmpl->flags, Noise::SGDetonate)) {
-    sgtrack.Acquire (ent, origin);
+    game_state.TrackSmokeDetonation (ent, origin);
   }
 
   // compute effective range from base radius, volume, and engine attenuation
