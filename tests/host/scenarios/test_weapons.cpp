@@ -224,6 +224,18 @@ TEST_CASE ("unit/weapons_fire") {
   testhost::FakeEngine engine;
   testhost::FakeCSApi cs {};
 
+  // material types fixture must exist before level init loads it; entries mirror
+  // the real cstrike file: comments, prefixed and lowercase names
+  ystl::File::make_path ("sound");
+  {
+    ystl::File mat {};
+
+    HOST_REQUIRE (mat.open ("sound/materials.txt", "wb"));
+
+    constexpr char kMaterials[] = "// real-file sample\nC CONCRETE\nW WOOD\nM -0cstrike_ME1Pl\nN znow1\n";
+    mat.write (kMaterials, sizeof (kMaterials) - 1);
+    mat.close ();
+  }
   BootWeapons (engine, cs);
 
   bots.Addbot ("WpnF", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
@@ -308,20 +320,7 @@ TEST_CASE ("unit/weapons_fire") {
   // ...method four mirrors FireBullets3 penetration: counts per wall over
   // the current power, power shrinks per surface material...
   cv_shoots_thru_walls.Set (4);
-  conf.SetupMemoryFiles ();
-
-  // material types fixture, resolved through pfnLoadFileForMe like on a server
-  // (entries mirror the real cstrike file: comments, prefixed and lowercase names)
-  ystl::File::make_path ("sound");
-  {
-    ystl::File mat {};
-
-    HOST_REQUIRE (mat.open ("sound/materials.txt", "wb"));
-
-    constexpr char kMaterials[] = "// real-file sample\nC CONCRETE\nW WOOD\nM -0cstrike_ME1Pl\nN znow1\n";
-    mat.write (kMaterials, sizeof (kMaterials) - 1);
-    mat.close ();
-  }
+  HOST_REQUIRE (conf.HasMaterialTypes ());
   engine.AdvanceTime (0.3f);
   engine.SetTraceLineHook ([] (const float *, const float *, int, edict_t *, TraceResult *out) {
     out->flFraction = 1.0f;
@@ -537,6 +536,54 @@ TEST_CASE ("unit/weapons_fire") {
   WeaponsHook::SetWantsFire (*bot, false);
   WeaponsHook::DoFire (*bot);
   CHECK (!(bot->pev->button & IN_ATTACK));
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/weapons_materials") {
+  ::remove ("sound/materials.txt");
+
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootWeapons (engine, cs);
+
+  bots.Addbot ("MatA", Difficulty::Expert, Personality::Normal, Team::Terrorist, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("MatA");
+  HOST_REQUIRE (bot != nullptr);
+  bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->team_ = Team::Terrorist;
+  bot->current_weapon_ = Weapon::AK47;
+
+  // no materials list: everything counts as concrete and method four delegates
+  // to the cheapest check, so the staged entry/exit wall still punches through
+  CHECK (!conf.HasMaterialTypes ());
+  CHECK (conf.GetMaterialType ("WOOD") == 'C');
+
+  int calls = 0;
+  engine.AdvanceTime (0.2f);
+  engine.SetTraceLineHook ([&calls] (const float *, const float *, int, edict_t *, TraceResult *out) {
+    ++calls;
+
+    out->flFraction = 0.5f;
+    out->vecEndPos[0] = calls == 1 ? 250.0f : 325.0f;
+    out->vecEndPos[1] = 0.0f;
+    out->vecEndPos[2] = 28.0f;
+  });
+  engine.SetPointContentsHook ([] (const float *v) {
+    return (v[0] >= 250.0f && v[0] <= 325.0f) ? CONTENTS_SOLID : CONTENTS_EMPTY;
+  });
+  cv_shoots_thru_walls.Set (4);
+  CHECK (WeaponsHook::Penetrable (*bot, ystl::Vector (400.0f, 0.0f, 28.0f)));
+  CHECK (calls == 2);
+
+  engine.SetTraceLineHook (nullptr);
+  engine.SetPointContentsHook (nullptr);
+  cv_shoots_thru_walls.Set (2);
 
   bots.Destroy ();
 }

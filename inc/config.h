@@ -178,6 +178,9 @@ public:
   // material type char for a texture name, concrete when unknown
   char GetMaterialType (const char *texture);
 
+  // whether a usable materials list was loaded
+  bool HasMaterialTypes ();
+
   // loads chatter config
   void LoadChatterConfig ();
 

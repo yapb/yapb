@@ -34,7 +34,8 @@ bool Bot::IsPenetrableObstacle (const ystl::Vector &dest) {
     return IsPenetrableObstacle3 (dest, penetrate_power);
 
   case 4:
-    return IsPenetrableObstacle4 (dest, penetrate_power);
+    // missing or broken materials list, fall back to the cheapest check that needs none
+    return conf.HasMaterialTypes () ? IsPenetrableObstacle4 (dest, penetrate_power) : IsPenetrableObstacle1 (dest, penetrate_power);
   };
   return false;
 }
@@ -180,11 +181,10 @@ bool Bot::IsPenetrableObstacle3 (const ystl::Vector &dest, int penetrate_power) 
   return false;
 }
 
-bool Bot::IsPenetrableObstacle4 (const ystl::Vector &dest, int penetrate_power) const {
+bool Bot::IsPenetrableObstacle4 (const ystl::Vector &dest, [[maybe_unused]] int penetrate_power) const {
   // game-faithful wallbang check, mirrors FireBullets3 penetration: every wall
   // eats penetration counts by its thickness over the current power, power
   // shrinks per surface material, walls past the weapon's range stop the bullet
-  (void)penetrate_power; // method reads game ballistics per weapon instead
 
   // per-weapon (penetration count, power, range), buckshot and blades never punch
   struct BulletParams {

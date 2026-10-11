@@ -75,6 +75,7 @@ void Config::LoadConfigs () {
   LoadLogosConfig ();
   LoadAvatarsConfig ();
   LoadDifficultyConfig ();
+  LoadMaterialTypes (); // once, keep the combat path free of file reads
 }
 
 void Config::LoadMainConfig (bool is_first_load) {
@@ -1242,8 +1243,6 @@ void Config::LoadMaterialTypes () {
 }
 
 char Config::GetMaterialType (const char *texture) {
-  LoadMaterialTypes ();
-
   if (texture == nullptr) {
     return 'C';
   }
@@ -1264,6 +1263,10 @@ char Config::GetMaterialType (const char *texture) {
     }
   }
   return 'C'; // unknown textures count as concrete, like the game
+}
+
+bool Config::HasMaterialTypes () {
+  return !material_types_.empty ();
 }
 
 void Config::SetupMemoryFiles () {
