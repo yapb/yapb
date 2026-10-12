@@ -1811,12 +1811,12 @@ TEST_CASE ("unit/navigate_cover") {
   NavigateHook::MoveToGoal (*walker);
   CHECK (walker->pev->button == 0);
 
-  // ...an airy crouch node never ducks...
+  // ...a crouch node ducks...
   graph.paths_[2].flags |= NodeFlag::Crouch;
   NavigateHook::ChangeNode (*walker, 2);
   walker->pev->button = 0;
   NavigateHook::MoveToGoal (*walker);
-  CHECK (walker->pev->button == 0);
+  CHECK ((walker->pev->button & IN_DUCK) != 0);
   graph.paths_[2].flags &= ~NodeFlag::Crouch;
 
   // ...while swimming steers by view and pitch
@@ -2587,28 +2587,12 @@ TEST_CASE ("unit/navigate_locomotion") {
   bot->pev->flags |= FL_ONGROUND;
   bot->team_ = Team::CT;
 
-  // crouch nodes duck only against a real low ceiling
+  // crouch node ducks; only an open camp/goal node stands
   graph.paths_[0].flags |= NodeFlag::Crouch;
   NavigateHook::ChangeNode (*bot, 0);
   bot->pev->button = 0;
-
-  engine.SetTraceHullHook ([&] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
-    (void)v2;
-    (void)no_monsters;
-    (void)skip;
-    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
-    out->flFraction = 0.5f;
-  });
-  engine.AdvanceTime (0.15f);
   NavigateHook::MoveToGoal (*bot);
   CHECK ((bot->pev->button & IN_DUCK) != 0);
-  engine.SetTraceHullHook (nullptr);
-  engine.AdvanceTime (0.15f);
-
-  // open headroom keeps standing
-  bot->pev->button = 0;
-  NavigateHook::MoveToGoal (*bot);
-  CHECK ((bot->pev->button & IN_DUCK) == 0);
 
   // swimming drives by facing and pitch
   bot->pev->waterlevel = 3;
@@ -2633,7 +2617,7 @@ TEST_CASE ("unit/navigate_locomotion") {
   testhost::CloseFakeCs (cs);
 }
 
-// crouch nodes duck anywhere on the leg, not only over the node
+// crouch nodes duck; only an open camp/goal node stands
 TEST_CASE ("unit/navigate_crouch") {
   testhost::FakeEngine engine;
   engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
@@ -2660,17 +2644,7 @@ TEST_CASE ("unit/navigate_crouch") {
   bot->pev->flags |= FL_ONGROUND;
   bot->team_ = Team::CT;
 
-  // low ceiling: every head-height hull probe reads blocked
-  engine.SetTraceHullHook ([] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
-    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
-    out->flFraction = 0.5f;
-  });
-
-  ystl::Array<int32_t> walk {};
-  walk.push (2);
-  walk.push (3);
-
-  // current node crouch: ducks against the low ceiling
+  // a plain crouch node ducks, no geometry probe
   graph.paths_[2].flags |= NodeFlag::Crouch;
   NavigateHook::ChangeNode (*bot, 2);
   bot->pev->origin = graph[2].origin;
@@ -2678,40 +2652,51 @@ TEST_CASE ("unit/navigate_crouch") {
   NavigateHook::MoveToGoal (*bot);
   CHECK ((bot->pev->button & IN_DUCK) != 0);
 
-  // successor (Next) crouch but far away: lookahead stays off
+  // only the current node matters: a distant crouch successor does not duck the leg
   graph.paths_[2].flags &= ~NodeFlag::Crouch;
   graph.paths_[3].flags |= NodeFlag::Crouch;
   NavigateHook::ChangeNode (*bot, 1);
-  NavigateHook::SetWalk (*bot, walk); // First=2, Next=3 (crouch), bot 200u away
+  ystl::Array<int32_t> walk {};
+  walk.push (2);
+  walk.push (3);
+  NavigateHook::SetWalk (*bot, walk); // First=2, Next=3 (crouch)
   bot->pev->origin = graph[1].origin;
   bot->pev->button = 0;
   NavigateHook::MoveToGoal (*bot);
   CHECK ((bot->pev->button & IN_DUCK) == 0);
-
-  // ...within the 24u lookahead window it ducks early
-  bot->pev->origin = graph[3].origin - ystl::Vector (10.0f, 0.0f, 0.0f);
-  bot->pev->button = 0;
-  NavigateHook::MoveToGoal (*bot);
-  CHECK ((bot->pev->button & IN_DUCK) != 0);
   graph.paths_[3].flags &= ~NodeFlag::Crouch;
 
-  // crouch node with clear centre but low leg: the probe above the bot catches it
-  engine.AdvanceTime (0.2f); // expire the trace cache from the earlier blocked probes
-  engine.SetTraceHullHook ([] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
-    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
-
-    if (v1[0] < 190.0f) {
-      out->flFraction = 0.5f; // low lip everywhere except right above the node centre
-    }
-  });
-  graph.paths_[2].flags |= NodeFlag::Crouch;
+  // an open camp crouch node stands: the probe over the node sees sky
+  graph.paths_[2].flags |= NodeFlag::Crouch | NodeFlag::Camp;
   NavigateHook::ChangeNode (*bot, 2);
-  bot->pev->origin = ystl::Vector (150.0f, 0.0f, 0.0f); // mid-leg, under the low lip
+  bot->pev->origin = graph[2].origin;
+  bot->pev->button = 0;
+  engine.AdvanceTime (0.2f);
+  engine.SetTraceLineHook ([] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out); // clear sky
+  });
+  NavigateHook::MoveToGoal (*bot);
+  CHECK ((bot->pev->button & IN_DUCK) == 0);
+
+  // ...but the same node under a low ceiling ducks
+  engine.AdvanceTime (0.2f);
+  engine.SetTraceLineHook ([] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)v2;
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    out->flFraction = 0.5f; // ceiling above the node
+  });
   bot->pev->button = 0;
   NavigateHook::MoveToGoal (*bot);
   CHECK ((bot->pev->button & IN_DUCK) != 0);
+  engine.SetTraceLineHook (nullptr);
+  graph.paths_[2].flags &= ~(NodeFlag::Crouch | NodeFlag::Camp);
 
   // stuck at a crouch node: the probe picks duck, not a strafe into the wall
+  graph.paths_[2].flags |= NodeFlag::Crouch;
   engine.AdvanceTime (0.2f);
   engine.SetTraceLineHook ([] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
     testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out); // duck-height rays stay clear
@@ -2988,152 +2973,6 @@ TEST_CASE ("unit/navigate_jump_retime") {
   CHECK (fast.y == 0.0f);
 
   engine.SetTraceLineHook (nullptr);
-
-  table.pfnServerDeactivate ();
-  testhost::CloseFakeCs (cs);
-}
-
-// vent lookahead probes the airspace over the crouch node itself: a vent ducks
-// early even with open sky above the bot, a field camp keeps standing
-TEST_CASE ("unit/navigate_vent_duck") {
-  testhost::FakeEngine engine;
-  engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
-
-  testhost::FakeCSApi cs {};
-  HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
-  cs.reset ();
-
-  GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
-  HOST_REQUIRE (cs.entered () != 0);
-
-  gamefuncs_t table {};
-  HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
-
-  game.Precache ();
-  table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
-
-  BuildChainGraph ();
-  planner.Init ();
-
-  auto bot = CreateNavBot ("VentBot", ystl::Vector (200.0f, 0.0f, 0.0f));
-  HOST_REQUIRE (bot.get () != nullptr);
-  bot->pev->maxspeed = 270.0f;
-  bot->pev->flags |= FL_ONGROUND;
-  bot->team_ = Team::CT;
-
-  ystl::Array<int32_t> walk {};
-  walk.push (3);
-  walk.push (4);
-  NavigateHook::ChangeNode (*bot, 3);
-  NavigateHook::SetWalk (*bot, walk); // First=3, Next=4 (crouch), 44u away
-  bot->pev->origin = graph[3].origin;
-  bot->pev->button = 0;
-
-  // open headroom above the bot, low ceiling above the vent node
-  engine.SetTraceHullHook ([] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
-    (void)v2;
-    (void)no_monsters;
-    (void)skip;
-    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
-
-    const float dx = v1[0] - 244.0f;
-    const float dy = v1[1] - 0.0f;
-
-    if (dx * dx + dy * dy < 144.0f) {
-      out->flFraction = 0.5f;
-    }
-  });
-  engine.AdvanceTime (0.15f);
-
-  NavigateHook::MoveToGoal (*bot);
-  CHECK ((bot->pev->button & IN_DUCK) != 0);
-
-  // control: open ceiling everywhere (field camp) keeps standing
-  engine.SetTraceHullHook (nullptr);
-  engine.AdvanceTime (0.15f);
-  bot->pev->button = 0;
-  NavigateHook::MoveToGoal (*bot);
-  CHECK ((bot->pev->button & IN_DUCK) == 0);
-
-  table.pfnServerDeactivate ();
-  testhost::CloseFakeCs (cs);
-}
-
-// a low lip on the way to a crouch node (vent mouth in open air above the bot):
-// the node airspace reads clear, but the duck must start before the head bump
-TEST_CASE ("unit/navigate_lip_duck") {
-  testhost::FakeEngine engine;
-  engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
-
-  testhost::FakeCSApi cs {};
-  HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
-  cs.reset ();
-
-  GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
-  HOST_REQUIRE (cs.entered () != 0);
-
-  gamefuncs_t table {};
-  HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
-
-  game.Precache ();
-  table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
-
-  BuildChainGraph ();
-  planner.Init ();
-
-  edict_t *wall = engine.SpawnEntity ("func_wall");
-  HOST_REQUIRE (wall != nullptr);
-
-  auto bot = CreateNavBot ("LipBot", ystl::Vector (200.0f, 0.0f, 0.0f));
-  HOST_REQUIRE (bot.get () != nullptr);
-  bot->pev->maxspeed = 270.0f;
-  bot->pev->flags |= FL_ONGROUND;
-  bot->team_ = Team::CT;
-
-  ystl::Array<int32_t> walk {};
-  walk.push (3);
-  walk.push (4);
-  NavigateHook::ChangeNode (*bot, 3);
-  NavigateHook::SetWalk (*bot, walk); // First=3, Next=4 (crouch), 44u away
-  bot->pev->origin = graph[3].origin;
-  NavigateHook::SetDestOrigin (*bot, graph[4].origin);
-  NavigateHook::SetMoveSpeed (*bot, 270.0f);
-  bot->pev->button = 0;
-
-  // low lip between the bot and the node: the standing body is blocked ahead,
-  // the crouched body fits; airspace over the node and over the bot stays open
-  engine.SetTraceHullHook ([wall] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
-    (void)no_monsters;
-    (void)skip;
-    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
-
-    if (v2[0] != v1[0] && v1[2] >= 5.0f) {
-      out->flFraction = 0.5f;
-      out->pHit = wall;
-    }
-  });
-  engine.SetTraceLineHook ([wall] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
-    (void)no_monsters;
-    (void)skip;
-    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
-
-    if (v2[2] == v1[2] && v1[2] >= 5.0f) {
-      out->flFraction = 0.5f;
-      out->pHit = wall;
-    }
-  });
-  engine.AdvanceTime (0.15f);
-
-  NavigateHook::MoveToGoal (*bot);
-  CHECK ((bot->pev->button & IN_DUCK) != 0);
-
-  // control: open air everywhere (field camp) keeps standing
-  engine.SetTraceHullHook (nullptr);
-  engine.SetTraceLineHook (nullptr);
-  engine.AdvanceTime (0.15f);
-  bot->pev->button = 0;
-  NavigateHook::MoveToGoal (*bot);
-  CHECK ((bot->pev->button & IN_DUCK) == 0);
 
   table.pfnServerDeactivate ();
   testhost::CloseFakeCs (cs);

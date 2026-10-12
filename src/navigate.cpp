@@ -1361,67 +1361,17 @@ void Bot::MoveToGoal () {
 
   bool press_duck = false;
 
-  // current node requires crouching, probe above the node and the bot
+  // crouch node: duck, except over an open camp/goal node where there is nothing to duck under
   if (has_flag (path_flags_, NodeFlag::Crouch)) {
-    const ystl::Vector probes[2] = { path_origin_, pev->origin };
+    press_duck = true;
 
-    for (const auto &base : probes) {
+    if (has_flag (path_flags_, NodeFlag::Camp | NodeFlag::Goal)) {
       Trace::Result tr {};
 
-      auto src = base;
-      auto dst = base;
+      trace.Line (path_origin_ + ystl::Vector (0, 0, 12), path_origin_ + ystl::Vector (0, 0, 46), TraceIgnore::Everything, Ent (), &tr);
 
-      src.z += 5.0f;
-      dst.z += 72.0f; // player height
-
-      trace.Hull (src, dst, TraceIgnore::Monsters, head_hull, Ent (), &tr);
-
-      // only duck if there's a real obstruction
-      if (tr.fraction < 0.9f) {
-        press_duck = true;
-        break;
-      }
-    }
-  }
-
-  // keep ducking across consecutive crouch nodes for smooth passage
-  if (!press_duck && has_flag (path_flags_, NodeFlag::Crouch) && path_walk_.HasNext ()) {
-    if (has_flag (graph[path_walk_.Next ()].flags, NodeFlag::Crouch)) {
-      // only continue ducking if we're actually in a tight space
-      Trace::Result tr {};
-
-      auto src = pev->origin + ystl::Vector (0, 0, 5);
-      auto dst = pev->origin + ystl::Vector (0, 0, 72);
-
-      trace.Hull (src, dst, TraceIgnore::Monsters, head_hull, Ent (), &tr);
-
-      if (tr.fraction < 0.85f) {
-        press_duck = true;
-      }
-    }
-  }
-
-  // lookahead: heading for a crouch node
-  if (!press_duck && path_walk_.HasNext () && has_flag (graph[path_walk_.Next ()].flags, NodeFlag::Crouch)) {
-    const float dist_to_next = pev->origin.distance_sq2d (graph[path_walk_.Next ()].origin);
-
-    // close by, probe the airspace over the crouch node itself: open sky (field camp) keeps standing
-    if (dist_to_next < ystl::sqrf (48.0f)) {
-      const ystl::Vector &over = graph[path_walk_.Next ()].origin;
-      Trace::Result tr {};
-
-      trace.Hull (over + ystl::Vector (0, 0, 5), over + ystl::Vector (0, 0, 72), TraceIgnore::Monsters, head_hull, Ent (), &tr);
-
-      if (tr.fraction < 0.9f) {
-        press_duck = true;
-      }
-    }
-    // the lip can sit before the node (vent mouth): standing body blocked ahead but a ducked one fits
-    if (!press_duck && IsOnFloor () && !IsOnLadder () && !IsInWater () && move_speed_ > 20.0f) {
-      const ystl::Vector dir = (dest_origin_ - pev->origin).normalize2d ();
-
-      if (!dir.empty () && IsBlockedForward (dir) != nullptr && CanDuckUnder (dir)) {
-        press_duck = true;
+      if (tr.fraction >= 0.95f) {
+        press_duck = false;
       }
     }
   }
@@ -4703,7 +4653,7 @@ void Bot::RetimeJumpVelocityForLip () {
   const float rise_time = dist / link_speed;
   const float arrival = kPlayerJumpTakeoff * rise_time - 0.5f * gravity * rise_time * rise_time + 18.0f;
 
-  if (arrival >= rise + 6.0f) {
+  if (arrival >= rise + 4.0f) {
     return; // sufficient, keep mapper data
   }
   const float timed = ystl::clamp (dist / (kPlayerJumpTakeoff / gravity), 80.0f, pev->maxspeed);
