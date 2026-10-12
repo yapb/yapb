@@ -1412,14 +1412,18 @@ void Bot::Logic () {
   const ystl::Vector dir_old = dest_origin_ - (pev->origin + pev->velocity * frame_interval_);
   const ystl::Vector dir_normal = dir_old.normalize2d ();
 
-  move_angles_ = dir_old.angles ();
-  move_angles_.clamp_angles ();
-  move_angles_.x = -move_angles_.x; // invert for engine
+  // refresh heading only while moving, a standing bot keeps its heading
+  const bool commanded_move = ystl::abs (move_speed_) > 1.0f || ystl::abs (strafe_speed_) > 1.0f;
 
-  // clamp movement pitch on the ground: a goal nearly straight below or above
-  // collapses the horizontal drive and stalls the bot on the spot
-  if (IsOnFloor () && !IsInWater () && !IsOnLadder ()) {
-    move_angles_.x = ystl::clamp (move_angles_.x, -45.0f, 45.0f);
+  if (commanded_move && dir_old.length_sq () > ystl::sqrf (2.0f)) {
+    move_angles_ = dir_old.angles ();
+    move_angles_.clamp_angles ();
+    move_angles_.x = -move_angles_.x; // invert for engine
+
+    // clamp pitch on the ground, a vertical goal would stall horizontal drive
+    if (IsOnFloor () && !IsInWater () && !IsOnLadder ()) {
+      move_angles_.x = ystl::clamp (move_angles_.x, -45.0f, 45.0f);
+    }
   }
 
   // do some overriding for special cases

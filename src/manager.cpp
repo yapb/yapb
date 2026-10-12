@@ -332,6 +332,11 @@ void TickManager::RunCommand (Bot *bot) {
     if (bot->IsStuckState () || bot->GetTaskId () == TaskId::Attack || !bot->approaching_ladder_timer_.elapsed ()) {
       return bot->pev->v_angle;
     }
+
+    // while idle send the ai look so view and model agree
+    if (ystl::fzero (bot->move_speed_) && ystl::fzero (bot->strafe_speed_)) {
+      return bot->pev->v_angle;
+    }
     return bot->move_angles_;
   };
 

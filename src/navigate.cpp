@@ -1127,7 +1127,8 @@ void Bot::ExecuteCollisionResponse () {
 
   switch (collide_moves_[coll_state_index_]) {
   case CollisionState::Jump:
-    if ((IsOnFloor () || IsInWater ()) && !IsOnLadder ()) {
+    // jump once, not every tick: a held IN_JUMP bunny-hops in place and shakes the model
+    if ((IsOnFloor () || IsInWater ()) && !IsOnLadder () && jump_time_ + 0.75f < game.Time ()) {
       if (IsInWater () || !is_creature_ || last_damage_timestamp_ < game.Time () || has_flag (current_travel_flags_, PathFlag::Jump) ||
           IsStuckState ()) {
         pev->button |= IN_JUMP;

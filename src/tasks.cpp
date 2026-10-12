@@ -1162,7 +1162,8 @@ void Bot::TaskPlantBomb () {
       check_terrain_ = false;
       nav_timer_.start ();
 
-      if (has_flag (path_flags_, NodeFlag::Crouch)) {
+      // hold crouch while planting so the engine does not try to stand up
+      if (IsDucking () || has_flag (path_flags_, NodeFlag::Crouch)) {
         pev->button |= (IN_ATTACK | IN_DUCK);
       }
       else {
