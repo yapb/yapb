@@ -125,6 +125,12 @@ struct NavigateHook {
     bot.terrain_strafe_dir_ = dir;
     bot.avoid_strafe_change_timer_.start (hold_time);
   }
+  static void SetFrameInterval (Bot &bot, float value) {
+    bot.frame_interval_ = value;
+  }
+  static void SetDesiredVelocity (Bot &bot, const ystl::Vector &value) {
+    bot.desired_velocity_ = value;
+  }
   static void SetMovedDistance (Bot &bot, float value) {
     bot.moved_distance_ = value;
   }
@@ -394,6 +400,67 @@ void BuildNavGraph () {
   link (2, 1, 100);
   link (2, 3, 100);
   link (3, 2, 100);
+
+  graph.PopulateNodes ();
+  planner.Init ();
+}
+
+// jump chain replica of de_dust2 149 -> 150 -> 152 (two exact jump nodes in a row)
+// plus a vent pair mirroring 537 (plain, r16) -> 538 (crouch, r0), kept flat so the
+// trace-height bands (eye 28 vs jump rays 9/27) stay exactly separable in hooks
+void BuildChainGraph () {
+  graph.Reset ();
+
+  const ystl::Vector spots[5] = {
+    ystl::Vector (0.0f, 0.0f, 0.0f), // 0: chain start (plain)
+    ystl::Vector (42.0f, 0.0f, 0.0f), // 1: first box top, exact jump node
+    ystl::Vector (108.0f, 0.0f, 0.0f), // 2: second box top
+    ystl::Vector (200.0f, 0.0f, 0.0f), // 3: vent approach (plain, r16)
+    ystl::Vector (244.0f, 0.0f, 0.0f), // 4: vent (crouch, r0)
+  };
+  const float radius_of[5] = { 16.0f, 0.0f, 0.0f, 16.0f, 0.0f };
+  const int32_t flag_of[5] = {
+    0,
+    0,
+    0,
+    0,
+    ystl::to_underlying (NodeFlag::Crouch),
+  };
+
+  for (int i = 0; i < 5; ++i) {
+    Path path {};
+    path.origin = spots[i];
+    path.number = i;
+    path.radius = radius_of[i];
+    path.flags = flag_of[i];
+    path.light = kInvalidLightLevel;
+
+    for (auto &link : path.links) {
+      link.index = kInvalidNodeIndex;
+    }
+    graph.paths_.push (path);
+  }
+
+  auto link = [] (int from, int to, int distance, uint16_t flags, const ystl::Vector &velocity) {
+    for (auto &slot : graph.paths_[static_cast<size_t> (from)].links) {
+      if (slot.index == kInvalidNodeIndex) {
+        slot.index = static_cast<int16_t> (to);
+        slot.distance = distance;
+        slot.flags = flags;
+        slot.velocity = velocity;
+        return;
+      }
+    }
+    HOST_REQUIRE (false);
+  };
+  const uint16_t jump = ystl::to_underlying (PathFlag::Jump);
+
+  link (0, 1, 42, jump, ystl::Vector (110.0f, 0.0f, 0.0f));
+  link (1, 0, 42, 0, ystl::Vector ());
+  link (1, 2, 66, jump, ystl::Vector (130.0f, 0.0f, 0.0f));
+  link (2, 1, 66, 0, ystl::Vector ());
+  link (3, 4, 44, 0, ystl::Vector ());
+  link (4, 3, 44, 0, ystl::Vector ());
 
   graph.PopulateNodes ();
   planner.Init ();
@@ -2722,6 +2789,271 @@ TEST_CASE ("unit/navigate_nodes_extra") {
   CHECK (NavigateHook::LookupBtn (*bot, "door9", true) == btn);
   CHECK (NavigateHook::LookupBtn (*bot, "door9", false) == btn);
   CHECK (NavigateHook::LookupBtn (*bot, "none", true) == nullptr);
+
+  table.pfnServerDeactivate ();
+  testhost::CloseFakeCs (cs);
+}
+
+// overshoot predict: a fully blocked bot (zero velocity) must not count an exact
+// node as reached by equality, only real motion past it advances the walk
+TEST_CASE ("unit/navigate_jump_predict") {
+  testhost::FakeEngine engine;
+  engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
+
+  testhost::FakeCSApi cs {};
+  HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
+  cs.reset ();
+
+  GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
+  HOST_REQUIRE (cs.entered () != 0);
+
+  gamefuncs_t table {};
+  HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
+
+  game.Precache ();
+  table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
+
+  BuildChainGraph ();
+  planner.Init ();
+
+  auto bot = CreateNavBot ("PredictBot", ystl::Vector (42.0f, 0.0f, 0.0f));
+  HOST_REQUIRE (bot.get () != nullptr);
+  bot->pev->maxspeed = 270.0f;
+  bot->pev->flags |= FL_ONGROUND;
+  bot->team_ = Team::CT;
+  bot->StartTask (TaskId::MoveTo, 50.0f, 2, 0.0f, false);
+
+  // plain arrival at the exact jump node (like 151 -> 150): no travel flags here,
+  // the exactness comes from the node outgoing jump links alone
+  ystl::Array<int32_t> walk {};
+  walk.push (1);
+  walk.push (2);
+  NavigateHook::ChangeNode (*bot, 1);
+  NavigateHook::SetWalk (*bot, walk);
+  NavigateHook::SetFrameInterval (*bot, 0.02f);
+
+  // walled 10u short, zero velocity: predict == node must not count as passing
+  bot->pev->origin = ystl::Vector (52.0f, 0.0f, 0.0f);
+  bot->pev->velocity.clear ();
+  bot->pev->button = 0;
+  CHECK (!NavigateHook::UpdateNav (*bot));
+  CHECK (bot->GetCurrentNodeIndex () == 1);
+
+  // real overshoot still advances: 2u short, driving 250 through the point
+  bot->pev->origin = ystl::Vector (44.0f, 0.0f, 0.0f);
+  bot->pev->velocity = ystl::Vector (-250.0f, 0.0f, 0.0f);
+  bot->pev->button = 0;
+  CHECK (!NavigateHook::UpdateNav (*bot));
+  CHECK (bot->GetCurrentNodeIndex () == 2);
+
+  table.pfnServerDeactivate ();
+  testhost::CloseFakeCs (cs);
+}
+
+// apex-timed takeoff: a marginal rising jump link is retimed so the arc apex
+// meets the lip, sufficient arcs and flat links keep the mapper velocity
+TEST_CASE ("unit/navigate_jump_retime") {
+  testhost::FakeEngine engine;
+  engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
+
+  testhost::FakeCSApi cs {};
+  HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
+  cs.reset ();
+
+  GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
+  HOST_REQUIRE (cs.entered () != 0);
+
+  gamefuncs_t table {};
+  HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
+
+  game.Precache ();
+  table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
+
+  // takeoff (0,300,0) plain, dest (66,300,51): 51 up, the dust2 150 -> 152 shape
+  graph.Reset ();
+
+  const ystl::Vector spots[2] = {
+    ystl::Vector (0.0f, 300.0f, 0.0f),
+    ystl::Vector (66.0f, 300.0f, 51.0f),
+  };
+
+  for (int i = 0; i < 2; ++i) {
+    Path path {};
+    path.origin = spots[i];
+    path.number = i;
+    path.radius = 0.0f;
+    path.light = kInvalidLightLevel;
+
+    for (auto &link : path.links) {
+      link.index = kInvalidNodeIndex;
+    }
+    graph.paths_.push (path);
+  }
+
+  for (auto &slot : graph.paths_[0].links) {
+    if (slot.index == kInvalidNodeIndex) {
+      slot.index = 1;
+      slot.distance = 66;
+      slot.flags = ystl::to_underlying (PathFlag::Jump);
+      slot.velocity = ystl::Vector (130.0f, 0.0f, 0.0f);
+      break;
+    }
+  }
+
+  for (auto &slot : graph.paths_[1].links) {
+    if (slot.index == kInvalidNodeIndex) {
+      slot.index = 0;
+      slot.distance = 66;
+      break;
+    }
+  }
+  graph.PopulateNodes ();
+  planner.Init ();
+
+  edict_t *wall = engine.SpawnEntity ("func_wall");
+  HOST_REQUIRE (wall != nullptr);
+
+  // wall fraction per row, set before each bot runs
+  float wall_fraction = 1.0f;
+
+  engine.SetTraceLineHook ([&] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+
+    if (v2[2] == v1[2] && v1[2] < 60.0f) {
+      out->flFraction = wall_fraction;
+      out->pHit = wall;
+    }
+  });
+
+  auto run_takeoff = [&] (Bot &bot, float fraction) {
+    wall_fraction = fraction;
+    engine.AdvanceTime (0.15f);
+
+    NavigateHook::ChangeNode (bot, 1); // dest node, rise reads off its origin
+    NavigateHook::SetTravelFlags (bot, PathFlag::Jump);
+    NavigateHook::SetDesiredVelocity (bot, ystl::Vector (130.0f, 0.0f, 0.0f));
+    bot.pev->button = 0;
+    CHECK (!NavigateHook::UpdateNav (bot));
+    CHECK ((bot.pev->button & IN_JUMP) != 0);
+    return bot.pev->velocity;
+  };
+  auto make_takeoff_bot = [&] (const char *name, const ystl::Vector &pos) {
+    auto bot = CreateNavBot (name, pos);
+    bot->pev->maxspeed = 270.0f;
+    bot->pev->flags |= FL_ONGROUND;
+    bot->team_ = Team::CT;
+    return bot;
+  };
+
+  // marginal arc (lip 24 out, +2.9 margin): braked to the 80 floor
+  auto slow_bot = make_takeoff_bot ("RetimeSlow", ystl::Vector (0.0f, 300.0f, 0.0f));
+  HOST_REQUIRE (slow_bot.get () != nullptr);
+
+  const ystl::Vector slow = run_takeoff (*slow_bot, 24.0f / 128.0f);
+  CHECK (slow.x == 80.0f);
+  CHECK (slow.y == 0.0f);
+
+  // sufficient arc (lip 50 out, +10.9 margin): mapper velocity untouched
+  auto keep_bot = make_takeoff_bot ("RetimeKeep", ystl::Vector (0.0f, 300.0f, 0.0f));
+  HOST_REQUIRE (keep_bot.get () != nullptr);
+
+  const ystl::Vector kept = run_takeoff (*keep_bot, 50.0f / 128.0f);
+  CHECK (kept.x == 130.0f);
+  CHECK (kept.y == 0.0f);
+
+  // flat dest (rise 0): gate skips, mapper velocity untouched
+  auto flat_bot = make_takeoff_bot ("RetimeFlat", ystl::Vector (0.0f, 300.0f, 51.0f));
+  HOST_REQUIRE (flat_bot.get () != nullptr);
+
+  const ystl::Vector flat = run_takeoff (*flat_bot, 24.0f / 128.0f);
+  CHECK (flat.x == 130.0f);
+  CHECK (flat.y == 0.0f);
+
+  // open air (no face within 128): mapper velocity untouched
+  auto open_bot = make_takeoff_bot ("RetimeOpen", ystl::Vector (0.0f, 300.0f, 0.0f));
+  HOST_REQUIRE (open_bot.get () != nullptr);
+
+  const ystl::Vector open = run_takeoff (*open_bot, 1.0f);
+  CHECK (open.x == 130.0f);
+  CHECK (open.y == 0.0f);
+
+  // far lip (66 out, short by 0.5): boosted towards apex timing
+  auto fast_bot = make_takeoff_bot ("RetimeFast", ystl::Vector (0.0f, 300.0f, 0.0f));
+  HOST_REQUIRE (fast_bot.get () != nullptr);
+
+  const ystl::Vector fast = run_takeoff (*fast_bot, 66.0f / 128.0f);
+  CHECK (fast.x > 190.0f && fast.x < 205.0f);
+  CHECK (fast.y == 0.0f);
+
+  engine.SetTraceLineHook (nullptr);
+
+  table.pfnServerDeactivate ();
+  testhost::CloseFakeCs (cs);
+}
+
+// vent lookahead probes the airspace over the crouch node itself: a vent ducks
+// early even with open sky above the bot, a field camp keeps standing
+TEST_CASE ("unit/navigate_vent_duck") {
+  testhost::FakeEngine engine;
+  engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
+
+  testhost::FakeCSApi cs {};
+  HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
+  cs.reset ();
+
+  GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
+  HOST_REQUIRE (cs.entered () != 0);
+
+  gamefuncs_t table {};
+  HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
+
+  game.Precache ();
+  table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
+
+  BuildChainGraph ();
+  planner.Init ();
+
+  auto bot = CreateNavBot ("VentBot", ystl::Vector (200.0f, 0.0f, 0.0f));
+  HOST_REQUIRE (bot.get () != nullptr);
+  bot->pev->maxspeed = 270.0f;
+  bot->pev->flags |= FL_ONGROUND;
+  bot->team_ = Team::CT;
+
+  ystl::Array<int32_t> walk {};
+  walk.push (3);
+  walk.push (4);
+  NavigateHook::ChangeNode (*bot, 3);
+  NavigateHook::SetWalk (*bot, walk); // First=3, Next=4 (crouch), 44u away
+  bot->pev->origin = graph[3].origin;
+  bot->pev->button = 0;
+
+  // open headroom above the bot, low ceiling above the vent node
+  engine.SetTraceHullHook ([] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)v2;
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+
+    const float dx = v1[0] - 244.0f;
+    const float dy = v1[1] - 0.0f;
+
+    if (dx * dx + dy * dy < 144.0f) {
+      out->flFraction = 0.5f;
+    }
+  });
+  engine.AdvanceTime (0.15f);
+
+  NavigateHook::MoveToGoal (*bot);
+  CHECK ((bot->pev->button & IN_DUCK) != 0);
+
+  // control: open ceiling everywhere (field camp) keeps standing
+  engine.SetTraceHullHook (nullptr);
+  engine.AdvanceTime (0.15f);
+  bot->pev->button = 0;
+  NavigateHook::MoveToGoal (*bot);
+  CHECK ((bot->pev->button & IN_DUCK) == 0);
 
   table.pfnServerDeactivate ();
   testhost::CloseFakeCs (cs);

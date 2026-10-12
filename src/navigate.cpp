@@ -1406,13 +1406,12 @@ void Bot::MoveToGoal () {
     if (has_flag (graph[path_walk_.Next ()].flags, NodeFlag::Crouch)) {
       const float dist_to_next = pev->origin.distance_sq2d (graph[path_walk_.Next ()].origin);
 
-      // only duck when very close to the next crouch node (reduce from 32 to 24 units)
-      if (dist_to_next < ystl::sqrf (24.0f)) {
-        // verify there's actually low ceiling ahead before ducking early
+      // probe the airspace over the crouch node itself: open sky (field camp) keeps standing, vent ducks early
+      if (dist_to_next < ystl::sqrf (48.0f)) {
         Trace::Result tr {};
 
-        auto src = pev->origin + ystl::Vector (0, 0, 5);
-        auto dst = pev->origin + ystl::Vector (0, 0, 72);
+        auto src = graph[path_walk_.Next ()].origin + ystl::Vector (0, 0, 5);
+        auto dst = graph[path_walk_.Next ()].origin + ystl::Vector (0, 0, 72);
 
         trace.Hull (src, dst, TraceIgnore::Monsters, head_hull, Ent (), &tr);
 
@@ -1458,6 +1457,7 @@ void Bot::ResetMovement () {
   move_speed_ = 0.0f;
   strafe_speed_ = 0.0f;
   move_angles_.clear ();
+  jump_sequence_ = false;
 }
 
 void Bot::TranslateInput () {
@@ -1569,6 +1569,7 @@ bool Bot::UpdateNavigation () {
       // if bot's on the ground or on the ladder we're free to jump
       if (IsOnFloor () || IsOnLadder ()) {
         if (desired_velocity_.length2d () > 0.0f) {
+          RetimeJumpVelocityForLip ();
           pev->velocity = desired_velocity_;
         }
         else if (graph.IsAnalyzed () || analyzer.IsAnalyzed ()) {
@@ -1914,11 +1915,11 @@ bool Bot::UpdateNavigation () {
     desired_distance_sq = ystl::sqrf (48.0f);
   }
 
-  // needs precise placement - check if we get past the point
+  // precise placement: count the node passed only on real motion, equality means standing still against a wall
   if (desired_distance_sq < ystl::sqrf (16.0f) && node_distance_sq < ystl::sqrf (30.0f)) {
     const auto predict_range_sq = path_origin_.distance_sq (pev->origin + pev->velocity * frame_interval_);
 
-    if (predict_range_sq >= node_distance_sq || predict_range_sq <= desired_distance_sq) {
+    if (predict_range_sq > node_distance_sq || predict_range_sq <= desired_distance_sq) {
       desired_distance_sq = node_distance_sq + 1.0f;
     }
   }
@@ -3476,6 +3477,18 @@ bool Bot::AdvanceMovement () {
       }
     }
 
+    const bool analyzed = graph.IsAnalyzed () || analyzer.IsAnalyzed ();
+
+    auto is_slope_jump = [this, analyzed] (int from, int to) -> bool {
+      if (!analyzed || has_flag (graph[from].flags, NodeFlag::Ladder)) {
+        return false;
+      }
+      const float diff = ystl::abs (graph[from].origin.z - graph[to].origin.z);
+
+      return graph[to].origin.z > graph[from].origin.z && diff > cv_graph_slope_height.As<float> () &&
+        !IsWalkableAscent (graph[from].origin, graph[to].origin);
+    };
+
     if (!path_walk_.Empty ()) {
       jump_sequence_ = false;
 
@@ -3495,19 +3508,12 @@ bool Bot::AdvanceMovement () {
               is_current_jump = true;
             }
 
-            // if graph is analyzed, check for slope-based jumps
-            if ((graph.IsAnalyzed () || analyzer.IsAnalyzed ()) && !has_flag (path_->flags, NodeFlag::Ladder)) {
-              const float diff = ystl::abs (path_->origin.z - graph[dest_index].origin.z);
+            if (is_slope_jump (current_node_index_, dest_index)) {
+              current_travel_flags_ |= PathFlag::Jump;
+              desired_velocity_.clear (); // make bot compute jump velocity
+              jump_finished_ = false; // force-mark this path as jump
 
-              // if height difference is enough, consider this link as jump link
-              if (graph[dest_index].origin.z > path_->origin.z && diff > cv_graph_slope_height.As<float> () &&
-                  !IsWalkableAscent (path_->origin, graph[dest_index].origin)) {
-                current_travel_flags_ |= PathFlag::Jump;
-                desired_velocity_.clear (); // make bot compute jump velocity
-                jump_finished_ = false; // force-mark this path as jump
-
-                is_current_jump = true;
-              }
+              is_current_jump = true;
             }
             break;
           }
@@ -3545,7 +3551,7 @@ bool Bot::AdvanceMovement () {
           const auto &next = graph[next_index];
 
           for (const auto &link : path.links) {
-            if (link.index == next_index && has_flag (link.flags, PathFlag::Jump)) {
+            if (link.index == next_index && (has_flag (link.flags, PathFlag::Jump) || is_slope_jump (dest_index, next_index))) {
               src = path.origin;
               dst = next.origin;
 
@@ -3559,7 +3565,7 @@ bool Bot::AdvanceMovement () {
 
         // mark as jump sequence, if the current and next paths are jumps
         if (is_current_jump) {
-          jump_sequence_ = will_jump && jump_distance_sq > ystl::sqrf (96.0f);
+          jump_sequence_ = will_jump && (jump_distance_sq > ystl::sqrf (96.0f) || ystl::abs (dst.z - src.z) > 36.0f);
         }
 
         // is there a jump node right ahead? then maybe draw the knife for extra speed
@@ -4652,6 +4658,54 @@ ystl::Vector Bot::CalcJumpVelocity (const ystl::Vector &start, const ystl::Vecto
 
   // no speed clamp, airborne velocity persists and the arc was solved for it
   return velocity;
+}
+
+void Bot::RetimeJumpVelocityForLip () {
+  // apex-timed takeoff for marginal rising jump links: meet the lip at the arc apex
+  if (!IsOnFloor () || IsInWater ()) {
+    return;
+  }
+  const float rise = path_origin_.z - pev->origin.z;
+
+  if (rise <= 30.0f) {
+    return; // flat or falling links fly fine on the mapper velocity
+  }
+  const float link_speed = desired_velocity_.length2d ();
+
+  if (link_speed <= 1.0f) {
+    return;
+  }
+  const float gravity = sv_gravity.As<float> ();
+
+  if (gravity <= 1.0f) {
+    return;
+  }
+  const ystl::Vector dir = desired_velocity_.normalize2d ();
+
+  // face distance at waist height (the lip we must rise over)
+  constexpr float kFaceProbeRange = 128.0f;
+  Trace::Result tr {};
+  trace.Line (pev->origin, pev->origin + dir * kFaceProbeRange, TraceIgnore::Monsters, Ent (), &tr);
+
+  if (tr.fraction >= 1.0f) {
+    return; // open air, nothing to time against
+  }
+  const float dist = tr.fraction * kFaceProbeRange;
+
+  if (dist < 20.0f) {
+    return; // face at the nose: vertical pop territory, keep mapper data
+  }
+  // arrival height on the learned arc (+18 mid-air duck the engine applies)
+  const float rise_time = dist / link_speed;
+  const float arrival = kPlayerJumpTakeoff * rise_time - 0.5f * gravity * rise_time * rise_time + 18.0f;
+
+  if (arrival >= rise + 6.0f) {
+    return; // sufficient, keep mapper data
+  }
+  const float timed = ystl::clamp (dist / (kPlayerJumpTakeoff / gravity), 80.0f, pev->maxspeed);
+
+  desired_velocity_.x = dir.x * timed;
+  desired_velocity_.y = dir.y * timed;
 }
 
 } // namespace bot
