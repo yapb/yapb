@@ -45,36 +45,14 @@ struct VisionHook {
   static void SetCurrent (Bot &bot, int index) {
     bot.current_node_index_ = index;
   }
-  static void SetStates (Bot &bot, Sense states) {
-    bot.states_ = states;
-  }
-  static void SetShootTime (Bot &bot, float value) {
-    bot.shoot_time_ = value;
-  }
-  static void SetLastEnemy (Bot &bot, edict_t *ent) {
-    bot.last_enemy_ = ent;
-  }
-  static void ClearEnemy (Bot &bot) {
-    bot.enemy_ = nullptr;
-  }
-  static void RestartSeeEnemy (Bot &bot) {
-    bot.see_enemy_timer_.start ();
-  }
   static void SetAggression (Bot &bot, float value) {
     bot.agression_level_ = value;
   }
   static void SetEnemyOrigin (Bot &bot, const ystl::Vector &pos) {
     bot.last_enemy_origin_ = pos;
   }
-  static void SetMove (Bot &bot, float speed, float yaw) {
-    bot.move_speed_ = speed;
-    bot.move_angles_ = ystl::Vector (0.0f, yaw, 0.0f);
-  }
   static float MemorySpan (Bot &bot) {
     return bot.EnemyMemorySpan ();
-  }
-  static float AimHold (Bot &bot) {
-    return bot.EnemyAimHold ();
   }
 
   static float InFov (Bot &bot, const ystl::Vector &dest) {
@@ -465,48 +443,6 @@ TEST_CASE ("unit/vision_aim") {
   VisionHook::AimDirection (*bot);
   CHECK (VisionHook::LookAt (*bot) == ystl::Vector (21.0f, 22.0f, 23.0f));
 
-  // a hidden enemy: right after losing him the bot pre-aims the last-known spot
-  edict_t *foe = game.CreateFakeClient ("VisFoe");
-  HOST_REQUIRE (!game.IsNullEntity (foe));
-  foe->v.origin = ystl::Vector (400.0f, 0.0f, 0.0f);
-
-  VisionHook::SetLastEnemy (*bot, foe);
-  bot->last_enemy_origin_ = ystl::Vector (400.0f, 0.0f, 0.0f);
-  VisionHook::ClearEnemy (*bot);
-  VisionHook::SetShootTime (*bot, -100.0f); // no recent shot
-  VisionHook::SetAimFlags (*bot, AimFlags::Camp);
-  VisionHook::SetLookAtSafe (*bot, ystl::Vector (7.0f, 8.0f, 9.0f));
-
-  VisionHook::SetMove (*bot, 0.0f, 0.0f);
-  VisionHook::RestartSeeEnemy (*bot);
-  VisionHook::AimDirection (*bot);
-  CHECK (VisionHook::LookAt (*bot) == ystl::Vector (400.0f, 0.0f, 0.0f));
-
-  // after the skill-scaled hold the view returns to the route
-  engine.AdvanceTime (3.0f); // past the max hold (2.0s)
-  VisionHook::AimDirection (*bot);
-  CHECK (VisionHook::LookAt (*bot) == ystl::Vector (7.0f, 8.0f, 9.0f));
-
-  // walking away from the spot: never swing back
-  VisionHook::RestartSeeEnemy (*bot);
-  VisionHook::SetMove (*bot, 270.0f, 180.0f); // heading west, spot is east
-  VisionHook::AimDirection (*bot);
-  CHECK (VisionHook::LookAt (*bot) == ystl::Vector (7.0f, 8.0f, 9.0f));
-
-  // ...but pushing toward it the pre-aim holds
-  VisionHook::SetMove (*bot, 270.0f, 0.0f); // heading east
-  VisionHook::AimDirection (*bot);
-  CHECK (VisionHook::LookAt (*bot) == ystl::Vector (400.0f, 0.0f, 0.0f));
-
-  // and seeing him again re-arms the hold
-  engine.AdvanceTime (3.0f); // hold expired
-  VisionHook::AimDirection (*bot);
-  CHECK (VisionHook::LookAt (*bot) == ystl::Vector (7.0f, 8.0f, 9.0f));
-
-  VisionHook::RestartSeeEnemy (*bot); // fresh sighting
-  VisionHook::AimDirection (*bot);
-  CHECK (VisionHook::LookAt (*bot) == ystl::Vector (400.0f, 0.0f, 0.0f));
-
   // memory span scales with skill, aggression and closeness, clamped to sane bounds
   bot->pev->origin = ystl::Vector (0.0f, 0.0f, 0.0f);
 
@@ -514,22 +450,15 @@ TEST_CASE ("unit/vision_aim") {
   VisionHook::SetAggression (*bot, 0.0f);
   VisionHook::SetEnemyOrigin (*bot, ystl::Vector (2048.0f, 0.0f, 0.0f)); // far
   const float low = VisionHook::MemorySpan (*bot);
-  const float hold_low = VisionHook::AimHold (*bot);
 
   bot->SetNewDifficulty (Difficulty::Expert);
   VisionHook::SetAggression (*bot, 1.0f);
   VisionHook::SetEnemyOrigin (*bot, ystl::Vector (64.0f, 0.0f, 0.0f)); // close
   const float high = VisionHook::MemorySpan (*bot);
-  const float hold_high = VisionHook::AimHold (*bot);
 
   CHECK (low == Approx (3.0f).margin (0.01f));
   CHECK (high == Approx (8.0f).margin (0.01f));
   CHECK (high > low);
-
-  // the pre-aim hold stays short, never a stare
-  CHECK (hold_low == Approx (0.4f).margin (0.01f));
-  CHECK (hold_high <= 2.0f + 0.01f);
-  CHECK (hold_high > hold_low);
 
   bots.Destroy ();
 }
@@ -606,7 +535,7 @@ TEST_CASE ("unit/vision_nav") {
   VisionHook::AimDirection (*bot);
   CHECK (!has_flag (VisionHook::GetAimFlags (*bot), AimFlags::PredictPath));
 
-  // live predictions through visible nodes land exactly
+  // live predictions through visible nodes land on the direction, at eye level
   vistab.StartRebuild ();
 
   for (int i = 0; i < 40 && !vistab.IsReady (); ++i) {
@@ -618,7 +547,7 @@ TEST_CASE ("unit/vision_nav") {
   VisionHook::SetPredict (*bot, 3, 10);
   VisionHook::SetPrevNode (*bot, 0);
   VisionHook::AimDirection (*bot);
-  CHECK (VisionHook::LookAt (*bot) == ystl::Vector (300.0f, 0.0f, 0.0f));
+  CHECK (VisionHook::LookAt (*bot) == ystl::Vector (300.0f, 0.0f, 28.0f));
 
   // danger glances commit above the chord with hotspot math inside
   bots.SetEnemySpotted (true);

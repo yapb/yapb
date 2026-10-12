@@ -330,22 +330,6 @@ void Bot::SetAimDirection () {
       flags &= ~(AimFlags::LastEnemy | AimFlags::PredictPath);
       can_set_aim_direction_ = false;
     }
-
-    // pre-aim the last spot briefly, never a swing off the route while leaving
-    if ((see_enemy_timer_.less_than (EnemyAimHold ()) || shoot_time_ + 1.0f > game.Time ()) && forget_last_victim_timer_.elapsed () &&
-        !last_enemy_origin_.empty () && game.IsPlayerEntity (last_enemy_) && !game.IsPlayerEntity (enemy_)) {
-
-      bool on_the_way = true;
-
-      if (!ystl::fzero (move_speed_)) {
-        const float enemy_yaw = (last_enemy_origin_ - pev->origin).angles ().y;
-        on_the_way = ystl::abs (ystl::wrap_angle (enemy_yaw - move_angles_.y)) < 100.0f;
-      }
-
-      if (on_the_way) {
-        flags |= AimFlags::LastEnemy;
-      }
-    }
   }
 
   // last victim: look at last kill position briefly (stop early to avoid snap-back)
@@ -456,7 +440,8 @@ void Bot::SetAimDirection () {
       }
       const float dist_to_predict_node_sq = graph[predict_node].origin.distance_sq (pev->origin);
 
-      if (dist_to_predict_node_sq >= ystl::sqrf (2048.0f) || dist_to_predict_node_sq <= ystl::sqrf (256.0f)) {
+      // a nearby peek spot is fine when the enemy ducked behind the adjacent wall
+      if (dist_to_predict_node_sq >= ystl::sqrf (2048.0f) || dist_to_predict_node_sq <= ystl::sqrf (96.0f)) {
         return false;
       }
 
@@ -489,6 +474,9 @@ void Bot::SetAimDirection () {
 
     if (!look_at_predict_.empty ()) {
       look_at_ = look_at_predict_;
+
+      // watch predicted direction at eye level, no staring into the sky
+      look_at_.z = GetEyesPos ().z;
     }
   }
   else if (has_flag (flags, AimFlags::Camp)) {

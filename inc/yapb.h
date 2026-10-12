@@ -278,9 +278,6 @@ private:
   // how long the bot keeps tracking an enemy after losing sight
   float EnemyMemorySpan () const;
 
-  // how long the bot keeps pre-aiming the last known spot after losing sight
-  float EnemyAimHold () const;
-
   // check if bomb timer is about to expire
   bool IsOutOfBombTimer ();
 

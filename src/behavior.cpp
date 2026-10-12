@@ -719,7 +719,9 @@ void Bot::UpdatePredictedIndex () {
   }
 
   float time_since_last_seen = see_enemy_timer_.elapsed_time ();
-  float max_predict_distance = ystl::min (time_since_last_seen * 320.0f, 1024.0f);
+
+  // floor so watching starts the moment the enemy is lost
+  float max_predict_distance = ystl::clamp (time_since_last_seen * 320.0f, 512.0f, 1024.0f);
 
   // context is captured by a single pointer, so the lambda stays within ystl::lambda inline storage
   struct PredictContext {
@@ -775,7 +777,9 @@ void Bot::RefreshEnemyPredict () {
     return;
   }
 
-  if (game.IsNullEntity (enemy_) && !game.IsNullEntity (last_enemy_) && !last_enemy_origin_.empty ()) {
+  // watch a visible spot while the enemy is still a live suspect
+  if (has_flag (states_, Sense::SuspectEnemy) && game.IsNullEntity (enemy_) && !game.IsNullEntity (last_enemy_) &&
+      !last_enemy_origin_.empty ()) {
     const auto distance_to_last_enemy_sq = last_enemy_origin_.distance_sq (pev->origin);
 
     if (distance_to_last_enemy_sq < ystl::sqrf (2048.0f)) {
