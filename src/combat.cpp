@@ -392,6 +392,32 @@ void Bot::TrackEnemies () {
   }
 }
 
+float Bot::EnemyMemorySpan () const {
+  // memory grows with skill, aggression and how close the last contact was
+  const float skill = static_cast<float> (Skill ()) / 100.0f;
+  const float aggression = ystl::clamp (agression_level_, 0.0f, 1.0f);
+
+  float closeness = 0.0f;
+
+  if (!last_enemy_origin_.empty ()) {
+    closeness = ystl::clamp (1.0f - last_enemy_origin_.distance (pev->origin) / 2048.0f, 0.0f, 1.0f);
+  }
+  return ystl::clamp (3.0f + 3.0f * skill + 1.5f * aggression + 2.0f * closeness, 3.0f, 8.0f);
+}
+
+float Bot::EnemyAimHold () const {
+  // pre-aim right after losing sight scales with skill, aggression and closeness
+  const float skill = static_cast<float> (Skill ()) / 100.0f;
+  const float aggression = ystl::clamp (agression_level_, 0.0f, 1.0f);
+
+  float closeness = 0.0f;
+
+  if (!last_enemy_origin_.empty ()) {
+    closeness = ystl::clamp (1.0f - last_enemy_origin_.distance (pev->origin) / 2048.0f, 0.0f, 1.0f);
+  }
+  return ystl::clamp (0.4f + 1.0f * skill + 0.3f * aggression + 0.3f * closeness, 0.4f, 2.0f);
+}
+
 bool Bot::LookupEnemies () {
   // this function tries to find the best suitable enemy for the bot
 
@@ -409,7 +435,7 @@ bool Bot::LookupEnemies () {
   if (!game.IsNullEntity (enemy_) && has_flag (states_, Sense::SeeingEnemy)) {
     states_ &= ~Sense::SuspectEnemy;
   }
-  else if (game.IsNullEntity (enemy_) && see_enemy_timer_.less_than (4.0f) && game.IsAliveEntity (last_enemy_)) {
+  else if (game.IsNullEntity (enemy_) && see_enemy_timer_.less_than (EnemyMemorySpan ()) && game.IsAliveEntity (last_enemy_)) {
     states_ |= Sense::SuspectEnemy;
 
     const bool deny_last_enemy = pev->velocity.length_sq2d () > 0.0f && last_enemy_origin_.distance_sq (pev->origin) < ystl::sqrf (256.0f) &&

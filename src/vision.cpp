@@ -331,13 +331,20 @@ void Bot::SetAimDirection () {
       can_set_aim_direction_ = false;
     }
 
-    // don't switch view right away after loosing focus with current enemy
-    if ((shoot_time_ + 1.0f > game.Time () || see_enemy_timer_.less_than (1.125f))
+    // pre-aim the last spot briefly, never a swing off the route while leaving
+    if ((see_enemy_timer_.less_than (EnemyAimHold ()) || shoot_time_ + 1.0f > game.Time ()) && forget_last_victim_timer_.elapsed () &&
+        !last_enemy_origin_.empty () && game.IsPlayerEntity (last_enemy_) && !game.IsPlayerEntity (enemy_)) {
 
-        && forget_last_victim_timer_.elapsed () && !last_enemy_origin_.empty () && game.IsPlayerEntity (last_enemy_) &&
-        !game.IsPlayerEntity (enemy_)) {
+      bool on_the_way = true;
 
-      flags |= AimFlags::LastEnemy;
+      if (!ystl::fzero (move_speed_)) {
+        const float enemy_yaw = (last_enemy_origin_ - pev->origin).angles ().y;
+        on_the_way = ystl::abs (ystl::wrap_angle (enemy_yaw - move_angles_.y)) < 100.0f;
+      }
+
+      if (on_the_way) {
+        flags |= AimFlags::LastEnemy;
+      }
     }
   }
 
