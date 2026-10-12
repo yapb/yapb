@@ -1099,8 +1099,9 @@ void Bot::ComputeCollisionWeights (const ystl::Vector &dir_normal, CollisionWeig
   // duck weight calculation
   if (has_flag (bits, CollisionProbe::Duck)) {
     auto &duck_weight = weights[CollisionState::Duck].weight;
+    const bool can_duck_under = CanDuckUnder (dir_normal);
 
-    if (CanDuckUnder (dir_normal)) {
+    if (can_duck_under) {
       duck_weight += 10;
     }
     if ((dest_origin_.z + 36.0f <= pev->origin.z) && (dest_visible || SeesEntity (dest_origin_))) {
@@ -1109,6 +1110,10 @@ void Bot::ComputeCollisionWeights (const ystl::Vector &dir_normal, CollisionWeig
     // penalty: ducking is often unnecessary when strafing would work
     if (is_similar_height ()) {
       duck_weight -= 8;
+    }
+    // a crouch node is meant to be ducked through, strafing in the passage is useless
+    if (can_duck_under && has_flag (path_flags_, NodeFlag::Crouch)) {
+      duck_weight += 20;
     }
   }
 }
@@ -1355,21 +1360,26 @@ void Bot::MoveToGoal () {
 
   bool press_duck = false;
 
-  // current node requires crouching - but only if headroom is actually limited
+  // current node requires crouching, probe above the node and the bot
   if (has_flag (path_flags_, NodeFlag::Crouch)) {
-    Trace::Result tr {};
+    const ystl::Vector probes[2] = { path_origin_, pev->origin };
 
-    auto src = path_origin_;
-    auto dst = path_origin_;
+    for (const auto &base : probes) {
+      Trace::Result tr {};
 
-    src.z += 5.0f;
-    dst.z += 72.0f; // player height
+      auto src = base;
+      auto dst = base;
 
-    trace.Hull (src, dst, TraceIgnore::Monsters, head_hull, Ent (), &tr);
+      src.z += 5.0f;
+      dst.z += 72.0f; // player height
 
-    // only duck if there's a real obstruction
-    if (tr.fraction < 0.9f) {
-      press_duck = true;
+      trace.Hull (src, dst, TraceIgnore::Monsters, head_hull, Ent (), &tr);
+
+      // only duck if there's a real obstruction
+      if (tr.fraction < 0.9f) {
+        press_duck = true;
+        break;
+      }
     }
   }
 

@@ -2566,6 +2566,113 @@ TEST_CASE ("unit/navigate_locomotion") {
   testhost::CloseFakeCs (cs);
 }
 
+// crouch nodes duck anywhere on the leg, not only over the node
+TEST_CASE ("unit/navigate_crouch") {
+  testhost::FakeEngine engine;
+  engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
+
+  testhost::FakeCSApi cs {};
+  HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
+  cs.reset ();
+
+  GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
+  HOST_REQUIRE (cs.entered () != 0);
+
+  gamefuncs_t table {};
+  HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
+
+  game.Precache ();
+  table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
+
+  BuildNavGraph ();
+  planner.Init ();
+
+  auto bot = CreateNavBot ("CrouchBot", ystl::Vector (0.0f, 0.0f, 0.0f));
+  HOST_REQUIRE (bot.get () != nullptr);
+  bot->pev->maxspeed = 270.0f;
+  bot->pev->flags |= FL_ONGROUND;
+  bot->team_ = Team::CT;
+
+  // low ceiling: every head-height hull probe reads blocked
+  engine.SetTraceHullHook ([] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    out->flFraction = 0.5f;
+  });
+
+  ystl::Array<int32_t> walk {};
+  walk.push (2);
+  walk.push (3);
+
+  // current node crouch: ducks against the low ceiling
+  graph.paths_[2].flags |= NodeFlag::Crouch;
+  NavigateHook::ChangeNode (*bot, 2);
+  bot->pev->origin = graph[2].origin;
+  bot->pev->button = 0;
+  NavigateHook::MoveToGoal (*bot);
+  CHECK ((bot->pev->button & IN_DUCK) != 0);
+
+  // successor (Next) crouch but far away: lookahead stays off
+  graph.paths_[2].flags &= ~NodeFlag::Crouch;
+  graph.paths_[3].flags |= NodeFlag::Crouch;
+  NavigateHook::ChangeNode (*bot, 1);
+  NavigateHook::SetWalk (*bot, walk); // First=2, Next=3 (crouch), bot 200u away
+  bot->pev->origin = graph[1].origin;
+  bot->pev->button = 0;
+  NavigateHook::MoveToGoal (*bot);
+  CHECK ((bot->pev->button & IN_DUCK) == 0);
+
+  // ...within the 24u lookahead window it ducks early
+  bot->pev->origin = graph[3].origin - ystl::Vector (10.0f, 0.0f, 0.0f);
+  bot->pev->button = 0;
+  NavigateHook::MoveToGoal (*bot);
+  CHECK ((bot->pev->button & IN_DUCK) != 0);
+  graph.paths_[3].flags &= ~NodeFlag::Crouch;
+
+  // crouch node with clear centre but low leg: the probe above the bot catches it
+  engine.AdvanceTime (0.2f); // expire the trace cache from the earlier blocked probes
+  engine.SetTraceHullHook ([] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+
+    if (v1[0] < 190.0f) {
+      out->flFraction = 0.5f; // low lip everywhere except right above the node centre
+    }
+  });
+  graph.paths_[2].flags |= NodeFlag::Crouch;
+  NavigateHook::ChangeNode (*bot, 2);
+  bot->pev->origin = ystl::Vector (150.0f, 0.0f, 0.0f); // mid-leg, under the low lip
+  bot->pev->button = 0;
+  NavigateHook::MoveToGoal (*bot);
+  CHECK ((bot->pev->button & IN_DUCK) != 0);
+
+  // stuck at a crouch node: the probe picks duck, not a strafe into the wall
+  engine.AdvanceTime (0.2f);
+  engine.SetTraceLineHook ([] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out); // duck-height rays stay clear
+  });
+  engine.SetTraceHullHook ([] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    out->flFraction = 0.5f; // standing-height hulls blocked
+  });
+  NavigateHook::ChangeNode (*bot, 2); // crouch node
+  bot->pev->origin = graph[2].origin;
+  NavigateHook::SetDestOrigin (*bot, graph[3].origin);
+  NavigateHook::SetMoveAngles (*bot, ystl::Vector (0.0f, 0.0f, 0.0f));
+  NavigateHook::SetMoveSpeed (*bot, 100.0f);
+  NavigateHook::SetTerrainStrafe (*bot, 1.0f, 100.0f);
+  CHECK (NavigateHook::DuckUnder (*bot, ystl::Vector (1.0f, 0.0f, 0.0f)));
+
+  Bot::CollisionWeights weights {};
+  NavigateHook::CollisionWeights (*bot, ystl::Vector (1.0f, 0.0f, 0.0f), weights);
+  CHECK (weights[CollisionState::Duck].weight > weights[CollisionState::StrafeLeft].weight);
+  CHECK (weights[CollisionState::Duck].weight > weights[CollisionState::StrafeRight].weight);
+
+  engine.SetTraceHullHook (nullptr);
+  engine.SetTraceLineHook (nullptr);
+
+  table.pfnServerDeactivate ();
+  testhost::CloseFakeCs (cs);
+}
+
 TEST_CASE ("unit/navigate_nodes_extra") {
   testhost::FakeEngine engine;
   engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
