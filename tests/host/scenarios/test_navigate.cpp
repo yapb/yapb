@@ -3059,4 +3059,84 @@ TEST_CASE ("unit/navigate_vent_duck") {
   testhost::CloseFakeCs (cs);
 }
 
+// a low lip on the way to a crouch node (vent mouth in open air above the bot):
+// the node airspace reads clear, but the duck must start before the head bump
+TEST_CASE ("unit/navigate_lip_duck") {
+  testhost::FakeEngine engine;
+  engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
+
+  testhost::FakeCSApi cs {};
+  HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
+  cs.reset ();
+
+  GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
+  HOST_REQUIRE (cs.entered () != 0);
+
+  gamefuncs_t table {};
+  HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
+
+  game.Precache ();
+  table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
+
+  BuildChainGraph ();
+  planner.Init ();
+
+  edict_t *wall = engine.SpawnEntity ("func_wall");
+  HOST_REQUIRE (wall != nullptr);
+
+  auto bot = CreateNavBot ("LipBot", ystl::Vector (200.0f, 0.0f, 0.0f));
+  HOST_REQUIRE (bot.get () != nullptr);
+  bot->pev->maxspeed = 270.0f;
+  bot->pev->flags |= FL_ONGROUND;
+  bot->team_ = Team::CT;
+
+  ystl::Array<int32_t> walk {};
+  walk.push (3);
+  walk.push (4);
+  NavigateHook::ChangeNode (*bot, 3);
+  NavigateHook::SetWalk (*bot, walk); // First=3, Next=4 (crouch), 44u away
+  bot->pev->origin = graph[3].origin;
+  NavigateHook::SetDestOrigin (*bot, graph[4].origin);
+  NavigateHook::SetMoveSpeed (*bot, 270.0f);
+  bot->pev->button = 0;
+
+  // low lip between the bot and the node: the standing body is blocked ahead,
+  // the crouched body fits; airspace over the node and over the bot stays open
+  engine.SetTraceHullHook ([wall] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+
+    if (v2[0] != v1[0] && v1[2] >= 5.0f) {
+      out->flFraction = 0.5f;
+      out->pHit = wall;
+    }
+  });
+  engine.SetTraceLineHook ([wall] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+
+    if (v2[2] == v1[2] && v1[2] >= 5.0f) {
+      out->flFraction = 0.5f;
+      out->pHit = wall;
+    }
+  });
+  engine.AdvanceTime (0.15f);
+
+  NavigateHook::MoveToGoal (*bot);
+  CHECK ((bot->pev->button & IN_DUCK) != 0);
+
+  // control: open air everywhere (field camp) keeps standing
+  engine.SetTraceHullHook (nullptr);
+  engine.SetTraceLineHook (nullptr);
+  engine.AdvanceTime (0.15f);
+  bot->pev->button = 0;
+  NavigateHook::MoveToGoal (*bot);
+  CHECK ((bot->pev->button & IN_DUCK) == 0);
+
+  table.pfnServerDeactivate ();
+  testhost::CloseFakeCs (cs);
+}
+
 } // namespace bot

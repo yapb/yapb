@@ -1401,23 +1401,27 @@ void Bot::MoveToGoal () {
     }
   }
 
-  // lookahead: next node requires crouching (duck early to give engine time to shrink hull)
-  if (!press_duck && path_walk_.HasNext ()) {
-    if (has_flag (graph[path_walk_.Next ()].flags, NodeFlag::Crouch)) {
-      const float dist_to_next = pev->origin.distance_sq2d (graph[path_walk_.Next ()].origin);
+  // lookahead: heading for a crouch node
+  if (!press_duck && path_walk_.HasNext () && has_flag (graph[path_walk_.Next ()].flags, NodeFlag::Crouch)) {
+    const float dist_to_next = pev->origin.distance_sq2d (graph[path_walk_.Next ()].origin);
 
-      // probe the airspace over the crouch node itself: open sky (field camp) keeps standing, vent ducks early
-      if (dist_to_next < ystl::sqrf (48.0f)) {
-        Trace::Result tr {};
+    // close by, probe the airspace over the crouch node itself: open sky (field camp) keeps standing
+    if (dist_to_next < ystl::sqrf (48.0f)) {
+      const ystl::Vector &over = graph[path_walk_.Next ()].origin;
+      Trace::Result tr {};
 
-        auto src = graph[path_walk_.Next ()].origin + ystl::Vector (0, 0, 5);
-        auto dst = graph[path_walk_.Next ()].origin + ystl::Vector (0, 0, 72);
+      trace.Hull (over + ystl::Vector (0, 0, 5), over + ystl::Vector (0, 0, 72), TraceIgnore::Monsters, head_hull, Ent (), &tr);
 
-        trace.Hull (src, dst, TraceIgnore::Monsters, head_hull, Ent (), &tr);
+      if (tr.fraction < 0.9f) {
+        press_duck = true;
+      }
+    }
+    // the lip can sit before the node (vent mouth): standing body blocked ahead but a ducked one fits
+    if (!press_duck && IsOnFloor () && !IsOnLadder () && !IsInWater () && move_speed_ > 20.0f) {
+      const ystl::Vector dir = (dest_origin_ - pev->origin).normalize2d ();
 
-        if (tr.fraction < 0.9f) {
-          press_duck = true;
-        }
+      if (!dir.empty () && IsBlockedForward (dir) != nullptr && CanDuckUnder (dir)) {
+        press_duck = true;
       }
     }
   }
