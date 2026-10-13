@@ -31,6 +31,16 @@ option(YAPB_WITH_TLS "Enable HTTPS support via vendored mbedtls" ON)
 option(YAPB_BUILD_TESTS "Build test host (fake engine harness, native gcc/clang only, requires -DYAPB_64BIT=ON)" OFF)
 option(YAPB_WITH_AMXX "Build AMX Mod X module (i386 only)" ON)
 
+# android (ndk toolchain) fixes the abi for us: follow the pointer size instead of
+# the manual flag, so the parent never has to force YAPB_64BIT before adding us
+if(ANDROID)
+  if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(YAPB_64BIT ON CACHE BOOL "Build as 64-bit binary" FORCE)
+  else()
+    set(YAPB_64BIT OFF CACHE BOOL "Build as 64-bit binary" FORCE)
+  endif()
+endif()
+
 # classic headers only, no c++20 modules
 set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 

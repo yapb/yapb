@@ -164,7 +164,12 @@ if(CLANG_OR_GCC AND NOT ANDROID)
     endif()
   endif()
 
-  if(NOT YAPB_64BIT AND NOT _PROC STREQUAL "aarch64" AND NOT CPU_NON_X86)
+  # android owns the abi via its toolchain, never force a bitness there
+  if(ANDROID)
+    list(APPEND _cflags -fPIC)
+    list(APPEND _ldflags -fPIC)
+    set(_yapb_no_pic OFF)
+  elseif(NOT YAPB_64BIT AND NOT _PROC STREQUAL "aarch64" AND NOT CPU_NON_X86)
     list(APPEND _cflags -m32)
     list(APPEND _ldflags -m32)
 
