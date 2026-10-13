@@ -1130,7 +1130,7 @@ bool Game::Postload () {
 
 #if defined(YSTL_WITH_TLS)
   // tls certificate bundle shipped with the package, without it https is unverified
-  if (!ystl::http.set_ca_file (ystl::strings.join_path (bstor.GetRunningPathVfs (), folders.config, folders.extra, "cacert.pem"))) {
+  if (!ystl::http.set_ca_file (ystl::strings.join_path (bstor.GetRunningPath (), folders.config, folders.extra, "cacert.pem"))) {
     ystl::logger.error ("https ca bundle is missing, tls connections will be unverified");
   }
 #endif
