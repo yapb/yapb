@@ -802,4 +802,66 @@ TEST_CASE ("unit/manager_leaders_de") {
   bots.Destroy ();
 }
 
+// issue 681: a noclipping human keeps team and health, so autokill must not fire
+TEST_CASE ("unit/manager_autokill") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootManager (engine, cs);
+
+  bots.Addbot ("NoclipA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("NoclipB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 2));
+
+  edict_t *human = CreateHuman ("Noclipper");
+  HOST_REQUIRE (!game.IsNullEntity (human));
+
+  Bot *a = testhost::FindBot ("NoclipA");
+  Bot *b = testhost::FindBot ("NoclipB");
+  HOST_REQUIRE (a != nullptr && b != nullptr);
+
+  for (Bot *bot : { a, b }) {
+    bot->pev->health = 100.0f;
+    bot->pev->deadflag = DEAD_NO;
+    bot->is_alive_ = true; // pumped bots never ran Update, mark the live round state by hand
+  }
+  clients.Update ();
+
+  clients[human].team2 = Team::Terrorist;
+  human->v.health = 100.0f;
+  human->v.deadflag = DEAD_NO;
+  clients.Update ();
+
+  cv_autokill_delay.Set (5.0f);
+
+  // living human on a team: still in the round
+  CHECK (bots.GetAliveHumansCount () == 1);
+
+  // console/cheat noclip keeps team and health: still in the round, no kill after the delay
+  human->v.movetype = MOVETYPE_NOCLIP;
+  clients.Update ();
+  CHECK (bots.GetAliveHumansCount () == 1);
+
+  const int touch_base = testhost::CsCalls (cs, "Touch");
+  bots.MaintainAutoKill ();
+  engine.AdvanceTime (6.0f);
+  bots.MaintainAutoKill ();
+  CHECK (testhost::CsCalls (cs, "Touch") == touch_base);
+  CHECK (a->is_alive_ && b->is_alive_);
+
+  // control: a truly dead human still arms the timer and the bots die after the delay
+  human->v.movetype = MOVETYPE_WALK;
+  human->v.deadflag = DEAD_DEAD;
+  human->v.health = 0.0f;
+  clients.Update ();
+  CHECK (bots.GetAliveHumansCount () == 0);
+
+  bots.MaintainAutoKill ();
+  engine.AdvanceTime (6.0f);
+  bots.MaintainAutoKill ();
+  CHECK (testhost::CsCalls (cs, "Touch") > touch_base);
+
+  bots.Destroy ();
+}
+
 } // namespace bot

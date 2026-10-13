@@ -649,9 +649,10 @@ void Manager::InitQuota () {
 void Manager::ServerFill (CSTeam team, Personality personality, Difficulty difficulty, int num_to_add) {
   // this function fill server with bots, with specified team & personality
 
+  const auto keep_slots = cv_autovacate_keep_slots.As<int> ();
+
   // always keep one slot
-  const int max_clients = cv_autovacate
-                            ? game.MaxClients () - cv_autovacate_keep_slots.As<int> () - (game.IsDedicatedServer () ? 0 : GetHumansCount ())
+  const int max_clients = cv_autovacate ? game.MaxClients () - keep_slots - (game.IsDedicatedServer () ? 0 : GetHumansCount ())
                             : game.MaxClients ();
 
   if (GetBotCount () >= max_clients - GetHumansCount ()) {
@@ -1431,12 +1432,21 @@ int Manager::GetHumansCount (bool ignore_spectators) {
 }
 
 int Manager::GetAliveHumansCount () {
-  // this function returns number of humans playing on the server
+  // this function returns number of humans still in the round
+
+  // console/cheat noclip keeps the team (unlike a real spectator), so such a human is still in the round
+  auto is_still_in_round = [] (const Client &client) {
+    return (client.team2 == Team::Terrorist || client.team2 == Team::CT) && client.ent->v.deadflag == DEAD_NO &&
+      client.ent->v.health > 0.0f;
+  };
 
   int count = 0;
 
   for (const auto &client : clients) {
-    if (client.IsUsedAndAlive () && client.IsHuman ()) {
+    if (!client.IsUsed () || !client.IsHuman ()) {
+      continue;
+    }
+    if (client.IsUsedAndAlive () || is_still_in_round (client)) {
       ++count;
     }
   }
