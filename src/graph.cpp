@@ -150,13 +150,9 @@ bool Graph::HasFreeLinkSlot (int index) const {
   if (!Exists (index)) {
     return false;
   }
-
-  for (const auto &link : paths_[index].links) {
-    if (link.index == kInvalidNodeIndex) {
-      return true;
-    }
-  }
-  return false;
+  return ystl::find_if (paths_[index].links, [] (const auto &link) {
+    return link.index == kInvalidNodeIndex;
+  }) != nullptr;
 }
 
 bool Graph::IsWalkableSlope (const ystl::Vector &src, const ystl::Vector &dst) const {
@@ -854,13 +850,9 @@ bool Graph::IsConnected (int a, int b) {
   if (!Exists (a) || !Exists (b)) {
     return false;
   }
-
-  for (const auto &link : paths_[a].links) {
-    if (link.index == b) {
-      return true;
-    }
-  }
-  return false;
+  return ystl::find_if (paths_[a].links, [&] (const auto &link) {
+    return link.index == b;
+  }) != nullptr;
 }
 
 int Graph::GetFacingIndex () {
@@ -2730,14 +2722,15 @@ void Graph::Frame () {
 
         // draw node without additional flags
         if (node_flag_color.red == -1) {
-          game.DrawLine (editor_, path.origin - ystl::Vector (0.0f, 0.0f, node_half_height), path.origin + ystl::Vector (0.0f, 0.0f, node_half_height),
-            node_width + 1, 0, node_color, 250, 0, 10);
+          game.DrawLine (editor_, path.origin - ystl::Vector (0.0f, 0.0f, node_half_height),
+            path.origin + ystl::Vector (0.0f, 0.0f, node_half_height), node_width + 1, 0, node_color, 250, 0, 10);
         }
 
         // draw node with flags
         else {
           game.DrawLine (editor_, path.origin - ystl::Vector (0.0f, 0.0f, node_half_height),
-            path.origin - ystl::Vector (0.0f, 0.0f, node_half_height - node_height * 0.75f), node_width, 0, node_color, 250, 0, 10); // draw basic path
+            path.origin - ystl::Vector (0.0f, 0.0f, node_half_height - node_height * 0.75f), node_width, 0, node_color, 250, 0,
+            10); // draw basic path
           game.DrawLine (editor_, path.origin - ystl::Vector (0.0f, 0.0f, node_half_height - node_height * 0.75f),
             path.origin + ystl::Vector (0.0f, 0.0f, node_half_height), node_width, 0, node_flag_color, 250, 0, 10); // draw additional path
         }

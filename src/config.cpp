@@ -85,12 +85,9 @@ void Config::LoadMainConfig (bool is_first_load) {
   SetupMemoryFiles ();
 
   auto needs_to_ignore_var = [] (ystl::Array<ystl::String> &list, const char *needle) {
-    for (const auto &var : list) {
-      if (var == needle) {
-        return true;
-      }
-    }
-    return false;
+    return ystl::find_if (list, [&] (const auto &var) {
+      return var == needle;
+    }) != nullptr;
   };
 
   auto store_var_value = [] (cvar_t *c, ystl::StringRef value) {
@@ -625,14 +622,9 @@ void Config::LoadChatterConfig () {
         if (node->name () == "RewritePath") {
           continue;
         }
-        const EventMap *event_def = nullptr;
-
-        for (const auto &event : kChatterEventMap) {
-          if (event.name == node->name ()) {
-            event_def = &event;
-            break;
-          }
-        }
+        const EventMap *event_def = ystl::find_if (kChatterEventMap, [&] (const auto &event) {
+          return event.name == node->name ();
+        });
 
         if (!event_def) {
           ystl::logger.error ("chatter.%s: unknown chatter event '%s'. Entry ignored.", kConfigExtension, node->name ().chars ());
@@ -1257,12 +1249,10 @@ char Config::GetMaterialType (const char *texture) {
     name += 1;
   }
 
-  for (const auto &entry : material_types_) {
-    if (ystl::strings.matches (entry.name.chars (), name)) {
-      return entry.type;
-    }
-  }
-  return 'C'; // unknown textures count as concrete, like the game
+  const auto *match = material_types_.find_if ([&] (const auto &entry) {
+    return ystl::strings.matches (entry.name.chars (), name);
+  });
+  return match != nullptr ? match->type : 'C'; // unknown textures count as concrete, like the game
 }
 
 bool Config::HasMaterialTypes () {

@@ -239,14 +239,9 @@ bool Bot::IsPenetrableObstacle4 (const ystl::Vector &dest, [[maybe_unused]] int 
     }
   };
 
-  const BulletParams *params = nullptr;
-
-  for (const auto &entry : kBulletParams) {
-    if (entry.id == current_weapon_) {
-      params = &entry;
-      break;
-    }
-  }
+  const BulletParams *params = ystl::find_if (kBulletParams, [&] (const auto &entry) {
+    return entry.id == current_weapon_;
+  });
 
   if (params == nullptr || params->count <= 0) {
     return false;
@@ -1628,12 +1623,10 @@ bool Bot::ValidatePickupByType (edict_t *ent, Pickup pickup_type) {
         auto model = ent->v.model.str (9);
         const auto &tab = conf.GetWeapons ();
 
-        for (const auto &rw : tab) {
-          if (rw.model == model) {
-            return false; // it's a weapon, not ammo
-          }
-        }
-        return true; // not found in weapon list, allow ammo pickup
+        // not found in weapon list, allow ammo pickup
+        return ystl::find_if (tab, [&] (const auto &rw) {
+          return rw.model == model;
+        }) == nullptr;
       }
       return false;
     }

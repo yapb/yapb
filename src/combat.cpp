@@ -13,42 +13,22 @@ int Bot::NumFriendsNear (const ystl::Vector &origin, const float radius) const {
   if (game.Is (GameFlags::FreeForAll)) {
     return 0; // no friends on free for all mode
   }
-
-  int count = 0;
   const float radius_sq = ystl::sqrf (radius);
 
-  for (const auto &client : clients) {
-    if (!client.IsTeammate (team_, Ent ())) {
-      continue;
-    }
-
-    if (client.IsInRadius (origin, radius_sq)) {
-      count++;
-    }
-  }
-  return count;
+  return static_cast<int> (ystl::count_if (clients, [&] (const auto &client) {
+    return client.IsTeammate (team_, Ent ()) && client.IsInRadius (origin, radius_sq);
+  }));
 }
 
 int Bot::NumEnemiesNear (const ystl::Vector &origin, const float radius) const {
-  int count = 0;
   const float radius_sq = ystl::sqrf (radius);
   const bool free_for_all = game.Is (GameFlags::FreeForAll);
 
-  for (const auto &client : clients) {
-    if (!client.IsUsedAndAlive () || client.ent == Ent ()) {
-      continue;
-    }
-
-    // on free-for-all every other player is a hostile
-    if (!free_for_all && client.IsSameTeam (team_)) {
-      continue;
-    }
-
-    if (client.IsInRadius (origin, radius_sq)) {
-      count++;
-    }
-  }
-  return count;
+  // on free-for-all every other player is a hostile
+  return static_cast<int> (ystl::count_if (clients, [&] (const auto &client) {
+    return client.IsUsedAndAlive () && client.ent != Ent () && (free_for_all || !client.IsSameTeam (team_)) &&
+           client.IsInRadius (origin, radius_sq);
+  }));
 }
 
 bool Bot::IsEnemyHidden (edict_t *enemy) {

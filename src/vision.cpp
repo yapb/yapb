@@ -305,12 +305,9 @@ bool Frustum::Check (const Planes &planes, edict_t *ent) const {
   const float height = (ent->v.flags & FL_DUCKING) ? 36.0f : 72.0f;
   const float radius = 16.0f;
 
-  for (const auto &plane : planes) {
-    if (!IsObjectInsidePlane (plane, origin, height, radius)) {
-      return false;
-    }
-  }
-  return true;
+  return ystl::find_if (planes, [&] (const auto &plane) {
+    return !IsObjectInsidePlane (plane, origin, height, radius);
+  }) == nullptr;
 }
 
 void Bot::SetAimDirection () {

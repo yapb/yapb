@@ -91,10 +91,10 @@ float PlannerHeuristicFastHostage::G (Team, int current_index, int parent_index,
     if (has_flag (graph[current_index].flags, NodeFlag::NoHostage)) {
       return kInfiniteHeuristic;
     }
-    for (const auto &link : graph[parent_index].links) {
-      if (link.index == current_index && has_flag (link.flags, PathFlag::Jump)) {
-        return kInfiniteHeuristic;
-      }
+    if (ystl::find_if (graph[parent_index].links, [&] (const auto &link) {
+          return link.index == current_index && has_flag (link.flags, PathFlag::Jump);
+        }) != nullptr) {
+      return kInfiniteHeuristic;
     }
   }
   if (has_flag (graph[current_index].flags, NodeFlag::Crouch | NodeFlag::Ladder)) {
@@ -208,10 +208,10 @@ float PlannerHeuristicOptimalHostage::G (Team team, int current_index, int paren
     if (has_flag (graph[current_index].flags, NodeFlag::NoHostage)) {
       return kInfiniteHeuristic;
     }
-    for (const auto &link : graph[parent_index].links) {
-      if (link.index == current_index && has_flag (link.flags, PathFlag::Jump)) {
-        return kInfiniteHeuristic;
-      }
+    if (ystl::find_if (graph[parent_index].links, [&] (const auto &link) {
+          return link.index == current_index && has_flag (link.flags, PathFlag::Jump);
+        }) != nullptr) {
+      return kInfiniteHeuristic;
     }
   }
   auto cost = practice.GetDamageEx (team, current_index, current_index, true);
@@ -333,10 +333,10 @@ float PlannerHeuristicSafeHostage::G (Team team, int current_index, int parent_i
     if (has_flag (graph[current_index].flags, NodeFlag::NoHostage)) {
       return kInfiniteHeuristic;
     }
-    for (const auto &link : graph[parent_index].links) {
-      if (link.index == current_index && has_flag (link.flags, PathFlag::Jump)) {
-        return kInfiniteHeuristic;
-      }
+    if (ystl::find_if (graph[parent_index].links, [&] (const auto &link) {
+          return link.index == current_index && has_flag (link.flags, PathFlag::Jump);
+        }) != nullptr) {
+      return kInfiniteHeuristic;
     }
   }
   auto cost = practice.GetDamageEx (team, current_index, current_index, false);
@@ -451,18 +451,12 @@ bool AStarAlgo::CantSkipNode (const int a, const int b, bool skip_vis_check) {
   if (too_far || too_close) {
     return true;
   }
-  for (const auto &link : ag.links) {
-    if (link.index != kInvalidNodeIndex && has_flag (link.flags, PathFlag::Jump)) {
-      return true;
-    }
-  }
-
-  for (const auto &link : bg.links) {
-    if (link.index != kInvalidNodeIndex && has_flag (link.flags, PathFlag::Jump)) {
-      return true;
-    }
-  }
-  return false;
+  const auto has_jump = [] (const auto &links) {
+    return ystl::find_if (links, [] (const auto &link) {
+      return link.index != kInvalidNodeIndex && has_flag (link.flags, PathFlag::Jump);
+    }) != nullptr;
+  };
+  return has_jump (ag.links) || has_jump (bg.links);
 }
 
 void AStarAlgo::PostSmooth (NodeAdderFn on_added_node) {

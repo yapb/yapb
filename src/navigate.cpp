@@ -526,13 +526,9 @@ int Bot::FindGoalPost (GoalTactic tactic, ystl::SmallArray<int32_t> *defensive, 
   }
 
   // count valid goals (exclude negative/invalid values)
-  int valid_count = 0;
-
-  for (int i = 0; i < 4; ++i) {
-    if (goal_choices[i] != kInvalidNodeIndex) {
-      ++valid_count;
-    }
-  }
+  const int valid_count = static_cast<int> (ystl::count_if (goal_choices, [] (int goal) {
+    return goal != kInvalidNodeIndex;
+  }));
 
   // sort only valid goals by practice value (ascending = closer/better goals first)
   ystl::bubble_sort (goal_choices, static_cast<size_t> (valid_count), [this] (int a, int b) {
@@ -1368,8 +1364,8 @@ void Bot::MoveToGoal () {
     if (has_flag (path_flags_, NodeFlag::Camp | NodeFlag::Goal)) {
       Trace::Result tr {};
 
-      trace.Line (path_origin_ + ystl::Vector (0.0f, 0.0f, 12.0f), path_origin_ + ystl::Vector (0.0f, 0.0f, 46.0f),
-        TraceIgnore::Everything, Ent (), &tr);
+      trace.Line (
+        path_origin_ + ystl::Vector (0.0f, 0.0f, 12.0f), path_origin_ + ystl::Vector (0.0f, 0.0f, 46.0f), TraceIgnore::Everything, Ent (), &tr);
 
       if (tr.fraction >= 0.95f) {
         press_duck = false;
@@ -2482,13 +2478,9 @@ bool Bot::FindNextBestNodeEx (const ystl::Array<int32_t> &data, bool handle_fail
 
   // select random candidate from valid ones
   int selected = kInvalidNodeIndex;
-  int valid_count = 0;
-
-  for (const auto &cand : candidates) {
-    if (cand.index != kInvalidNodeIndex) {
-      ++valid_count;
-    }
-  }
+  const int valid_count = static_cast<int> (ystl::count_if (candidates, [] (const auto &cand) {
+    return cand.index != kInvalidNodeIndex;
+  }));
 
   if (valid_count > 0) {
     const int pick_idx = (valid_count == 1) ? 0 : rg (0, valid_count - 1);
@@ -2737,13 +2729,9 @@ int Bot::FindNearestNode () {
 
   // select random candidate from valid ones
   int selected = kInvalidNodeIndex;
-  int valid_count = 0;
-
-  for (const auto &cand : candidates) {
-    if (cand.index != kInvalidNodeIndex) {
-      ++valid_count;
-    }
-  }
+  int valid_count = static_cast<int> (ystl::count_if (candidates, [] (const auto &cand) {
+    return cand.index != kInvalidNodeIndex;
+  }));
 
   if (valid_count > 0) {
     const int pick_idx = (valid_count == 1) ? 0 : rg (0, valid_count - 1);
@@ -2806,13 +2794,9 @@ int Bot::FindNearestNode () {
 
   // select random candidate from valid ones
   selected = kInvalidNodeIndex;
-  valid_count = 0;
-
-  for (const auto &cand : candidates) {
-    if (cand.index != kInvalidNodeIndex) {
-      ++valid_count;
-    }
-  }
+  valid_count = static_cast<int> (ystl::count_if (candidates, [] (const auto &cand) {
+    return cand.index != kInvalidNodeIndex;
+  }));
 
   if (valid_count > 0) {
     const int pick_idx = (valid_count == 1) ? 0 : rg (0, valid_count - 1);
@@ -2948,13 +2932,9 @@ int Bot::FindBombNode () {
 
   // select random candidate from valid ones
   int selected = kInvalidNodeIndex;
-  int valid_count = 0;
-
-  for (const auto &cand : candidates) {
-    if (cand.index != kInvalidNodeIndex) {
-      ++valid_count;
-    }
-  }
+  const int valid_count = static_cast<int> (ystl::count_if (candidates, [] (const auto &cand) {
+    return cand.index != kInvalidNodeIndex;
+  }));
 
   if (valid_count > 0) {
     const int pick_idx = (valid_count == 1) ? 0 : rg (0, valid_count - 1);
@@ -3441,7 +3421,7 @@ bool Bot::AdvanceMovement () {
       const float diff = ystl::abs (graph[from].origin.z - graph[to].origin.z);
 
       return graph[to].origin.z > graph[from].origin.z && diff > cv_graph_slope_height.As<float> () &&
-        !IsWalkableAscent (graph[from].origin, graph[to].origin);
+             !IsWalkableAscent (graph[from].origin, graph[to].origin);
     };
 
     if (!path_walk_.Empty ()) {

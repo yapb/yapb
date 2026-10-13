@@ -652,8 +652,8 @@ void Manager::ServerFill (CSTeam team, Personality personality, Difficulty diffi
   const auto keep_slots = cv_autovacate_keep_slots.As<int> ();
 
   // always keep one slot
-  const int max_clients = cv_autovacate ? game.MaxClients () - keep_slots - (game.IsDedicatedServer () ? 0 : GetHumansCount ())
-                            : game.MaxClients ();
+  const int max_clients =
+    cv_autovacate ? game.MaxClients () - keep_slots - (game.IsDedicatedServer () ? 0 : GetHumansCount ()) : game.MaxClients ();
 
   if (GetBotCount () >= max_clients - GetHumansCount ()) {
     return;
@@ -1436,8 +1436,7 @@ int Manager::GetAliveHumansCount () {
 
   // console/cheat noclip keeps the team (unlike a real spectator), so such a human is still in the round
   auto is_still_in_round = [] (const Client &client) {
-    return (client.team2 == Team::Terrorist || client.team2 == Team::CT) && client.ent->v.deadflag == DEAD_NO &&
-      client.ent->v.health > 0.0f;
+    return (client.team2 == Team::Terrorist || client.team2 == Team::CT) && client.ent->v.deadflag == DEAD_NO && client.ent->v.health > 0.0f;
   };
 
   int count = 0;
@@ -1521,12 +1520,9 @@ void Manager::DisconnectBot (Bot *bot) {
   // unlink from the live set first, the owned object dies with the array below
   bots_.unlink (*bot);
 
-  for (size_t i = 0; i < owned_bots_.size (); ++i) {
-    if (owned_bots_[i].get () == bot) {
-      owned_bots_.erase (i, 1);
-      break;
-    }
-  }
+  owned_bots_.erase_if ([bot] (const UniqueBot &owned) {
+    return owned.get () == bot;
+  });
 }
 
 void Manager::HandleDeath (edict_t *killer, edict_t *victim) {

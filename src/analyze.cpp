@@ -144,14 +144,10 @@ bool ConnectionCleaner::InspectPair (int pos) {
 }
 
 void ConnectionCleaner::InspectSeamPair () {
-  int pos = -1;
-
-  for (int i = 0; i < count_; ++i) {
-    if (links_[i].slot == isolated_slot_) {
-      pos = i;
-      break;
-    }
-  }
+  const auto *found = ystl::find_if (links_.data (), static_cast<size_t> (count_), [this] (const Link &link) {
+    return link.slot == isolated_slot_;
+  });
+  int pos = found != nullptr ? static_cast<int> (found - links_.data ()) : -1;
 
   if (pos < 0) {
     return; // the remembered link was already removed by the pair pass
@@ -611,13 +607,9 @@ float GraphAnalyze::NodeImportance (int index) const {
   const auto &path = graph[index];
   float importance = 1.0f;
 
-  int connections = 0;
-
-  for (const auto &link : path.links) {
-    if (link.index != kInvalidNodeIndex && graph.Exists (link.index) && link.index != index) {
-      ++connections;
-    }
-  }
+  const int connections = static_cast<int> (ystl::count_if (path.links, [&] (const auto &link) {
+    return link.index != kInvalidNodeIndex && graph.Exists (link.index) && link.index != index;
+  }));
   importance += static_cast<float> (connections) * 2.0f;
 
   if (has_flag (path.flags, NodeFlag::Goal)) {
@@ -640,11 +632,10 @@ float GraphAnalyze::NodeImportance (int index) const {
     if (i == index) {
       continue;
     }
-    for (const auto &link : graph[i].links) {
-      if (link.index == index) {
-        importance += 1.5f;
-        break;
-      }
+    if (ystl::find_if (graph[i].links, [&] (const auto &link) {
+          return link.index == index;
+        }) != nullptr) {
+      importance += 1.5f;
     }
   }
   return importance;
@@ -742,14 +733,9 @@ bool GraphAnalyze::PassRemoveCollinear () {
       if (from == i || optimized_nodes_[from]) {
         continue;
       }
-      bool has_from = false;
-
-      for (const auto &link : graph[from].links) {
-        if (link.index == i) {
-          has_from = true;
-          break;
-        }
-      }
+      const bool has_from = ystl::find_if (graph[from].links, [&] (const auto &link) {
+        return link.index == i;
+      }) != nullptr;
 
       if (!has_from) {
         continue;
@@ -827,13 +813,9 @@ bool GraphAnalyze::PassRemoveUnconnected () {
       continue; // node 0 is the root of all traversals, never erase it silently
     }
 
-    int outgoing = 0;
-
-    for (const auto &link : graph[i].links) {
-      if (graph.Exists (link.index) && link.index != i) {
-        ++outgoing;
-      }
-    }
+    const int outgoing = static_cast<int> (ystl::count_if (graph[i].links, [&] (const auto &link) {
+      return graph.Exists (link.index) && link.index != i;
+    }));
 
     if (outgoing > 0) {
       continue;
@@ -844,12 +826,9 @@ bool GraphAnalyze::PassRemoveUnconnected () {
       if (j == i || optimized_nodes_[j]) {
         continue;
       }
-      for (const auto &link : graph[j].links) {
-        if (link.index == i) {
-          incoming = true;
-          break;
-        }
-      }
+      incoming = ystl::find_if (graph[j].links, [&] (const auto &link) {
+        return link.index == i;
+      }) != nullptr;
     }
 
     if (!incoming) {
@@ -865,13 +844,9 @@ bool GraphAnalyze::HasFreeLinkSlot (int index) const {
   if (!graph.Exists (index)) {
     return false;
   }
-
-  for (const auto &link : graph[index].links) {
-    if (link.index == kInvalidNodeIndex) {
-      return true;
-    }
-  }
-  return false;
+  return ystl::find_if (graph[index].links, [] (const auto &link) {
+    return link.index == kInvalidNodeIndex;
+  }) != nullptr;
 }
 
 bool GraphAnalyze::HasJumpLink (int index) const {
@@ -879,10 +854,10 @@ bool GraphAnalyze::HasJumpLink (int index) const {
     return false;
   }
 
-  for (const auto &link : graph[index].links) {
-    if (link.index != kInvalidNodeIndex && has_flag (link.flags, PathFlag::Jump)) {
-      return true;
-    }
+  if (ystl::find_if (graph[index].links, [] (const auto &link) {
+        return link.index != kInvalidNodeIndex && has_flag (link.flags, PathFlag::Jump);
+      }) != nullptr) {
+    return true;
   }
 
   for (int i = 0; i < graph.Length (); ++i) {
@@ -890,10 +865,10 @@ bool GraphAnalyze::HasJumpLink (int index) const {
       continue;
     }
 
-    for (const auto &link : graph[i].links) {
-      if (link.index == index && has_flag (link.flags, PathFlag::Jump)) {
-        return true;
-      }
+    if (ystl::find_if (graph[i].links, [&] (const auto &link) {
+          return link.index == index && has_flag (link.flags, PathFlag::Jump);
+        }) != nullptr) {
+      return true;
     }
   }
   return false;
@@ -903,13 +878,10 @@ bool GraphAnalyze::LinkHasJump (int from, int to) const {
   if (!graph.Exists (from) || !graph.Exists (to)) {
     return false;
   }
-
-  for (const auto &link : graph[from].links) {
-    if (link.index == to) {
-      return has_flag (link.flags, PathFlag::Jump);
-    }
-  }
-  return false;
+  const auto *jump = ystl::find_if (graph[from].links, [&] (const auto &link) {
+    return link.index == to;
+  });
+  return jump != nullptr && has_flag (jump->flags, PathFlag::Jump);
 }
 
 bool GraphAnalyze::LinkNodes (int from, int to) {
@@ -1457,14 +1429,9 @@ bool GraphAnalyze::MarkCampsSlice () {
     }
 
     // keep spacing between camp nodes
-    bool crowded = false;
-
-    for (const auto &at : accepted) {
-      if (path.origin.distance_sq (at) < ystl::sqrf (kCampSpacing)) {
-        crowded = true;
-        break;
-      }
-    }
+    const bool crowded = ystl::find_if (accepted, [&] (const auto &at) {
+      return path.origin.distance_sq (at) < ystl::sqrf (kCampSpacing);
+    }) != nullptr;
 
     if (crowded) {
       continue;
