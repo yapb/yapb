@@ -247,7 +247,7 @@ bool Bot::CheckBodyPartsWithOffsets (edict_t *target) {
   ystl::Vector dir = (target->v.origin - pev->origin).normalize2d ();
 
   ystl::Vector perp (-dir.y, dir.x, 0.0f);
-  spot = target->v.origin + ystl::Vector (perp.x * kEdgeOffset, perp.y * kEdgeOffset, 0);
+  spot = target->v.origin + ystl::Vector (perp.x * kEdgeOffset, perp.y * kEdgeOffset, 0.0f);
 
   trace.Line (eyes, spot, ignore_flags, self, &result);
 
@@ -257,7 +257,7 @@ bool Bot::CheckBodyPartsWithOffsets (edict_t *target) {
 
     return true;
   }
-  spot = target->v.origin - ystl::Vector (perp.x * kEdgeOffset, perp.y * kEdgeOffset, 0);
+  spot = target->v.origin - ystl::Vector (perp.x * kEdgeOffset, perp.y * kEdgeOffset, 0.0f);
 
   trace.Line (eyes, spot, ignore_flags, self, &result);
 

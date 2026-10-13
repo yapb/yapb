@@ -2730,16 +2730,16 @@ void Graph::Frame () {
 
         // draw node without additional flags
         if (node_flag_color.red == -1) {
-          game.DrawLine (editor_, path.origin - ystl::Vector (0, 0, node_half_height), path.origin + ystl::Vector (0, 0, node_half_height),
+          game.DrawLine (editor_, path.origin - ystl::Vector (0.0f, 0.0f, node_half_height), path.origin + ystl::Vector (0.0f, 0.0f, node_half_height),
             node_width + 1, 0, node_color, 250, 0, 10);
         }
 
         // draw node with flags
         else {
-          game.DrawLine (editor_, path.origin - ystl::Vector (0, 0, node_half_height),
-            path.origin - ystl::Vector (0, 0, node_half_height - node_height * 0.75f), node_width, 0, node_color, 250, 0, 10); // draw basic path
-          game.DrawLine (editor_, path.origin - ystl::Vector (0, 0, node_half_height - node_height * 0.75f),
-            path.origin + ystl::Vector (0, 0, node_half_height), node_width, 0, node_flag_color, 250, 0, 10); // draw additional path
+          game.DrawLine (editor_, path.origin - ystl::Vector (0.0f, 0.0f, node_half_height),
+            path.origin - ystl::Vector (0.0f, 0.0f, node_half_height - node_height * 0.75f), node_width, 0, node_color, 250, 0, 10); // draw basic path
+          game.DrawLine (editor_, path.origin - ystl::Vector (0.0f, 0.0f, node_half_height - node_height * 0.75f),
+            path.origin + ystl::Vector (0.0f, 0.0f, node_half_height), node_width, 0, node_flag_color, 250, 0, 10); // draw additional path
         }
         path.display = game.Time ();
       }

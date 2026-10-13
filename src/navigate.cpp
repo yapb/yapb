@@ -1368,7 +1368,8 @@ void Bot::MoveToGoal () {
     if (has_flag (path_flags_, NodeFlag::Camp | NodeFlag::Goal)) {
       Trace::Result tr {};
 
-      trace.Line (path_origin_ + ystl::Vector (0, 0, 12), path_origin_ + ystl::Vector (0, 0, 46), TraceIgnore::Everything, Ent (), &tr);
+      trace.Line (path_origin_ + ystl::Vector (0.0f, 0.0f, 12.0f), path_origin_ + ystl::Vector (0.0f, 0.0f, 46.0f),
+        TraceIgnore::Everything, Ent (), &tr);
 
       if (tr.fraction >= 0.95f) {
         press_duck = false;
