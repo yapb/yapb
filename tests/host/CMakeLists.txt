@@ -164,22 +164,29 @@ set(DISCOVERED_TESTS "${CMAKE_CURRENT_BINARY_DIR}/discovered_tests.cmake")
 # ctest errors on a missing include, so seed an empty one before the first build
 file(WRITE "${DISCOVERED_TESTS}" "# pending yapb_testhost build\n")
 
-add_custom_command(TARGET yapb_testhost POST_BUILD
+# discovery reruns whenever the host or a staged game dll changes, so adding
+# a scenario never requires touching CMake: drop the .cpp, rebuild, ctest sees it
+add_custom_command(
+    OUTPUT "${DISCOVERED_TESTS}"
     COMMAND ${CMAKE_COMMAND}
         "-DTEST_EXECUTABLE=$<TARGET_FILE:yapb_testhost>"
         "-DTEST_OUTPUT=${DISCOVERED_TESTS}"
         "-DTEST_GAMEDIR=${TEST_GAMEDIR}"
         "-DTEST_WINDOWS=${WIN32}"
+        "-DTEST_CSSUFFIX=cs${FAKECS_SUFFIX}${FAKECS_EXT}"
         -P "${PROJECT_SOURCE_DIR}/tests/cmake/DiscoverTests.cmake"
+    DEPENDS yapb_testhost fake_cs fake_cs_modern fake_cs_regame
     COMMENT "Discovering yapb test cases"
     VERBATIM
 )
+
+add_custom_target(discover_yapb_tests ALL DEPENDS "${DISCOVERED_TESTS}")
 
 set_property(DIRECTORY APPEND PROPERTY TEST_INCLUDE_FILES "${DISCOVERED_TESTS}")
 
 add_custom_target(run-tests
     COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
-    DEPENDS yapb_testhost fake_cs
+    DEPENDS discover_yapb_tests fake_cs
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT "Running yapb test host"
     USES_TERMINAL

@@ -286,6 +286,13 @@ void FakeEngine::Initialise (const char *game_dir, int max_clients) {
     ystl::plat.set_working_directory (parent.chars ());
   }
 
+  // ctest isolates each case in its own scratch dir under the install root
+  const char *workdir = ystl::plat.env ("YAPB_TEST_WORKDIR");
+
+  if (workdir[0] != '\0') {
+    ystl::plat.set_working_directory (workdir);
+  }
+
   // wipe edicts; edict 0 is worldspawn
   for (auto &e : edicts) {
     e = edict_t {};

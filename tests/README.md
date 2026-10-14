@@ -382,9 +382,9 @@ for (int i = 0; i < 100; ++i) {
 }
 ```
 
-- The harness runs with CWD at the staged gamedir (ctest sets
-  `WORKING_DIRECTORY`), like a real server: the relative
-  `cstrike/dlls/cs_amd64.so` lookup resolves from there.
+- The harness runs with CWD at a per-case scratch dir under the staged
+  gamedir (ctest sets `WORKING_DIRECTORY`), like a real server: the install
+  root layout stays intact while fixtures and saves never leak across cases.
 - `fake_cs.so` is staged automatically after build into
   `<build>/tests/host/gamedir/cstrike/dlls/`.
 - ystl `REQUIRE` only records failures, it never aborts: hard
@@ -397,9 +397,9 @@ for (int i = 0; i < 100; ++i) {
 1. New file in `host/scenarios/` (one file per covered prod file,
    one or more `TEST_CASE("area/name")` per file).
 2. That is it: sources are globbed (`CONFIGURE_DEPENDS`) and ctest entries
-   are generated from the binary's own registry
-   (`tests/cmake/DiscoverTests.cmake` runs `--list-tests` as a POST_BUILD
-   step). Scenarios that need the modern/regame staging tag their case name
+    are generated from the binary's own registry
+    (the `discover_yapb_tests` target runs `--list-tests` via
+    `tests/cmake/DiscoverTests.cmake`). Scenarios that need the modern/regame staging tag their case name
    with `[modern]` / `[regame]`; everything else runs in `gamedir`.
 3. Drive via `FakeEngine` (trace hooks, cvars, `spawnClient`), assert via
    public bot API + `engine.calls()/heardSounds()/messages()` + FakeCS log.
@@ -418,8 +418,8 @@ The bot singletons cannot be reset, so the host runs one case per process:
 with no/loose filter it re-execs itself per case (like ctest), and a single
 `--filter=` runs in-process.
 
-Tests share the staged gamedir on disk, so run ctest serially (the
-`run-tests` target does); `ctest -j` can race on the config/graph files.
+Each case runs in its own scratch dir (`gamedir/work/<case>`, game dll
+mirrored), so `ctest -j` is safe: fixtures and saves never cross cases.
 
 ## Conventions
 
