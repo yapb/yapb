@@ -80,3 +80,4 @@ constexpr auto kBombPanicHearDistance = 2048.0f;
 constexpr auto kBombSiteGoalRadius = 1024.0f; // goals this close to a checked one belong to the same site
 
 } // namespace bot
+

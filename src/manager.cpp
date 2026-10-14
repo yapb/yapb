@@ -1083,18 +1083,15 @@ ystl::Twin<int, int> Manager::CountTeamPlayers () {
 }
 
 Bot *Manager::FindHighestFragBot (Team team) {
-  ystl::Twin<int32_t, float> best { -1, 0.0f };
+  Bot *best = nullptr;
 
   // search bots in this team
-  for (const auto &bot : bots) {
-    if (bot.is_alive_ && game.GetRealPlayerTeam (bot.Ent ()) == team) {
-      if (best.first == -1 || bot.pev->frags > best.second) {
-        best.first = bot.Index ();
-        best.second = bot.pev->frags;
-      }
+  for (auto &bot : bots_) {
+    if (bot.is_alive_ && game.GetRealPlayerTeam (bot.Ent ()) == team && (best == nullptr || bot.pev->frags > best->pev->frags)) {
+      best = &bot;
     }
   }
-  return best.first == -1 ? nullptr : FindBotByIndex (best.first);
+  return best;
 }
 
 void Manager::UpdateTeamEconomics (Team team, bool set_true) {
@@ -2264,25 +2261,16 @@ void Manager::SelectLeaders (Team team, bool reset) {
       leader_choosen_ct = true;
     }
   }
-  else if (game.MapIs (MapFlags::Escape | MapFlags::KnifeArena | MapFlags::FightYard)) {
-    auto bot = bots.FindHighestFragBot (team);
-
-    if (!leader_choosen && bot) {
-      bot->is_leader_ = true;
-
-      if (ystl::rg.chance (30)) {
-        bot->PushRadioChat (RadioChat::FollowMe);
-      }
-      leader_choosen = true;
-    }
-  }
   else {
     auto bot = bots.FindHighestFragBot (team);
 
     if (!leader_choosen && bot) {
       bot->is_leader_ = true;
 
-      if (ystl::rg.chance (team == Team::Terrorist ? 30 : 40)) {
+      const int follow_chance =
+        game.MapIs (MapFlags::Escape | MapFlags::KnifeArena | MapFlags::FightYard) ? 30 : (team == Team::Terrorist ? 30 : 40);
+
+      if (ystl::rg.chance (follow_chance)) {
         bot->PushRadioChat (RadioChat::FollowMe);
       }
       leader_choosen = true;
