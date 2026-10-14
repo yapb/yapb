@@ -707,6 +707,17 @@ TEST_CASE ("unit/control_debug") {
   RunCmd (engine, { "yb", "debug", "memory" });
   DrainPrints (engine);
 
+  // ...http diagnostics always answer with resolver/tls/cacert/url lines...
+  mark = PrintMark (engine);
+  RunCmd (engine, { "yb", "debug", "http" });
+  DrainPrints (engine);
+  CHECK (PrintedSince (engine, mark, "resolver:"));
+  CHECK (PrintedSince (engine, mark, "tls:"));
+  CHECK (PrintedSince (engine, mark, "cacert:"));
+  CHECK (PrintedSince (engine, mark, "download:"));
+  CHECK (PrintedSince (engine, mark, "upload:"));
+  CHECK (PrintedSince (engine, mark, "last http status:"));
+
   // ...god without a target needs the listenserver host...
   mark = PrintMark (engine);
   RunCmd (engine, { "yb", "debug", "god" });

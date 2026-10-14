@@ -184,6 +184,7 @@ private:
   CommandResult CmdDebugNotarget ();
   CommandResult CmdDebugExec ();
   CommandResult CmdDebugMemory ();
+  CommandResult CmdDebugHttp ();
 
   CommandResult CmdDebugTranslate ();
   edict_t *ResolveDebugTarget (int arg_index);

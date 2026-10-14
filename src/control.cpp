@@ -1574,6 +1574,27 @@ CommandResult Control::CmdDebugMemory () {
   return CommandResult::Handled;
 }
 
+CommandResult Control::CmdDebugHttp () {
+  Msg ("resolver: getaddrinfo (AF_INET only, dns timeout 3000ms).");
+
+#if defined(YSTL_WITH_TLS)
+  Msg ("tls: supported (vendored mbedtls).");
+#else
+  Msg ("tls: unsupported (https fails with HttpOnly).");
+#endif
+
+  const auto ca_path = ystl::strings.join_path (bstor.GetRunningPath (), folders.config, folders.extra, "cacert.pem");
+  Msg ("cacert: %s (%s).", ca_path.chars (), ystl::http.has_ca_bundle () ? "loaded" : "missing, https is unverified");
+
+  Msg ("download: %s.", graph_urls.DownloadBase ().chars ());
+  Msg ("upload: %s.", graph_urls.UploadBase ().chars ());
+  Msg ("download url: %s.", graph_urls.DownloadUrl (game.GetMapName ()).chars ());
+  Msg ("can download: %s, can collect: %s.", graph_urls.CanDownload () ? "yes" : "no", graph_urls.CanCollect () ? "yes" : "no");
+  Msg ("last http status: %d.", static_cast<int> (ystl::http.get_last_status_code ()));
+
+  return CommandResult::Handled;
+}
+
 CommandResult Control::CmdDebugTranslate () {
   enum args {
     root,
@@ -3010,6 +3031,7 @@ void Control::RegisterCommands () {
   debug_subcommands.emplace ("notarget", "notarget [id|name|host]", "Toggles notarget on a player.", &Control::CmdDebugNotarget);
   debug_subcommands.emplace ("exec", "exec [id|name|host] [command]", "Executes a client command on a player.", &Control::CmdDebugExec);
   debug_subcommands.emplace ("memory", "memory", "Displays memory allocation statistics.", &Control::CmdDebugMemory);
+  debug_subcommands.emplace ("http", "http", "Displays http/tls/cacert/graph-url diagnostics.", &Control::CmdDebugHttp);
   debug_subcommands.emplace ("translate", "translate [reset|write]",
     "Lists untranslated strings collected during play; 'write' appends them to the language config, 'reset' clears the list.",
     &Control::CmdDebugTranslate);
