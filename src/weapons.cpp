@@ -1814,10 +1814,7 @@ bool Bot::HandleCtBombPickup (const ystl::Vector &origin) {
 
 bool Bot::HandleCtDroppedC4 (edict_t *ent, const ystl::Vector &origin) {
   // handle dropped c4 pickup logic for ct team
-
-  ignored_items_.push (ent);
-
-  if (!defended_bomb_ && rg.chance (25 + Skill () / 2) && health_value_ < 60) {
+  if (!defended_bomb_ && rg.chance (25 + Skill () / 2)) {
     const int index = FindDefendNode (origin);
 
     StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex,
@@ -1827,6 +1824,7 @@ bool Bot::HandleCtDroppedC4 (edict_t *ent, const ystl::Vector &origin) {
     SelectCampButtons (index);
     defended_bomb_ = true;
 
+    ignored_items_.push (ent);
     PushRadioChat (RadioChat::GoingToGuardDroppedC4);
   }
   return false; // don't pickup dropped c4 as ct
