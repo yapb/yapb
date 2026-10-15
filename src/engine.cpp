@@ -948,8 +948,10 @@ void Game::ConstructCsBinaryName (ystl::SmallArray<ystl::String> &libs) {
 
   // clang-format off
    static constexpr Rule kCsBinaryRules[] = {
-      { "_android_arm64",  [] { return ystl::plat.android && ystl::plat.x64; } },
+      { "_android_arm64",  [] { return ystl::plat.android && ystl::plat.x64 && ystl::plat.arm; } },
+      { "_android_amd64",  [] { return ystl::plat.android && ystl::plat.x64 && !ystl::plat.arm; } },
       { "_android_armv7l", [] { return ystl::plat.android && ystl::plat.arm; } },
+      { "_android_i386",   [] { return ystl::plat.android && !ystl::plat.arm && !ystl::plat.x64; } },
       { "_psvita",         [] { return ystl::plat.psvita; } },
       { "_arm64",          [] { return ystl::plat.x64 && ystl::plat.arm; } },
       { "_ppc64le",        [] { return ystl::plat.x64 && ystl::plat.ppc; } },

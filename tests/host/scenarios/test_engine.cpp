@@ -45,6 +45,40 @@ TEST_CASE ("unit/engine_tables") {
   CHECK (libs[0] == "cs_amd64");
   CHECK (libs[1] == "mp_amd64");
 
+  // android x86 has neither arm nor x64 flags, still resolves its own lib
+  const bool saved_android = ystl::plat.android;
+  const bool saved_arm = ystl::plat.arm;
+  const bool saved_x64 = ystl::plat.x64;
+
+  ystl::plat.android = true;
+  ystl::plat.arm = false;
+  ystl::plat.x64 = false;
+
+  ystl::SmallArray<ystl::String> android_libs {};
+  game.ConstructCsBinaryName (android_libs);
+  HOST_REQUIRE (android_libs.size () == 1);
+  CHECK (android_libs[0] == "libcs_android_i386");
+
+  // android x86-64 is 64-bit but not arm, arm64 needs both flags
+  ystl::plat.arm = false;
+  ystl::plat.x64 = true;
+
+  ystl::SmallArray<ystl::String> android64_libs {};
+  game.ConstructCsBinaryName (android64_libs);
+  HOST_REQUIRE (android64_libs.size () == 1);
+  CHECK (android64_libs[0] == "libcs_android_amd64");
+
+  ystl::plat.arm = true;
+
+  ystl::SmallArray<ystl::String> android_arm64_libs {};
+  game.ConstructCsBinaryName (android_arm64_libs);
+  HOST_REQUIRE (android_arm64_libs.size () == 1);
+  CHECK (android_arm64_libs[0] == "libcs_android_arm64");
+
+  ystl::plat.android = saved_android;
+  ystl::plat.arm = saved_arm;
+  ystl::plat.x64 = saved_x64;
+
   // trace cache: first call misses, second hits, TTL expiry misses again
   int line_calls = 0;
   engine.SetTraceLineHook ([&] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
