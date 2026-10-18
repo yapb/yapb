@@ -104,6 +104,61 @@ void WriteConfFile (const ystl::String &path, ystl::StringRef text) {
   file.close ();
 }
 
+ystl::String MapSpecificFile () {
+  return ystl::strings.join_path (
+    bstor.GetRunningPath (), folders.config, "maps", ystl::strings.format ("de_test.%s", kConfigExtension));
+}
+
+ystl::String MaterialsFile () {
+  return ystl::strings.join_path ("sound", "materials.txt");
+}
+
+ystl::String WavePath (ystl::StringRef name) {
+  return ystl::strings.join_path (cv_chatter_path.As<ystl::StringRef> (), ystl::strings.format ("%s.wav", name));
+}
+
+void WriteWaveFile (const ystl::String &path) {
+  ystl::File::make_path (ystl::String (path.substr (0, path.find_last_of (kPathSeparator))).chars ());
+
+  // 8000 Hz 8-bit mono, 8000 frames: exactly one second of detectable audio...
+  ystl::String wav {};
+
+  wav += "RIFF";
+
+  auto push_le32 = [&] (uint32_t value) {
+    wav += static_cast<char> (value & 0xffu);
+    wav += static_cast<char> ((value >> 8) & 0xffu);
+    wav += static_cast<char> ((value >> 16) & 0xffu);
+    wav += static_cast<char> ((value >> 24) & 0xffu);
+  };
+
+  auto push_le16 = [&] (uint32_t value) {
+    wav += static_cast<char> (value & 0xffu);
+    wav += static_cast<char> ((value >> 8) & 0xffu);
+  };
+
+  push_le32 (8036u); // chunk size: header remainder plus 8000 frames
+  wav += "WAVE";
+  wav += "fmt ";
+  push_le32 (16u);
+  push_le16 (1u); // pcm
+  push_le16 (1u); // mono
+  push_le32 (8000u); // sample rate
+  push_le32 (8000u); // byte rate
+  push_le16 (1u); // block align
+  push_le16 (8u); // bits per sample
+  wav += "data";
+  push_le32 (8000u);
+
+  for (int i = 0; i < 8000; ++i) {
+    wav += static_cast<char> (0x80);
+  }
+  ystl::File file (path, "wb");
+  HOST_REQUIRE (!!file);
+  file.write (wav.chars (), wav.size (), 1);
+  file.close ();
+}
+
 } // namespace
 
 TEST_CASE ("unit/config_lookups") {
@@ -398,6 +453,675 @@ TEST_CASE ("unit/config_listen") {
   CHECK (saw_bind);
 
   testhost::CloseFakeCs (cs);
+}
+
+TEST_CASE ("unit/config_mainstay") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  // listen boot: the dedicated flag is cached on first query, unlock before anything asks...
+  engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
+  engine.SetDedicatedServer (false);
+
+  HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
+  cs.reset ();
+
+  GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
+  HOST_REQUIRE (cs.entered () != 0);
+
+  // fixtures next: the server activation runs the first main load, which samples the disable flag...
+  WriteConfFile (ConfFile ("custom"), "DisableLogFile = yes\n");
+  WriteConfFile (ConfFile ("yapb"), "; main config fixture\n\nyb_debug 1\nyb_quota 5\nyb_autovacate 0\nyb_no_such_cvar hello\n");
+
+  gamefuncs_t table {};
+  HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
+
+  game.Precache ();
+  table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
+
+  if (analyzer.IsAnalyzing ()) {
+    analyzer.Suspend ();
+  }
+  conf.InitWeapons ();
+
+  // pin the ignore list and quota: re-apply deterministically on top of whatever the boot left...
+  const ystl::String ignore_before = cv_ignore_cvars_on_changelevel.As<ystl::StringRef> ();
+  cv_ignore_cvars_on_changelevel.Set ("yb_quota,yb_autovacate");
+  cv_quota.Set (9);
+
+  // the boot load already applied the fixture: stored values stick, ignored ones keep theirs...
+  conf.LoadMainConfig (false);
+
+  // ...a stored debug value applies, ignored cvars keep their live values...
+  CHECK (cv_debug.As<int> () == 1);
+  CHECK (cv_quota.As<int> () == 9);
+  CHECK (cv_autovacate.As<int> () == 1);
+
+  bool saw_bind = false;
+
+  for (const auto &cmd : engine.ServerCommands ()) {
+    if (cmd.find ("bind") != ystl::String::InvalidIndex && cmd.find ("menu") != ystl::String::InvalidIndex) {
+      saw_bind = true;
+    }
+  }
+  CHECK (saw_bind);
+
+  // ...zero quota preserves the incoming value instead of the live one...
+  cv_quota.Set (0);
+  WriteConfFile (ConfFile ("yapb"), "; quota fixture\nyb_quota 5\n");
+  conf.LoadMainConfig (false);
+  CHECK (cv_quota.As<int> () == 5);
+  cv_quota.Set (9);
+
+  // ...the first load executes every line verbatim...
+  WriteConfFile (ConfFile ("yapb"), "; first load fixture\nyb_debug 0\n");
+  conf.LoadMainConfig (true);
+
+  bool saw_debug = false;
+
+  for (const auto &cmd : engine.ServerCommands ()) {
+    if (cmd.find ("yb_debug 0") != ystl::String::InvalidIndex) {
+      saw_debug = true;
+    }
+  }
+  CHECK (saw_debug);
+
+  // ...a missing file falls back to saving cvars...
+  ystl::plat.remove_file (ConfFile ("yapb").chars ());
+  conf.LoadMainConfig (false);
+
+  ystl::plat.remove_file (ConfFile ("custom").chars ());
+  conf.LoadCustomConfig ();
+
+  ystl::logger.set_log_write_enabled (true);
+  cv_debug.Set (0);
+  cv_quota.Set (9);
+  cv_ignore_cvars_on_changelevel.Set (ignore_before.chars ());
+  engine.SetDedicatedServer (true);
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/config_armory") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootConfig (engine, cs);
+
+  ystl::String order = "Knife USP Glock18 Deagle P228 Elite FiveSeven M3 XM1014 MP5 TMP P90 ";
+  order += "MAC10 UMP45 AK47 SG552 M4A1 Galil Famas AUG Scout AWP G3SG1 SG550 M249 Shield";
+
+  // teams, grenades, economy, delays and preferences in one pass...
+  ystl::String weapon_v1 = "Standard {\n  AK47 = Both\n  BogusGun = CT\n}\nAS {\n  M4A1 = BogusTeam\n}\n";
+  weapon_v1 += "Grenades {\n  HE = 90\n  Flash = 80\n  Flashbang = 70\n  Smoke = 60\n  BogusNade = 1\n}\n";
+  weapon_v1 += "Economy {\n  Primary = 5000\n  Shield = 999\n  BogusKey = 1\n}\n";
+  weapon_v1 += "FireDelay {\n  PistolBase = 0.06\n  OtherBase = 0.11\n  DeagleExtra = 0.09\n";
+  weapon_v1 += "  PistolMin = 0.02 0.04 0.06\n  PistolMax = 0.02 0.04 0.06 0.08 0.12 0.16\n";
+  weapon_v1 += "  OtherMin = 0.0 0.1 0.2 0.3 0.4 0.6\n  OtherMax = 0.1 0.2 0.3 0.4 0.5 0.7\n}\n";
+  weapon_v1 += ystl::strings.format ("Preferences {\n  Normal = %s\n}\nBogusTopLevel = 1\n", order);
+
+  WriteConfFile (ConfFile ("weapon"), weapon_v1);
+  conf.LoadWeaponsConfig ();
+
+  CHECK (conf.FindWeaponById (Weapon::AK47).team_standard == WeaponTeam::Both);
+  CHECK (conf.FindWeaponById (Weapon::M4A1).team_as == WeaponTeam::CT); // unknown team keeps the default
+  CHECK (conf.GetEconLimit (EcoLimit::PrimaryGreater) == 5000);
+  CHECK (conf.GetEconLimit (EcoLimit::ShieldGreater) == 999);
+
+  const auto &delay = conf.GetFireDelay ();
+  CHECK (delay.pistol_base > 0.05f && delay.pistol_base < 0.07f);
+  CHECK (delay.deagle_extra > 0.08f && delay.deagle_extra < 0.10f);
+
+  HOST_REQUIRE (conf.GetWeaponPrefs (Personality::Normal).size () == 26);
+  CHECK (conf.GetWeaponPrefs (Personality::Normal)[kNumWeapons - 1] == conf.FindWeaponIndexById (Weapon::Knife));
+
+  // ...block-form preferences apply per personality...
+  ystl::String rows = "Knife USP Glock18 Deagle P228 Elite FiveSeven M3 XM1014 MP5 TMP P90 MAC10";
+  ystl::String weapon_v2 = ystl::strings.format ("Preferences {\n  Normal = %s\n  Rusher {\n    row1 = %s\n", order, rows);
+  weapon_v2 += "    row2 = UMP45 AK47 SG552 M4A1 Galil Famas AUG Scout AWP G3SG1 SG550 M249 Shield\n  }\n}\n";
+
+  WriteConfFile (ConfFile ("weapon"), weapon_v2);
+  conf.LoadWeaponsConfig ();
+  CHECK (conf.GetWeaponPrefs (Personality::Rusher)[kNumWeapons - 1] == conf.FindWeaponIndexById (Weapon::Knife));
+
+  // ...all three personalities apply at once...
+  ystl::String careful = "AWP Knife USP Glock18 Deagle P228 Elite FiveSeven M3 XM1014 MP5 TMP P90 ";
+  careful += "MAC10 UMP45 AK47 SG552 M4A1 Galil Famas AUG Scout G3SG1 SG550 M249 Shield";
+  ystl::String rusher = "M4A1 Knife USP Glock18 Deagle P228 Elite FiveSeven M3 XM1014 MP5 TMP P90 ";
+  rusher += "MAC10 UMP45 AK47 SG552 Galil Famas AUG Scout AWP G3SG1 SG550 M249 Shield";
+  ystl::String weapon_v3 = ystl::strings.format ("Preferences {\n  Normal = %s\n  Rusher = %s\n  Careful = %s\n}\n", order,
+    rusher, careful);
+
+  WriteConfFile (ConfFile ("weapon"), weapon_v3);
+  conf.LoadWeaponsConfig ();
+  CHECK (conf.GetWeaponPrefs (Personality::Normal)[kNumWeapons - 1] == conf.FindWeaponIndexById (Weapon::Knife));
+  CHECK (conf.GetWeaponPrefs (Personality::Rusher)[kNumWeapons - 1] == conf.FindWeaponIndexById (Weapon::M4A1));
+  CHECK (conf.GetWeaponPrefs (Personality::Careful)[kNumWeapons - 1] == conf.FindWeaponIndexById (Weapon::AWP));
+
+  // ...block-form preferences reject unknown weapons the same way...
+  ystl::String weapon_v2b = ystl::strings.format ("Preferences {\n  Normal = %s\n  Rusher {\n    row1 = Knife BogusGun2\n  }\n}\n", order);
+
+  WriteConfFile (ConfFile ("weapon"), weapon_v2b);
+  conf.LoadWeaponsConfig ();
+  CHECK (conf.GetWeaponPrefs (Personality::Normal)[kNumWeapons - 1] == conf.FindWeaponIndexById (Weapon::Knife));
+  CHECK (conf.GetWeaponPrefs (Personality::Rusher)[kNumWeapons - 1] == conf.FindWeaponIndexById (Weapon::M4A1));
+
+  // ...unknown weapons, duplicates and gaps leave the table untouched...
+  WriteConfFile (ConfFile ("weapon"), "Preferences {\n  Normal = AK47 BogusGun\n}\n");
+  conf.LoadWeaponsConfig ();
+  CHECK (conf.GetWeaponPrefs (Personality::Normal)[kNumWeapons - 1] == conf.FindWeaponIndexById (Weapon::Knife));
+
+  WriteConfFile (ConfFile ("weapon"), "Preferences {\n  Normal = Knife Knife USP\n}\n");
+  conf.LoadWeaponsConfig ();
+  CHECK (conf.GetWeaponPrefs (Personality::Normal)[kNumWeapons - 1] == conf.FindWeaponIndexById (Weapon::Knife));
+
+  ystl::String scant = "Knife USP Glock18 Deagle P228 Elite FiveSeven M3 XM1014 MP5 TMP P90 ";
+  scant += "MAC10 UMP45 AK47 SG552 M4A1 Galil Famas AUG Scout AWP G3SG1 SG550";
+
+  WriteConfFile (ConfFile ("weapon"), ystl::strings.format ("Preferences {\n  Normal = %s\n}\n", scant));
+  conf.LoadWeaponsConfig ();
+  CHECK (conf.GetWeaponPrefs (Personality::Normal)[kNumWeapons - 1] == conf.FindWeaponIndexById (Weapon::Knife));
+
+  // ...garbage never parses...
+  WriteConfFile (ConfFile ("weapon"), "{{{\n");
+  conf.LoadWeaponsConfig ();
+
+  ystl::plat.remove_file (ConfFile ("weapon").chars ());
+  conf.LoadWeaponsConfig ();
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/config_chatterbox") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootConfig (engine, cs);
+
+  const int radio_before = cv_radio_mode.As<int> ();
+  const ystl::String chatter_path_before = cv_chatter_path.As<ystl::StringRef> ();
+
+  game.AddGameFlag (GameFlags::HasBotVoice);
+  cv_radio_mode.Set (2);
+  WriteWaveFile (WavePath ("wavok1"));
+  WriteWaveFile (WavePath ("wavok2"));
+
+  // block plus scalar sentences, one unknown event and one empty event...
+  ystl::String chatter_v1 = "RewritePath = sound/radio/bot\nCoverMe {\n  wavok1\n  missingwave1\n  missingwave2\n";
+  chatter_v1 += "  missingwave3\n  missingwave4\n  missingwave5\n  missingwave6\n}\n";
+  chatter_v1 += "EnemySpotted = wavok2, missingwave7, missingwave8, missingwave9, missingwave10, missingwave11\n";
+  chatter_v1 += "BogusEvent = whatever\nHoldPosition = ,\n";
+
+  WriteConfFile (ConfFile ("chatter"), chatter_v1);
+  conf.LoadChatterConfig ();
+
+  // ...eleven missing waves trip the breaker, the two real ones still land...
+  CHECK (cv_radio_mode.As<int> () == 1);
+  CHECK (conf.HasChatterBank (RadioChat::CoverMe));
+  CHECK (conf.HasChatterBank (RadioChat::EnemySpotted));
+  CHECK (conf.GetChatterMessageRepeatInterval (RadioChat::CoverMe) == kMaxChatterRepeatInterval);
+
+  // ...nested rewrite paths apply the same way (second ready load replaces the banks)...
+  cv_radio_mode.Set (2);
+  ystl::String chatter_v2 = "Chatter {\n  RewritePath = sound/radio/bot\n  CoverMe {\n    wavok1\n  }\n}\n";
+
+  WriteConfFile (ConfFile ("chatter"), chatter_v2);
+  conf.LoadChatterConfig ();
+  CHECK (conf.HasChatterBank (RadioChat::CoverMe));
+
+  // ...identical content skips the second parse...
+  conf.LoadChatterConfig ();
+  CHECK (conf.HasChatterBank (RadioChat::CoverMe));
+
+  // ...garbage silences the radio...
+  cv_radio_mode.Set (2);
+  WriteConfFile (ConfFile ("chatter"), "{{{\n");
+  conf.LoadChatterConfig ();
+  CHECK (cv_radio_mode.As<int> () == 1);
+
+  // ...a silenced radio skips the file entirely...
+  WriteConfFile (ConfFile ("chatter"), "CoverMe = wavok1\n");
+  conf.LoadChatterConfig ();
+  CHECK (cv_radio_mode.As<int> () == 1);
+
+  cv_radio_mode.Set (radio_before);
+  cv_chatter_path.Set (chatter_path_before.chars ());
+  game.ClearGameFlag (GameFlags::HasBotVoice);
+
+  ystl::plat.remove_file (ConfFile ("chatter").chars ());
+  ystl::plat.remove_file (WavePath ("wavok1").chars ());
+  ystl::plat.remove_file (WavePath ("wavok2").chars ());
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/config_dialogue") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootConfig (engine, cs);
+
+  const int chat_before = cv_chat.As<int> ();
+
+  // garbage disables chat...
+  WriteConfFile (ConfLangFile ("en_chat"), "{{{\n");
+  conf.LoadChatConfig ();
+  CHECK (cv_chat.As<int> () == 0);
+  cv_chat.Set (1);
+
+  // ...the full matrix loads: every section, replies, game names and junk...
+  ystl::String chat_v1 = "TopScalar = oops\nBogusSection {\n  x = 1\n}\n";
+  chat_v1 += "raw Killed {\n  kill one\n  kill two\n}\nraw BombPlant {\n  plant one\n}\nraw DeadChat {\n  dead one\n}\n";
+  chat_v1 += "raw Welcome {\n  hello one\n}\nraw TeamAttack {\n  attack one\n}\nraw TeamKill {\n  teamkill one\n}\n";
+  chat_v1 += "raw Unknown {\n  unknown one\n}\n";
+  chat_v1 += "Replies {\n  GoodGroup {\n    key = hello\n    raw {\n      hi there\n      hello back\n    }\n  }\n";
+  chat_v1 += "  BadGroup = oops\n  MixedGroup {\n    key = BOT\n    bogusentry = x\n";
+  chat_v1 += "    raw {\n      only reply\n    }\n  }\n  SpaceGroup {\n    key = \" BOT \"\n    raw {\n      spaced reply\n    }\n";
+  chat_v1 += "  }\n  PadGroup {\n    key = \"   \"\n    raw {\n      padded reply\n    }\n  }\n}\n";
+  chat_v1 += "GameNames {\n  CZ = cz_only\n  CS = cs_one, cs_two, cs_three\n  Bogus = x\n}\n";
+
+  WriteConfFile (ConfLangFile ("en_chat"), chat_v1);
+  conf.LoadChatConfig ();
+
+  CHECK (conf.HasChatBank (Chat::Kill));
+  CHECK (conf.HasChatBank (Chat::Plant));
+  CHECK (conf.HasChatBank (Chat::Dead));
+  CHECK (conf.HasChatBank (Chat::Hello));
+  CHECK (conf.HasChatBank (Chat::TeamAttack));
+  CHECK (conf.HasChatBank (Chat::TeamKill));
+  CHECK (conf.HasChatBank (Chat::NoKeyword));
+  CHECK (!conf.GetReplies ().empty ());
+  CHECK (!conf.GetKeywordIndex ().empty ());
+
+  // ...named game banks answer deterministically under a pinned roll...
+  ystl::rg.force_chance (true);
+  CHECK (conf.GetGameName () == "cs_one");
+  ystl::rg.force_chance (false);
+  ystl::rg.force_int (2);
+  CHECK (conf.GetGameName () == "cs_three");
+  ystl::rg.clear_forced ();
+
+  // ...identical content keeps the current cycles...
+  conf.LoadChatConfig ();
+  CHECK (conf.HasChatBank (Chat::Kill));
+
+  // ...a missing file disables chat...
+  ystl::plat.remove_file (ConfLangFile ("en_chat").chars ());
+  conf.LoadChatConfig ();
+  CHECK (cv_chat.As<int> () == 0);
+  cv_chat.Set (chat_before);
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/config_tongue") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootConfig (engine, cs);
+
+  const ystl::String language_before = cv_language.As<ystl::StringRef> ();
+  cv_language.Set ("xx");
+
+  game.ClearGameFlag (GameFlags::Legacy);
+
+  // menus always translate: showing one clears the boot-time translate bypass...
+  ctrl.ShowMenu (MenuId::Main);
+  CHECK (!ctrl.IgnoreTranslate ());
+
+  // a missing non-english language only logs...
+  conf.LoadLanguageConfig ();
+  CHECK (conf.MissingTranslations ().empty ());
+
+  // ...entries load without a Lang wrapper, junk and hollow pairs drop out...
+  ystl::String lang_v1 = "Greet {\n  raw Original {\n    Hello test\n    Second line\n  }\n";
+  lang_v1 += "  raw Translated {\n    Hola test\n    Segunda linea\n  }\n}\nScalarOops = ignored\n";
+  lang_v1 += "NoOrig {\n  raw Translated {\n    x\n  }\n}\n";
+
+  WriteConfFile (ConfLangFile ("xx_lang"), lang_v1);
+
+  ystl::MemFile probe {};
+  CHECK (conf.OpenConfig ("lang", "probe-missing", &probe, true));
+  probe.close ();
+
+  conf.LoadLanguageConfig ();
+  CHECK (ystl::StringRef (conf.Translate ("Hello test\nSecond line")) == "Hola test\nSegunda linea");
+
+  // ...identical content keeps the translations...
+  conf.LoadLanguageConfig ();
+  CHECK (ystl::StringRef (conf.Translate ("Hello test\nSecond line")) == "Hola test\nSegunda linea");
+
+  // ...a Lang wrapper loads the same way...
+  ystl::String lang_v2 = "Lang {\n  Bye {\n    raw Original {\n      Bye now\n    }\n    raw Translated {\n      Adios\n";
+  lang_v2 += "    }\n  }\n}\n";
+
+  WriteConfFile (ConfLangFile ("xx_lang"), lang_v2);
+  conf.LoadLanguageConfig ();
+
+  // ...garbage never parses, the previous translations survive...
+  WriteConfFile (ConfLangFile ("xx_lang"), "{{{\n");
+  conf.LoadLanguageConfig ();
+  CHECK (ystl::StringRef (conf.Translate ("Bye now")) == "Adios");
+  WriteConfFile (ConfLangFile ("xx_lang"), lang_v2);
+
+  // ...unseen strings are collected for the missing list...
+  CHECK (ystl::StringRef (conf.Translate ("Unseen phrase xyz")) == "Unseen phrase xyz");
+  CHECK (ystl::StringRef (conf.Translate ("!!!")) == "!!!");
+  CHECK (conf.MissingTranslations ().size () == 2);
+
+  // ...hashing skips non-letters, labels camelize or fall back to the hash...
+  CHECK (ConfigHook::HashLang ("a b!") == ConfigHook::HashLang ("ab"));
+  CHECK (ConfigHook::MakeLabel ("!!!", 0x12345678u) == "Entry12345678");
+  CHECK (ConfigHook::MakeLabel ("alpha beta gamma delta epsilon zeta", 1) == "AlphaBetaGammaDeltaEpsilon");
+
+  // ...the missing list appends to the existing file with a backup...
+  CHECK (conf.WriteMissingTranslations () == 2);
+  CHECK (conf.MissingTranslations ().empty ());
+  CHECK (ystl::plat.file_exists (ystl::strings.format ("%s.bak", ConfLangFile ("xx_lang").chars ())));
+
+  // ...a corrupt language file fails the write...
+  WriteConfFile (ConfLangFile ("xx_lang"), "{{{\n");
+  CHECK (ystl::StringRef (conf.Translate ("Garbage miss")) == "Garbage miss");
+  CHECK (conf.WriteMissingTranslations () == -1);
+
+  // ...a missing file is created from scratch with a version header...
+  ystl::plat.remove_file (ConfLangFile ("xx_lang").chars ());
+  CHECK (ystl::StringRef (conf.Translate ("Fresh miss one")) == "Fresh miss one");
+  CHECK (conf.WriteMissingTranslations () == 2);
+  CHECK (conf.MissingTranslations ().empty ());
+
+  // ...an unwritable file fails the write...
+  ystl::plat.remove_file (ConfLangFile ("xx_lang").chars ());
+  ystl::plat.create_directory (ConfLangFile ("xx_lang").chars ());
+  CHECK (ystl::StringRef (conf.Translate ("Dir miss")) == "Dir miss");
+  CHECK (conf.WriteMissingTranslations () == -1);
+  ystl::plat.remove_directory (ConfLangFile ("xx_lang").chars ());
+
+  game.AddGameFlag (GameFlags::Legacy);
+
+  conf.ShowCustomValues ();
+
+  cv_language.Set (language_before.chars ());
+  ystl::plat.remove_file (ConfLangFile ("xx_lang").chars ());
+  ystl::plat.remove_file (ystl::strings.format ("%s.bak", ConfLangFile ("xx_lang").chars ()));
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/config_staples") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootConfig (engine, cs);
+
+  // the boot fills the fallback roster, so names are always at hand...
+  HOST_REQUIRE (conf.PickBotName () != nullptr);
+
+  // ...a lone name resolves, reloads refresh without reallocating...
+  WriteConfFile (ConfFile ("names"), "raw Names {\n  Solo\n  ThisNameIsDefinitelyWayTooLongForTheBotLimitXYZ\n}\n");
+  conf.LoadNamesConfig ();
+  HOST_REQUIRE (conf.PickBotName () != nullptr);
+  conf.LoadNamesConfig ();
+  HOST_REQUIRE (conf.PickBotName () != nullptr);
+
+  // ...garbage keeps the previous roster...
+  WriteConfFile (ConfFile ("names"), "{{{\n");
+  conf.LoadNamesConfig ();
+  HOST_REQUIRE (conf.PickBotName () != nullptr);
+
+  // ...named entries are skipped, long names are clipped...
+  WriteConfFile (ConfFile ("names"), "Names {\n  SoloTwo\n  NamedOops = ignored\n  ThisNameIsDefinitelyWayTooLongForTheBotLimitXYZ\n}\n");
+  conf.LoadNamesConfig ();
+  HOST_REQUIRE (conf.PickBotName () != nullptr);
+
+  // ...id lookups miss cleanly, noise lists skip empties...
+  CHECK (conf.FindWeaponIndexById (Weapon::Invalid) == 0);
+  CHECK (ConfigHook::LookupNoise ("WeaponFire, ,Explosion") == (Noise::WeaponFire | Noise::Explosion));
+
+  // ...avatars need a non-legacy game...
+  game.ClearGameFlag (GameFlags::Legacy);
+  WriteConfFile (ConfFile ("avatars"), "Avatars {\n  avatar_one\n  avatar_two\n  NamedAva = avatar_three\n}\n");
+  conf.LoadAvatarsConfig ();
+  CHECK (!conf.GetRandomAvatar ().empty ());
+  conf.LoadAvatarsConfig ();
+  WriteConfFile (ConfFile ("avatars"), "{{{\n");
+  conf.LoadAvatarsConfig ();
+
+  // ...a missing file clears the banks...
+  ystl::plat.remove_file (ConfFile ("avatars").chars ());
+  conf.LoadAvatarsConfig ();
+  CHECK (conf.GetRandomAvatar ().empty ());
+  game.AddGameFlag (GameFlags::Legacy);
+
+  // ...difficulty parses every level and rejects the junk...
+  ystl::String diff_v1 = "StrayScalar = 1\nNoob {\n  Reaction = 1.0 1.2\n  HeadshotChance = 21\n";
+  diff_v1 += "  SeenThruWallChance = 11\n  HeardThruWallChance = 12\n  MaxRecoil = 33\n  AimError = 11.0 11.0 19.0\n}\n";
+  diff_v1 += "Easy {\n  Reaction = 0.7\n}\nNormal {\n  HeadshotChance = 55\n  AimError = 1.0 2.0\n}\n";
+  diff_v1 += "Hard {\n  Reaction = 0.3 0.45\n  HeadshotChance = 65\n}\nExpert {\n  Reaction = 0.15 0.3\n";
+  diff_v1 += "  AimError = 1.0 2.0 3.0\n}\nBogus {\n  HeadshotChance = 5\n}\n";
+
+  WriteConfFile (ConfFile ("difficulty"), diff_v1);
+  conf.LoadDifficultyConfig ();
+
+  const auto *noob = conf.GetDifficultyTweaks (Difficulty::Noob);
+  HOST_REQUIRE (noob != nullptr);
+  CHECK (noob->reaction[1] > 1.19f && noob->reaction[1] < 1.21f);
+  CHECK (noob->headshot_pct == 21);
+
+  const auto *normal = conf.GetDifficultyTweaks (Difficulty::Normal);
+  HOST_REQUIRE (normal != nullptr);
+  CHECK (normal->headshot_pct == 55);
+
+  conf.LoadDifficultyConfig ();
+  WriteConfFile (ConfFile ("difficulty"), "{{{\n");
+  conf.LoadDifficultyConfig ();
+
+  // ...custom values accept bare and named scalars...
+  WriteConfFile (ConfFile ("custom"), "TopScalar = topvalue\nBareTopItem\nTestSection {\n  TestKey = TestValue\n  BareInner\n}\n");
+  conf.LoadCustomConfig ();
+  CHECK (conf.FetchCustom ("TestKey") == "TestValue");
+  CHECK (conf.FetchCustom ("TopScalar") == "topvalue");
+  conf.LoadCustomConfig ();
+
+  WriteConfFile (ConfFile ("custom"), "{{{\n");
+  conf.LoadCustomConfig ();
+
+  ystl::plat.remove_file (ConfFile ("custom").chars ());
+  conf.LoadCustomConfig ();
+
+  // ...logos resolve through the engine decals...
+  WriteConfFile (ConfFile ("logos"), "Logos {\n  targetone\n  handone\n  NamedLogo = spittwo\n}\n");
+  conf.LoadLogosConfig ();
+  CHECK (conf.GetRandomLogoDecalIndex () > 0);
+  WriteConfFile (ConfFile ("logos"), "{{{\n");
+  conf.LoadLogosConfig ();
+
+  ystl::plat.remove_file (ConfFile ("logos").chars ());
+  conf.LoadLogosConfig ();
+
+  ystl::plat.remove_file (ConfFile ("avatars").chars ());
+  ystl::plat.remove_file (ConfFile ("difficulty").chars ());
+  ystl::plat.remove_file (ConfFile ("names").chars ());
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/config_gamedef") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
+
+  HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
+  cs.reset ();
+
+  GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
+  HOST_REQUIRE (cs.entered () != 0);
+
+  // material types load once per process, so the fixture must predate the activation load...
+  ystl::String materials = "// comment\n; another\n# third\n\nC conc_wall\nc low_wall extra words here\nW weaponwall\n";
+  materials += "1 badtype\n{\nC\n{bracewall\n";
+
+  WriteConfFile (MaterialsFile (), materials);
+
+  gamefuncs_t table {};
+  HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
+
+  game.Precache ();
+  table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
+
+  if (analyzer.IsAnalyzing ()) {
+    analyzer.Suspend ();
+  }
+  conf.InitWeapons ();
+
+  // garbage keeps the builtins...
+  WriteConfFile (ConfFile ("gamedef"), "{{{\n");
+  conf.LoadGameDefConfig ();
+  HOST_REQUIRE (conf.GetWeapons ().size () > 0);
+
+  // ...weapon defs override every field, sounds need valid flags...
+  ystl::String gamedef_v1 = "Weapons {\n  AK47 {\n    Price = 1234\n    TeamStandard = Both\n    TeamAS = T\n    Type = Rifle\n";
+  gamedef_v1 += "  }\n  M4A1 {\n    Name = weapon_m4a1x\n    Model = m4a1x.mdl\n    Alias = m4a1x\n    FullName = X Rifle\n";
+  gamedef_v1 += "    Price = 3100\n    MinPrimaryAmmo = 2\n    BuyGroup = 4\n    BuySelect = 9\n    BuySelectT = 9\n";
+  gamedef_v1 += "    BuySelectCT = 9\n    PenetratePower = 1\n    MaxClip = 30\n    PrimaryFireHold = false\n";
+  gamedef_v1 += "    TeamStandard = CT\n    TeamAS = CT\n    Type = ZoomRifle\n  }\n  BogusGun {\n    Price = 1\n  }\n";
+  gamedef_v1 += "  NonBlockEntry = 5\n}\nHearableSounds {\n  zzcfgtest {\n    Flags = WeaponFire, Explosion\n";
+  gamedef_v1 += "    Radius = 100.0\n    Duration = 0.5\n  }\n  badsound {\n    Flags = BogusFlag\n  }\n}\n";
+  gamedef_v1 += "Sentences {\n  alpha\n  bravo\n}\n";
+
+  WriteConfFile (ConfFile ("gamedef"), gamedef_v1);
+  conf.LoadGameDefConfig ();
+
+  CHECK (conf.FindWeaponById (Weapon::AK47).price == 1234);
+  CHECK (conf.FindWeaponById (Weapon::AK47).team_standard == WeaponTeam::Both);
+  CHECK (conf.GetWeaponType (Weapon::M4A1) == WeaponType::ZoomRifle);
+
+  const SoundTemplate *tmpl = ConfigHook::ClassifySound ("zzcfgtest-1.wav");
+  HOST_REQUIRE (tmpl != nullptr);
+  CHECK (tmpl->base_radius == 100.0f);
+  CHECK (tmpl->duration == 0.5f);
+
+  // ...material types parse once and answer with engine prefixes...
+  conf.LoadMaterialTypes ();
+  CHECK (conf.HasMaterialTypes ());
+  conf.LoadMaterialTypes ();
+
+  CHECK (conf.GetMaterialType (nullptr) == 'C');
+  CHECK (conf.GetMaterialType ("weaponwall") == 'W');
+  CHECK (conf.GetMaterialType ("-aweaponwall") == 'W');
+  CHECK (conf.GetMaterialType ("{weaponwall") == 'W');
+  CHECK (conf.GetMaterialType ("!weaponwall") == 'W');
+  CHECK (conf.GetMaterialType ("~weaponwall") == 'W');
+  CHECK (conf.GetMaterialType (" weaponwall") == 'W');
+  CHECK (conf.GetMaterialType ("conc_wall") == 'C');
+  CHECK (conf.GetMaterialType ("low_wall") == 'C');
+  CHECK (conf.GetMaterialType ("nope_missing_xyz") == 'C');
+
+  ystl::plat.remove_file (ConfFile ("gamedef").chars ());
+  conf.LoadGameDefConfig ();
+  ystl::plat.remove_file (MaterialsFile ().chars ());
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/config_versions") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootConfig (engine, cs);
+
+  // an empty game has no default name bank...
+  ystl::rg.force_chance (false);
+  CHECK (conf.GetGameName () == "Counter-Strike");
+  ystl::rg.force_chance (true);
+  CHECK (conf.GetGameName () == "CS");
+  ystl::rg.clear_forced ();
+
+  // ...a flagless game has no name at all...
+  game.ClearGameFlag (GameFlags::Legacy);
+  CHECK (conf.GetGameName () == "");
+
+  // ...prices stay put outside legacy...
+  conf.AdjustWeaponPrices ();
+  game.AddGameFlag (GameFlags::Legacy);
+
+  // ...a language file never opens for english...
+  ystl::MemFile english {};
+  CHECK (!conf.OpenConfig ("lang", "gone", &english, true));
+
+  // ...condition zero answers from its own bank...
+  game.AddGameFlag (GameFlags::ConditionZero);
+  ystl::rg.force_chance (false);
+  CHECK (conf.GetGameName () == "Condition Zero");
+  ystl::rg.force_chance (true);
+  CHECK (conf.GetGameName () == "CZ");
+  ystl::rg.clear_forced ();
+  game.ClearGameFlag (GameFlags::ConditionZero);
+
+  // ...reads track content until a load snapshots it...
+  WriteConfFile (ConfFile ("testcfg"), "hello test\n");
+
+  ystl::String text {};
+  CHECK (ConfigHook::ReadText ("testcfg", "gone", text, false) == ConfigRead::Ready);
+  CHECK (ConfigHook::ReadText ("testcfg", "gone", text, false) == ConfigRead::Ready);
+
+  ConfigHook::MarkApplied ("testcfg", text);
+  CHECK (ConfigHook::ReadText ("testcfg", "gone", text, false) == ConfigRead::Unchanged);
+
+  // ...re-marking with new content updates the stored snapshot...
+  ConfigHook::MarkApplied ("testcfg", "hello test changed\n");
+  WriteConfFile (ConfFile ("testcfg"), "hello test changed\n");
+  CHECK (ConfigHook::ReadText ("testcfg", "gone", text, false) == ConfigRead::Unchanged);
+
+  WriteConfFile (ConfFile ("testcfg"), "hello test other\n");
+  CHECK (ConfigHook::ReadText ("testcfg", "gone", text, false) == ConfigRead::Ready);
+
+  // ...outdated versions never reach the parser...
+  ConfigHook::ForgetSnapshot ("testcfg");
+  WriteConfFile (ConfFile ("testcfg"), "; @version 0.1\nold = 1\n");
+  CHECK (ConfigHook::ReadText ("testcfg", "gone", text, false) == ConfigRead::Missing);
+
+  CHECK (ConfigHook::CheckVersion ("testcfg", "plain handmade config"));
+  CHECK (!ConfigHook::CheckVersion ("testcfg", "; @version 0.1\nold = 1\n"));
+  CHECK (ConfigHook::CheckVersion ("testcfg", "; @version 4.7\nnew = 1\n"));
+  CHECK (!ConfigHook::CheckVersion ("testcfg", "; @version 4\nnew = 1\n"));
+  CHECK (ConfigHook::CheckVersion ("testcfg", "; @version 99.99\nnew = 1\n"));
+
+  // ...an already open file is closed before reopening...
+  WriteConfFile (ConfFile ("testcfg"), "hello test\n");
+  ystl::MemFile open_first {};
+  HOST_REQUIRE (open_first.open (ConfFile ("testcfg")));
+  CHECK (conf.OpenConfig ("testcfg", "gone", &open_first, false));
+  open_first.close ();
+
+  // ...a missing translation falls back to english...
+  const ystl::String language_before = cv_language.As<ystl::StringRef> ();
+  cv_language.Set ("xx");
+  WriteConfFile (ConfLangFile ("en_chat"), "raw Killed {\n  hi one\n}\n");
+  ystl::MemFile fallback {};
+  CHECK (conf.OpenConfig ("chat", "gone", &fallback, true));
+  fallback.close ();
+  cv_language.Set (language_before.chars ());
+
+  // ...map configs execute when the file exists...
+  WriteConfFile (MapSpecificFile (), "yb_quota 9\n");
+  conf.LoadMapSpecificConfig ();
+
+  bool saw_exec = false;
+
+  for (const auto &cmd : engine.ServerCommands ()) {
+    if (cmd.find ("exec") != ystl::String::InvalidIndex) {
+      saw_exec = true;
+    }
+  }
+  CHECK (saw_exec);
+
+  ystl::plat.remove_file (ConfFile ("testcfg").chars ());
+  ystl::plat.remove_file (ConfLangFile ("en_chat").chars ());
+  ystl::plat.remove_file (MapSpecificFile ().chars ());
+
+  bots.Destroy ();
 }
 
 } // namespace bot

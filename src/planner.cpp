@@ -561,6 +561,8 @@ AStarResult AStarAlgo::Find (Team bot_team, int src_index, int dest_index, NodeA
     // is the current node the goal node?
     if (current_index == dest_index) {
       // build the complete path
+      size_t path_length = 0;
+
       do {
         if (post_smooth_path) {
           constructed_path_.push (current_index);
@@ -569,6 +571,13 @@ AStarResult AStarAlgo::Find (Team bot_team, int src_index, int dest_index, NodeA
           on_added_node (current_index);
         }
         current_index = routes_[current_index].parent;
+
+        // bail out on parent cycles: random H(d) bands can re-parent a closed
+        // node to its own descendant, so the chain never reaches the start;
+        // floyds take over through the Failed path below
+        if (++path_length > static_cast<size_t> (size_)) {
+          return AStarResult::Failed;
+        }
       } while (current_index != kInvalidNodeIndex);
 
       // do a post-smooth if requested

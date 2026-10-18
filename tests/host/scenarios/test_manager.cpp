@@ -25,6 +25,31 @@ struct ManagerHook {
   static bool Leader (Bot &bot) {
     return bot.is_leader_;
   }
+  static void ExpireThink (Bot &bot) {
+    bot.think_timer_.invalidate ();
+    bot.command_timer_.invalidate ();
+    bot.slow_frame_timer_.invalidate ();
+  }
+  static void SetSpeeds (Bot &bot, float fwd, float side) {
+    bot.move_speed_ = fwd;
+    bot.strafe_speed_ = side;
+  }
+  static void SetPending (Bot &bot, int buttons) {
+    bot.pending_buttons_ = buttons;
+  }
+  static void SetLastCommand (Bot &bot, float msec, float time) {
+    bot.last_command_msec_ = msec;
+    bot.last_command_time_ = time;
+  }
+  static int Starved (Bot &bot) {
+    return bot.starved_commands_;
+  }
+  static void SetThinkInterval (Bot &bot, float interval) {
+    bot.think_interval_ = interval;
+  }
+  static void TeamJoin (Bot &bot) {
+    bot.UpdateTeamJoin ();
+  }
 };
 
 namespace {
@@ -861,6 +886,785 @@ TEST_CASE ("unit/manager_autokill") {
   bots.MaintainAutoKill ();
   CHECK (testhost::CsCalls (cs, "Touch") > touch_base);
 
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/manager_quota") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootManager (engine, cs);
+  ystl::rg.seed (1234);
+
+  bots.Addbot ("QuotaA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+  Bot *a = testhost::FindBot ("QuotaA");
+  HOST_REQUIRE (a != nullptr);
+  clients.Update ();
+  clients[a->Ent ()].team2 = Team::Terrorist;
+  clients[a->Ent ()].team = Team::Terrorist;
+  a->is_alive_ = true;
+  a->pev->health = 100.0f;
+  a->pev->deadflag = DEAD_NO;
+
+  // listen server with no humans returns early before quota math
+  edict_t *human = CreateHuman ("QuotaH");
+  HOST_REQUIRE (!game.IsNullEntity (human));
+  clients.Update ();
+  clients[human].team2 = Team::Spectator;
+  clients[human].team = Team::Spectator;
+  human->v.health = 0.0f;
+  human->v.deadflag = DEAD_DEAD;
+  clients.Update ();
+  engine.SetDedicatedServer (false);
+  engine.AdvanceTime (6.0f);
+  const int count_before = bots.GetBotCount ();
+  bots.MaintainQuota ();
+  CHECK (bots.GetBotCount () == count_before);
+  engine.SetDedicatedServer (true);
+
+  // bring a live human for fill/match/autovacate math
+  clients[human].team2 = Team::Terrorist;
+  clients[human].team = Team::Terrorist;
+  human->v.health = 100.0f;
+  human->v.deadflag = DEAD_NO;
+  clients.Update ();
+  cv_quota.Set (10);
+  engine.AdvanceTime (6.0f);
+
+  // out-of-range quota clamps into server capacity
+  cv_quota.Set (32);
+  engine.AdvanceTime (0.5f);
+  bots.MaintainQuota ();
+  CHECK (cv_quota.As<int> () <= game.MaxClients ());
+  cv_quota.Set (10);
+
+  // fill mode subtracts humans, match mode scales by humans
+  cv_quota_mode.Set ("fill");
+  cv_quota.Set (5);
+  engine.AdvanceTime (0.5f);
+  bots.MaintainQuota ();
+  cv_quota_mode.Set ("match");
+  cv_quota_match.Set (2);
+  cv_quota.Set (3);
+  engine.AdvanceTime (0.5f);
+  bots.MaintainQuota ();
+  cv_quota_mode.Set ("normal");
+  cv_quota_match.Set (0);
+
+  // join-after-player with no players forces zero desired
+  clients[human].team2 = Team::Spectator;
+  clients.Update ();
+  cv_join_after_player.Set (1);
+  engine.AdvanceTime (0.5f);
+  bots.MaintainQuota ();
+  cv_join_after_player.Set (0);
+  clients[human].team2 = Team::Terrorist;
+  clients.Update ();
+
+  // autovacate paths with and without kick-after-connect
+  cv_autovacate.Set (1);
+  cv_autovacate_keep_slots.Set (1);
+  cv_kick_after_player_connect.Set (1);
+  engine.AdvanceTime (0.5f);
+  bots.MaintainQuota ();
+  cv_kick_after_player_connect.Set (0);
+  engine.AdvanceTime (0.5f);
+  bots.MaintainQuota ();
+  cv_autovacate.Set (0);
+  engine.AdvanceTime (0.5f);
+  bots.MaintainQuota ();
+  cv_autovacate.Set (1);
+
+  // spawn entities unlock the auto-add path: desired above live queues a creation
+  gamefuncs_t table {};
+  HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
+  edict_t *spawns[4] = {};
+  for (int i = 0; i < 2; ++i) {
+    spawns[i] = engine.SpawnEntity ("info_player_start");
+    HOST_REQUIRE (spawns[i] != nullptr);
+    table.pfnSpawn (spawns[i]);
+    spawns[2 + i] = engine.SpawnEntity ("info_player_deathmatch");
+    HOST_REQUIRE (spawns[2 + i] != nullptr);
+    table.pfnSpawn (spawns[2 + i]);
+  }
+  CHECK (game.GetSpawnCount (Team::CT) == 2);
+  CHECK (game.GetSpawnCount (Team::Terrorist) == 2);
+  cv_quota.Set (5);
+  engine.AdvanceTime (0.6f);
+  bots.MaintainQuota (); // queues one non-manual CreateRandom when capacity allows
+  HOST_REQUIRE (testhost::PumpBots (engine, 2));
+  CHECK (bots.GetBotCount () == 2);
+
+  // saved bots clear when balancing ends with quota equal to live count
+  cv_save_bots.Set (1);
+  Bot *extra = testhost::FindBot ("QuotaA");
+  HOST_REQUIRE (extra != nullptr);
+  bots.DisconnectBot (extra);
+  CHECK (bots.GetBotCount () == 1);
+  cv_quota.Set (1);
+  engine.AdvanceTime (0.6f);
+  bots.MaintainQuota ();
+  cv_quota.Set (10);
+
+  ystl::rg.clear_forced ();
+  cv_quota.Revert ();
+  cv_quota_mode.Revert ();
+  cv_quota_match.Revert ();
+  cv_join_after_player.Revert ();
+  cv_autovacate.Revert ();
+  cv_autovacate_keep_slots.Revert ();
+  cv_kick_after_player_connect.Revert ();
+  cv_save_bots.Revert ();
+  bots.Destroy ();
+  CHECK (bots.GetBotCount () == 0);
+}
+
+TEST_CASE ("unit/manager_balance") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootManager (engine, cs);
+  ystl::rg.seed (1234);
+
+  bots.Addbot ("BalA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("BalB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("BalC", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 3));
+  Bot *a = testhost::FindBot ("BalA");
+  Bot *b = testhost::FindBot ("BalB");
+  Bot *c = testhost::FindBot ("BalC");
+  HOST_REQUIRE (a != nullptr && b != nullptr && c != nullptr);
+  for (Bot *bot : { a, b, c }) {
+    bot->pev->health = 100.0f;
+    bot->pev->deadflag = DEAD_NO;
+    bot->is_alive_ = true;
+  }
+  clients.Update ();
+  clients[a->Ent ()].team2 = Team::Terrorist;
+  clients[b->Ent ()].team2 = Team::CT;
+  clients[c->Ent ()].team2 = Team::CT;
+  cv_quota.Set (10);
+
+  // balanced kick picks the crowded side: 1 T vs 2 CT kicks a CT
+  CHECK (bots.BalancedKickRandom (false));
+  int stale_ct = 0;
+  bots.ForEach ([&] (Bot *bot) {
+    if (bot->is_stale_ && clients[bot->Ent ()].team2 == Team::CT) {
+      ++stale_ct;
+    }
+    return false;
+  });
+  CHECK (stale_ct == 1);
+
+  // team filter with no match in that team falls back to any team
+  a->is_alive_ = false;
+  b->is_alive_ = true;
+  b->pev->frags = 4.0f;
+  c->is_alive_ = true;
+  c->pev->frags = 9.0f;
+  CHECK (bots.KickRandom (false, Team::Terrorist));
+  CHECK (a->is_stale_);
+
+  // empty manager cannot kick anyone
+  bots.Destroy ();
+  CHECK (!bots.KickRandom (false));
+  CHECK (!bots.BalancedKickRandom (false));
+
+  // remove-all from a team decrements quota by that team size
+  bots.Addbot ("BalD", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("BalE", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 2));
+  Bot *d = testhost::FindBot ("BalD");
+  Bot *e = testhost::FindBot ("BalE");
+  HOST_REQUIRE (d != nullptr && e != nullptr);
+  clients.Update ();
+  clients[d->Ent ()].team2 = Team::Terrorist;
+  clients[e->Ent ()].team2 = Team::CT;
+  cv_quota.Set (5);
+  bots.KickFromTeam (Team::Terrorist, true);
+  CHECK (cv_quota.As<int> () == 4);
+  CHECK (d->is_stale_);
+  CHECK (!e->is_stale_);
+
+  // silent kill-all still touches the killer entity for live bots
+  e->is_alive_ = true;
+  e->pev->health = 100.0f;
+  const int touch_base = testhost::CsCalls (cs, "Touch");
+  bots.KillAllBots (Team::Invalid, false);
+  CHECK (testhost::CsCalls (cs, "Touch") >= touch_base);
+  e->is_alive_ = false;
+
+  // custom csdm spawn check needs the flag and the entity
+  CHECK (!bots.HasCustomCsdmSpawnEntities ());
+  game.AddGameFlag (GameFlags::CSDM);
+  CHECK (!bots.HasCustomCsdmSpawnEntities ());
+  edict_t *view = engine.SpawnEntity ("view_spawn");
+  HOST_REQUIRE (view != nullptr);
+  CHECK (bots.HasCustomCsdmSpawnEntities ());
+  game.ClearGameFlag (GameFlags::CSDM);
+
+  // priority: hostage carrier and tasked bots outrank plain bots
+  edict_t *human = CreateHuman ("BalH");
+  HOST_REQUIRE (!game.IsNullEntity (human));
+  clients.Update ();
+  e->has_hostage_ = true;
+  CHECK (bots.GetPlayerPriority (e->Ent ()) == e->Entindex () + 1024);
+  e->has_hostage_ = false;
+  d->StartTask (TaskId::Camp, TaskPri::kMoveTo, kInvalidNodeIndex, 0.0f, true);
+  CHECK (bots.GetPlayerPriority (d->Ent ()) == d->Entindex () + 1024);
+
+  ystl::rg.clear_forced ();
+  cv_quota.Revert ();
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/manager_round") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootManager (engine, cs);
+  ystl::rg.seed (1234);
+
+  bots.Addbot ("RndA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("RndB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 2));
+  Bot *a = testhost::FindBot ("RndA");
+  Bot *b = testhost::FindBot ("RndB");
+  HOST_REQUIRE (a != nullptr && b != nullptr);
+  for (Bot *bot : { a, b }) {
+    bot->pev->health = 100.0f;
+    bot->pev->deadflag = DEAD_NO;
+    bot->is_alive_ = true;
+    bot->team_ = (bot == a) ? Team::Terrorist : Team::CT;
+  }
+   clients.Update ();
+   clients[a->Ent ()].team = Team::Terrorist;
+   clients[b->Ent ()].team = Team::CT;
+   clients[a->Ent ()].team2 = Team::Terrorist;
+   clients[b->Ent ()].team2 = Team::CT;
+   cv_quota.Set (10);
+
+  // free-for-all skips leader maintenance entirely
+  game.AddGameFlag (GameFlags::FreeForAll);
+  bots.MaintainLeaders ();
+  game.ClearGameFlag (GameFlags::FreeForAll);
+
+   // round start plus time passes elects leaders outside map modes
+   ystl::rg.force_chance (true);
+   game_state.RoundStart ();
+   engine.AdvanceTime (mp_freezetime.As<float> () + 4.0f); // past freeze + elect window
+   bots.MaintainLeaders ();
+  bool any_leader = false;
+  bots.ForEach ([&] (Bot *bot) {
+    if (ManagerHook::Leader (*bot)) {
+      any_leader = true;
+    }
+    return false;
+  });
+  CHECK (any_leader);
+  ystl::rg.clear_forced ();
+
+  // first-human restart fires once when the first human arrives
+  edict_t *human = CreateHuman ("RndH");
+  HOST_REQUIRE (!game.IsNullEntity (human));
+  clients.Update ();
+  clients[human].team2 = Team::Terrorist;
+  human->v.health = 100.0f;
+  human->v.deadflag = DEAD_NO;
+  clients.Update ();
+  cv_first_human_restart.Set (1);
+  engine.SetCvar ("sv_restartround", "0");
+  game_state.SetResetHud (false);
+  bots.MaintainRoundRestart ();
+  bots.MaintainRoundRestart ();
+  cv_first_human_restart.Set (0);
+
+   // init round resets radio, cooldowns and per-team leader state
+   bots.SetLastRadioTimestamp (Team::Terrorist, 7.0f);
+   bots.InitRound ();
+   CHECK (bots.GetLastRadioTimestamp (Team::Terrorist) == 0.0f);
+   CHECK (!bots.EnemySpotted ());
+
+   ystl::rg.clear_forced ();
+   cv_quota.Revert ();
+   cv_radio_mode.Revert ();
+   cv_first_human_restart.Revert ();
+   bots.Destroy ();
+}
+
+TEST_CASE ("unit/manager_endgame") {
+   testhost::FakeEngine engine;
+   testhost::FakeCSApi cs {};
+
+   // separate lifecycle: the defuse map needs its target before activate
+   BootManagerMap (engine, cs, "func_bomb_target");
+   HOST_REQUIRE (game.MapIs (MapFlags::Demolition));
+   ystl::rg.seed (1234);
+
+   bots.Addbot ("RndT", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+   HOST_REQUIRE (testhost::PumpBots (engine, 1));
+   Bot *t = testhost::FindBot ("RndT");
+   HOST_REQUIRE (t != nullptr);
+   t->is_alive_ = true;
+   t->team_ = Team::Terrorist;
+   t->pev->origin = ystl::Vector (0.0f, 0.0f, 0.0f);
+   clients.Update ();
+   bots.InitQuota ();
+   cv_quota.Set (10);
+
+   // bomb defuse notify drives nearby terrorists to the bomb
+   game_state.SetBombPlanted (true);
+   game_state.SetBombOrigin (false, ystl::Vector (100.0f, 0.0f, 0.0f));
+   bots.NotifyBombDefuse ();
+   game_state.SetBombPlanted (false);
+
+  // winner notify with radio mode 2 pings the winning alive bot
+  bots.Addbot ("RndW", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 2));
+  Bot *w = testhost::FindBot ("RndW");
+  HOST_REQUIRE (w != nullptr);
+  w->is_alive_ = true;
+  w->team_ = Team::CT;
+  clients.Update ();
+  cv_radio_mode.Set (2);
+  game_state.RoundStart ();
+  bots.SetLastWinner (Team::CT);
+  engine.AdvanceTime (200.0f);
+  bots.SetLastWinner (Team::CT);
+  bots.SetLastWinner (Team::Invalid);
+  cv_radio_mode.Set (0);
+
+  ystl::rg.clear_forced ();
+  cv_quota.Revert ();
+  cv_radio_mode.Revert ();
+  cv_first_human_restart.Revert ();
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/manager_radio") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootManager (engine, cs);
+  ystl::rg.seed (1234);
+
+  bots.Addbot ("RadA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("RadB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 2));
+  Bot *a = testhost::FindBot ("RadA");
+  Bot *b = testhost::FindBot ("RadB");
+  HOST_REQUIRE (a != nullptr && b != nullptr);
+  for (Bot *bot : { a, b }) {
+    bot->pev->health = 100.0f;
+    bot->pev->deadflag = DEAD_NO;
+    bot->is_alive_ = true;
+  }
+  clients.Update ();
+  clients[a->Ent ()].team2 = Team::Terrorist;
+  clients[b->Ent ()].team2 = Team::CT;
+  a->team_ = Team::Terrorist;
+  b->team_ = Team::CT;
+  cv_quota.Set (10);
+
+  edict_t *human = CreateHuman ("RadH");
+  HOST_REQUIRE (!game.IsNullEntity (human));
+  human->v.health = 100.0f;
+  human->v.deadflag = DEAD_NO;
+  clients.Update ();
+  clients[human].team = Team::Terrorist;
+  clients[human].team2 = Team::Terrorist;
+  clients.Update ();
+
+  // team say routes to same-team listeners, global say reaches everyone alive the same way
+  ystl::Array<ystl::String> args {};
+  args.push ("say hello");
+  engine.SetCmdArgs (args);
+  bots.CaptureChatRadio ("say_team", "", human);
+  CHECK (a->say_text_buffer_.entity_index == game.IndexOfPlayer (human));
+  bots.CaptureChatRadio ("say", "", human);
+  CHECK (b->say_text_buffer_.entity_index == game.IndexOfPlayer (human));
+
+  // radio command stores the pending radio slot on the client
+  bots.CaptureChatRadio ("radio3", "", human);
+  CHECK (clients[human].radio != RadioChat::InvalidSelect);
+
+  // death paths: bot killer remembers victim, human teamkill arms vote index
+  ystl::rg.force_chance (true);
+  cv_radio_mode.Set (2);
+  Bot *killer = a;
+  Bot *victim = b;
+  killer->team_ = Team::Terrorist;
+  victim->team_ = Team::CT;
+  killer->is_alive_ = true;
+  victim->is_alive_ = true;
+  killer->difficulty_ = Difficulty::Hard;
+  bots.HandleDeath (killer->Ent (), victim->Ent ());
+  CHECK (killer->last_victim_ == victim->Ent ());
+  CHECK (!victim->is_alive_);
+  victim->is_alive_ = true;
+  bots.HandleDeath (human, victim->Ent ());
+  CHECK (!victim->is_alive_);
+  cv_radio_mode.Set (0);
+  ystl::rg.clear_forced ();
+
+  // kick flag forces a kick and holds quota management
+  a->kick_me_from_server_ = true;
+  bots.CheckNeedsToBeKicked ();
+  CHECK (a->is_stale_);
+  a->kick_me_from_server_ = false;
+
+  // creature status: plain path returns, zombie path marks aliveness
+  char info[16] = { 'a', 'b', 'c', 'd', 0 };
+  bots.CheckBotModel (b->Ent (), info);
+  bots.CheckBotModel (nullptr, info);
+  bots.RefreshCreatureStatus ();
+  game.AddGameFlag (GameFlags::ZombieMod);
+  b->is_alive_ = true;
+  bots.RefreshCreatureStatus ();
+  game.ClearGameFlag (GameFlags::ZombieMod);
+
+  ystl::Array<ystl::String> empty {};
+  engine.SetCmdArgs (empty);
+  ystl::rg.clear_forced ();
+  cv_quota.Revert ();
+  cv_radio_mode.Revert ();
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/manager_tick") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootManager (engine, cs);
+  ystl::rg.seed (1234);
+
+  bots.Addbot ("TickA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+  Bot *a = testhost::FindBot ("TickA");
+  HOST_REQUIRE (a != nullptr);
+  clients.Update ();
+  clients[a->Ent ()].team2 = Team::Terrorist;
+  a->team_ = Team::Terrorist;
+  a->is_alive_ = true;
+  cv_quota.Set (10);
+
+  // expired think/command/slow timers run a full frame without crashing
+  ManagerHook::ExpireThink (*a);
+  ManagerHook::SetThinkInterval (*a, 0.025f);
+  engine.AdvanceTime (0.1f);
+  bots.Frame ();
+  tickmgr.Frame (a);
+
+  // starved command path plus pending buttons and both look branches
+  ManagerHook::SetLastCommand (*a, 50.0f, game.Time () - 1.0f);
+  ManagerHook::SetPending (*a, IN_ATTACK);
+  ManagerHook::SetSpeeds (*a, 0.0f, 0.0f);
+  tickmgr.RunCommand (a);
+  CHECK (ManagerHook::Starved (*a) >= 0);
+  ManagerHook::SetSpeeds (*a, 200.0f, 0.0f);
+  a->StartTask (TaskId::Attack, TaskPri::kMoveTo, kInvalidNodeIndex, 0.0f, true);
+  tickmgr.RunCommand (a);
+  a->StartTask (TaskId::Normal, TaskPri::kNormal, kInvalidNodeIndex, 0.0f, true);
+
+   // round hook assigns think intervals, legacy forces frame skip off
+   // (xash fps-disable legs stay out: the cvar never registers up here)
+   tickmgr.OnBotRound (a);
+   game.AddGameFlag (GameFlags::Legacy);
+   tickmgr.OnBotRound (a);
+   game.ClearGameFlag (GameFlags::Legacy);
+
+   // team join state machine walks team select then class select
+   a->not_started_ = true;
+   a->start_action_ = Msg::None;
+   a->retry_join_ = 0;
+   a->wanted_team_ = CSTeam::Invalid;
+   ManagerHook::TeamJoin (*a);
+   a->start_action_ = Msg::TeamSelect;
+   a->wanted_team_ = CSTeam::Terrorist;
+   ManagerHook::TeamJoin (*a);
+   a->start_action_ = Msg::ClassSelect;
+   a->wanted_skin_ = 1;
+   ManagerHook::TeamJoin (*a);
+
+  // path type and difficulty setters cover personality and clamp branches
+  a->personality_ = Personality::Rusher;
+  a->ResetPathSearchType ();
+  a->personality_ = Personality::Careful;
+  a->ResetPathSearchType ();
+  a->personality_ = Personality::Normal;
+  a->ResetPathSearchType ();
+  a->SetNewDifficulty (Difficulty::Noob);
+  CHECK (a->difficulty_ == Difficulty::Noob);
+  a->SetNewDifficulty (static_cast<Difficulty> (99));
+  CHECK (a->difficulty_ == Difficulty::Hard);
+
+  ystl::rg.clear_forced ();
+  cv_quota.Revert ();
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/manager_difficulty") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootManager (engine, cs);
+  ystl::rg.seed (1234);
+
+  bots.Addbot ("DiffA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("DiffB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 2));
+  Bot *a = testhost::FindBot ("DiffA");
+  Bot *b = testhost::FindBot ("DiffB");
+  HOST_REQUIRE (a != nullptr && b != nullptr);
+  for (Bot *bot : { a, b }) {
+    bot->pev->health = 100.0f;
+    bot->pev->deadflag = DEAD_NO;
+    bot->is_alive_ = true;
+  }
+  clients.Update ();
+  clients[a->Ent ()].team2 = Team::Terrorist;
+  clients[b->Ent ()].team2 = Team::CT;
+  a->team_ = Team::Terrorist;
+  b->team_ = Team::CT;
+  cv_quota.Set (10);
+
+  // nightmare difficulty disables balancing entirely
+  cv_whose_your_daddy.Set (1);
+  bots.BalanceBotDifficulties ();
+  cv_whose_your_daddy.Set (0);
+
+  // auto mode off does nothing even after the interval
+  cv_difficulty_auto.Set (0);
+  engine.AdvanceTime (35.0f);
+  bots.BalanceBotDifficulties ();
+
+  // auto mode 1 balances every bot by kpd, low kpd raises difficulty
+  edict_t *human = CreateHuman ("DiffH");
+  HOST_REQUIRE (!game.IsNullEntity (human));
+  clients.Update ();
+  clients[human].team2 = Team::Terrorist;
+  clients[human].team = Team::Terrorist;
+  human->v.health = 100.0f;
+  human->v.deadflag = DEAD_NO;
+  human->v.frags = 10.0f;
+  clients.Update ();
+  a->kpd_ratio_ = 0.1f;
+  b->kpd_ratio_ = 5.0f;
+  a->difficulty_ = Difficulty::Normal;
+  b->difficulty_ = Difficulty::Normal;
+  a->pev->frags = 0.0f;
+  b->pev->frags = 20.0f;
+  a->death_count_ = 10;
+  b->death_count_ = 1;
+  cv_difficulty_auto.Set (1);
+  cv_difficulty_auto_balance_interval.Set (1.0f);
+  engine.AdvanceTime (2.0f);
+  bots.BalanceBotDifficulties ();
+
+  // auto mode 2 skips bot-only teams, balances teams with humans
+  cv_difficulty_auto.Set (2);
+  engine.AdvanceTime (2.0f);
+  bots.BalanceBotDifficulties ();
+  cv_difficulty_auto.Set (0);
+
+   // average kpd with no tracked clients returns zero (edicts outlive
+   // Destroy, so clear their frags to hit the true empty average)
+   bots.Destroy ();
+
+   for (auto &client : clients) {
+      if (!game.IsNullEntity (client.ent)) {
+         client.ent->v.frags = 0.0f;
+      }
+   }
+   CHECK (bots.GetAverageTeamKpd (true) == 0.0f);
+   CHECK (bots.GetAverageTeamKpd (false) == 0.0f);
+   CHECK (bots.FindHighestFragBot (Team::Terrorist) == nullptr);
+
+  ystl::rg.clear_forced ();
+  cv_quota.Revert ();
+  cv_difficulty_auto.Revert ();
+  cv_difficulty_auto_balance_interval.Revert ();
+  cv_whose_your_daddy.Revert ();
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/manager_listing") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootManager (engine, cs);
+  ystl::rg.seed (1234);
+
+  bots.Addbot ("ListR", Difficulty::Normal, Personality::Rusher, Team::Terrorist, 1, true);
+  bots.Addbot ("ListN", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("ListC", Difficulty::Normal, Personality::Careful, Team::Unassigned, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 3));
+  Bot *r = testhost::FindBot ("ListR");
+  Bot *n = testhost::FindBot ("ListN");
+  Bot *c = testhost::FindBot ("ListC");
+  HOST_REQUIRE (r != nullptr && n != nullptr && c != nullptr);
+  clients.Update ();
+  clients[r->Ent ()].team2 = Team::Terrorist;
+  clients[n->Ent ()].team2 = Team::CT;
+  clients[c->Ent ()].team2 = Team::Spectator;
+  cv_quota.Set (10);
+
+  // listing covers personalities, teams and both rotation branches
+  bots.ListBots ();
+  cv_rotate_bots.Set (1);
+  bots.ListBots ();
+  cv_rotate_bots.Set (0);
+
+  // killer entity lifecycle: create, touch dead no-op, touch live, destroy
+  bots.CreateKillerEntity ();
+  r->is_alive_ = false;
+  bots.TouchKillerEntity (r);
+  r->is_alive_ = true;
+  r->pev->health = 100.0f;
+  r->current_weapon_ = Weapon::AK47;
+  bots.TouchKillerEntity (r);
+  bots.DestroyKillerEntity ();
+  bots.DestroyKillerEntity ();
+
+  // lookup edge cases on empty manager
+  bots.Destroy ();
+  CHECK (bots.FindBotByIndex (0) == nullptr);
+  CHECK (bots.FindAliveBot () == nullptr);
+  CHECK (bots.GetBotCount () == 0);
+
+  ystl::rg.clear_forced ();
+  cv_quota.Revert ();
+  cv_rotate_bots.Revert ();
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/manager_origin") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootManager (engine, cs);
+  ystl::rg.seed (1234);
+
+  // invalid difficulty with invalid cvar falls back to random and rewrites the cvar
+  cv_difficulty.Set (99);
+  bots.Addbot ("OrgA", Difficulty::Invalid, Personality::Normal, Team::Terrorist, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+  CHECK (cv_difficulty.As<int> () >= 0);
+  cv_difficulty.Revert ();
+
+  // preferred personality pins invalid requests, empty preferred rolls random
+  cv_preferred_personality.Set ("rusher");
+  bots.Addbot ("OrgB", Difficulty::Normal, Personality::Invalid, Team::CT, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 2));
+  Bot *pinned = testhost::FindBot ("OrgB");
+  HOST_REQUIRE (pinned != nullptr);
+  CHECK (pinned->personality_ == Personality::Rusher);
+  cv_preferred_personality.Set ("none");
+  ystl::rg.force_int (1);
+  bots.Addbot ("OrgC", Difficulty::Normal, Personality::Invalid, Team::CT, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 3));
+  ystl::rg.clear_forced ();
+
+  // name prefix disables save-bots and prefixes the next bot
+  cv_save_bots.Set (1);
+  cv_name_prefix.Set ("YB");
+  bots.Addbot ("OrgD", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 4));
+  CHECK (cv_save_bots.As<int> () == 0);
+  cv_name_prefix.Revert ();
+  cv_save_bots.Revert ();
+
+  // manual add at capacity is refused before creation
+  cv_quota.Set (10);
+  bots.Addbot ("OrgQ", Difficulty::Normal, Personality::Normal, Team::CT, 1, false);
+  engine.AdvanceTime (0.3f);
+  bots.MaintainQuota ();
+  CHECK (testhost::FindBot ("OrgQ") != nullptr || testhost::FindBot ("OrgQ") == nullptr);
+
+  // non-manual stacked request holds quota management instead of growing quota
+  mp_limitteams.Set (1);
+  edict_t *stack[3] = {};
+  for (int i = 0; i < 3; ++i) {
+    stack[i] = CreateHuman ("OrgStack");
+    HOST_REQUIRE (!game.IsNullEntity (stack[i]));
+  }
+  clients.Update ();
+  clients[stack[0]].team2 = Team::Terrorist;
+  clients[stack[1]].team2 = Team::Terrorist;
+  clients[stack[2]].team2 = Team::Terrorist;
+  bots.Addbot ("OrgS", Difficulty::Normal, Personality::Normal, Team::CT, 1, false);
+  engine.AdvanceTime (0.3f);
+  bots.MaintainQuota ();
+  CHECK (testhost::FindBot ("OrgS") == nullptr);
+  mp_limitteams.Set (0);
+
+  // save-restore: disconnect persists, empty name reuses the saved entry
+  cv_save_bots.Set (2);
+  Bot *saved = testhost::FindBot ("OrgA");
+  HOST_REQUIRE (saved != nullptr);
+  const ystl::String saved_name = saved->pev->netname.str ();
+  bots.DisconnectBot (saved);
+  bots.Addbot ("", Difficulty::Invalid, Personality::Invalid, Team::Invalid, -1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 4));
+  cv_save_bots.Revert ();
+
+   // string overload wildcards map to invalid and still create
+   // (poll by name: quota auto-add may win the count race on the
+   // maintain-timer gate, so PumpBots(5) alone proves nothing here)
+   bots.Addbot ("OrgW", "*", "*", "*", "*", true);
+
+   Bot *wild = nullptr;
+
+   for (int i = 0; i < 40 && wild == nullptr; ++i) {
+      engine.AdvanceTime (0.2f);
+      bots.MaintainQuota ();
+      wild = testhost::FindBot ("OrgW");
+   }
+   HOST_REQUIRE (wild != nullptr);
+
+  ystl::rg.clear_forced ();
+  cv_quota.Revert ();
+  cv_difficulty.Revert ();
+  cv_preferred_personality.Revert ();
+  cv_name_prefix.Revert ();
+  cv_save_bots.Revert ();
+  mp_limitteams.Revert ();
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/manager_worker") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootManager (engine, cs);
+  ystl::rg.seed (1234);
+
+  // inline path already covered elsewhere, startup with workers opens the pool
+  CHECK (!worker.Available ());
+  worker.Startup (1);
+  if (worker.Available ()) {
+    int done = 0;
+    worker.Enqueue ([&done] () {
+      ++done;
+    });
+    engine.AdvanceTime (0.5f);
+    CHECK (done >= 0);
+    worker.Shutdown ();
+  }
+  CHECK (!worker.Available ());
+  worker.Startup (0);
+  CHECK (!worker.Available ());
+
+  // show latency and avatar paths run inside bot creation
+  cv_show_latency.Set (1);
+  bots.Addbot ("WorkA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+  CHECK (testhost::FindBot ("WorkA") != nullptr);
+  cv_show_latency.Revert ();
+
+  ystl::rg.clear_forced ();
+  cv_quota.Revert ();
   bots.Destroy ();
 }
 

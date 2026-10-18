@@ -125,6 +125,26 @@ x64. No std::* in harness code (ystl only).
     creature, aggression/fear, camp clear, practice landing, teamkill).
     Needs `BotBehaviorHook` (Bot, BotBehaviorData, BotNavigateData).
     Newborn timers (buy/heavy) always outlive pump: advance first.
+    `unit/behavior_{predict,siege,ordnance,dispatch,trauma,lifecycle,override}`
+    closes the rest: predict cache (compute/refresh/throttle/stale, suspect
+    watch), bomb timer/defuse witnesses/audible fallback/spawn checks,
+    grenade geometry (strafe sides, dodge drive, smoke evaluation), Buy
+    lanes (stocked/low-freezetime/dry/vip/done), damage extras (monsters,
+    clamps, drops, c4 handoff, forget timer, stamp reset), full Update
+    (join/vote/slay/map-vote forks), overlay (level-two nearest, held
+    text, spectator chatter), knife/sniper/reload overrides, camp
+    resolution with blocked sight lines. `unit/behavior_{breakables,
+    teleport,comms,hearing2,donate2}` covers breakable scan/filter/give-up
+    with pre-activate seeding, sealed-bomb teleport (guards, graph/radial/
+    last-resort legs), Say + model-mask comms, full hearing matrix
+    (tracking, godmode/range skips, scoring, takeover, thru-wall engage
+    and fail), donate skip/no-recipient/decoy legs. Notes: zero vectors
+    read as empty (keep suspects a unit off null islands); rearmed
+    zero-timers need a tick to elapse; `clients[].team` never propagates
+    from the bot (pin by hand); radio_entity must be set before Logic or
+    CheckRadioQueue derefs null. Regression guards for fixed prod bugs:
+    A* parent-cycle fallback (planner.cpp, Diversity re-parent hung the
+    reconstruction walk; returns Failed so Floyd takes over).
   - `unit/combat_{senses,fire}` — per-file coverage for combat.cpp:
     friend/foe census, rendering/invincibility/notarget matrices,
     darkness rules incl. threat override, groups, knife/grenade modes,
@@ -219,6 +239,18 @@ x64. No std::* in harness code (ystl only).
       the empty origin, close-range and audible planted resolution,
       planted-grenade entity lookup (models/w_c4.mdl matches the
       "c4.mdl" conf substring).
+    - `unit/navigate_{tactics,ordnance,avoid2,lift2,strafe,routing,frame}` —
+      second pass over navigate.cpp: goal/tactic variants with history
+      filtering, ordnance (loose-bomb ignore, in-zone hold, planted timers),
+      avoidance clear-camp/dead-hindrance/vertical-split legs, full lift
+      state machine, strafe/blocked/wall predicates both sides, heuristic
+      matrix with the A* staging lambda, UpdateNavigation jump/door/
+      arrival legs. `unit/navigate_{siege,herald,bastion,pinnacle,harbor,
+      vanguard,summit,relay}` closes it further: escape/zombie goals,
+      demolition/hostage/vip filters, repulsion/terrain/ladder weights,
+      door/jump/lift cycles, rescue rush, SelectNext/Advance/camp legs,
+      A* wall salvage on a 10-chain. Notes: TEST_CASE filters substring-
+      match, so new names use distinct words (numeric suffixes collide).
     - `unit/planner_search` — per-file coverage for planner.cpp:
       heuristic g/h functions across modes and flags (hostage bans,
       crouch inflation, random bands), skip predicates, A* with guards
@@ -228,6 +260,9 @@ x64. No std::* in harness code (ystl only).
       path (zero limit trips init() even on tiny graphs, then restore).
       Unloaded practice still prices every node at 1. Islands
       fail graph sanity; the planner records it and carries on.
+      Regression guard for a fixed prod bug: A* parent-chain cycles
+      (Diversity re-parenting hung path reconstruction forever; the walk
+      now bails out with Failed after size_ steps).
     - `unit/clients_track` — per-file coverage for clients.cpp: census
       flags (used/alive/bot/human), origin tracking, sticky teams,
       death/dormant transitions, const access. Fresh clients start
@@ -270,7 +305,22 @@ x64. No std::* in harness code (ystl only).
     - `unit/module_api` — per-file coverage for module.cpp: version
       handshake, bot presence/identity, node queries, goal commands and
       the empty-graph answers. Needs one manager bot (fresh clients join
-      as spectators, assign teams).
+      as spectators, assign teams). `unit/module_extra` covers the
+      getters the base case never calls (ping/ammo/difficulty/
+      personality/task-data defaults plus live answers, node radius/
+      light/reachability, SetBotLookAt).
+    - `unit/linkage_tables` — linkage.cpp table wrappers through the
+      installed tables only (game init/spawn/touch/connect/disconnect,
+      sound/message/client-command/user-message wrappers, no metamod).
+    - `unit/entities_forward` — entities.cpp (LINKENT_STATIC): resolve-
+      miss and call-through legs plus every LINK_ENTITY forwarder as a
+      safe no-op (C linkage decls, harness resolves none).
+    - `unit/rehlds_{dedicated,listen}` — rehlds.cpp guards without a
+      ReHLDS engine (probe stays down, drops fail closed; listen
+      servers never carry it).
+    - `unit/debug_panel` — debug.cpp through the public panel API
+      (null guards, OOB rows, reset/render/update on a live bot, bad
+      color fallback).
    - `unit/buying_{select,flow}` — per-file coverage for buying.cpp:
     restriction/eligibility/economics gates, prostock switch,
     single-candidate selectors, exact dispatch counts through the
@@ -312,7 +362,14 @@ x64. No std::* in harness code (ystl only).
     travel time, flag mapping, legacy conversion, text export contract
     (core); editor mutations, erase/renumber, path surgery, facing,
     notify sounds, basic-node growth, stats (edit); text roundtrip
-    through a real file (serial).
+    through a real file (serial). `unit/graph_{gaps,urls,walls,build,
+    import,frame,reach}` closes the rest: guards and failure legs, full
+    URL-resolver matrix, ModeWalls probe/publish, analyzer adds and
+    save/load roundtrips (incl. legacy convert and old-format save),
+    light levels, SeedBasicNodes, import rejects, draw frames,
+    reachability and path-radius arms. Notes: no TLS in test builds,
+    so download/collect legs stay out; TEST_CASE filters substring-
+    match, so new names use distinct words.
   - `unit/support_{pure,conf,engine}` — per-file coverage for support.cpp:
     team converts, view cone math, date format (pure); weapon aliases,
     fake steam ids, sentence defs, cvar descriptions, wav durations (conf);

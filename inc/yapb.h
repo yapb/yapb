@@ -96,6 +96,7 @@ public:
   friend struct RadioHook;
   friend struct TasksHook;
   friend struct WeaponsHook;
+  friend struct ManagerHook; // test-only accessor (defined in tests/, no production code)
 
 private:
   ystl::RWrand rg {}; // all bots has own rng

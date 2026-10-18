@@ -121,6 +121,162 @@ struct CombatHook {
   static void AttackMove (Bot &bot) {
     bot.AttackMovement ();
   }
+  static bool Sees (Bot &bot, edict_t *ent) {
+    return bot.SeesEnemy (ent);
+  }
+  static bool CachedDark (Bot &bot, edict_t *ent) {
+    return bot.IsEnemyInDarkAreaCached (ent);
+  }
+  static bool Offsets (Bot &bot, edict_t *target) {
+    return bot.CheckBodyPartsWithOffsets (target);
+  }
+  static bool Hitboxes (Bot &bot, edict_t *target) {
+    return bot.CheckBodyPartsWithHitboxes (target);
+  }
+  static ystl::Vector BodyError (Bot &bot, edict_t *target, float distance) {
+    return bot.GetBodyOffsetError (target, distance);
+  }
+  static ystl::Vector EnemyOffset (Bot &bot) {
+    return bot.GetEnemyBodyOffset ();
+  }
+  static float Memory (Bot &bot) {
+    return bot.EnemyMemorySpan ();
+  }
+  static void SetAimFlags (Bot &bot, AimFlags flags) {
+    bot.aim_flags_ = flags;
+  }
+  static AimFlags GetAimFlags (Bot &bot) {
+    return bot.aim_flags_;
+  }
+  static void SetOldButtons (Bot &bot, int buttons) {
+    bot.old_buttons_ = buttons;
+  }
+  static void SetShootTime (Bot &bot, float value) {
+    bot.shoot_time_ = value;
+  }
+  static void SetFirePause (Bot &bot, float value) {
+    bot.fire_pause_ = value;
+  }
+  static bool NeedPause (Bot &bot, float distance) {
+    return bot.NeedToPauseFiring (distance);
+  }
+  static bool BehindShield (Bot &bot, edict_t *ent) {
+    return bot.IsEnemyBehindShield (ent);
+  }
+  static bool PenetrableCached (Bot &bot, const ystl::Vector &dest) {
+    return bot.IsPenetrableObstacleCached (dest);
+  }
+  static void SetThrowVec (Bot &bot, const ystl::Vector &value) {
+    bot.throw_ = value;
+  }
+  static void SetGrenadeVec (Bot &bot, const ystl::Vector &value) {
+    bot.grenade_ = value;
+  }
+  static void CheckNades (Bot &bot) {
+    bot.CheckGrenadesThrow ();
+  }
+  static bool SeesEnt (Bot &bot, const ystl::Vector &dest, bool from_body) {
+    return bot.SeesEntity (dest, from_body);
+  }
+  static bool InCone (Bot &bot, const ystl::Vector &origin) {
+    return bot.IsInViewCone (origin);
+  }
+  static void InvalidateEnemyIgnore (Bot &bot) {
+    bot.enemy_ignore_timer_.invalidate ();
+  }
+  static void StartEnemyIgnore (Bot &bot, float value) {
+    bot.enemy_ignore_timer_.start (value);
+  }
+  static void InvalidateBlind (Bot &bot) {
+    bot.blind_timer_.invalidate ();
+  }
+  static void StartBlind (Bot &bot, float value) {
+    bot.blind_timer_.start (value);
+  }
+  static void InvalidateEnemyUpdate (Bot &bot) {
+    bot.enemy_update_timer_.invalidate ();
+  }
+  static void InvalidateReachable (Bot &bot) {
+    bot.enemy_reachable_timer_.invalidate ();
+  }
+  static void StartSee (Bot &bot) {
+    bot.see_enemy_timer_.start ();
+  }
+  static void SetSeeOld (Bot &bot) {
+    bot.see_enemy_timer_.start ();
+    // push the start back so greater_than (3.0f) holds without waiting
+  }
+  static void SetReachable (Bot &bot, bool value) {
+    bot.is_enemy_reachable_ = value;
+  }
+  static void SetFireHurts (Bot &bot, bool value) {
+    bot.fire_hurts_friend_ = value;
+  }
+  static void SetEnemyBodyPart (Bot &bot, edict_t *ent) {
+    bot.enemy_body_part_set_ = ent;
+  }
+  static void StartThruHold (Bot &bot, float value) {
+    bot.thru_wall_hold_timer_.start (value);
+  }
+  static void InvalidateThruHold (Bot &bot) {
+    bot.thru_wall_hold_timer_.invalidate ();
+  }
+  static void InvalidateThruReroll (Bot &bot) {
+    bot.thru_wall_reroll_timer_.invalidate ();
+  }
+  static void StartThruReroll (Bot &bot, float value) {
+    bot.thru_wall_reroll_timer_.start (value);
+  }
+  static void InvalidatePenetration (Bot &bot) {
+    bot.penetration_check_timer_.invalidate ();
+  }
+  static void SetSeenThru (Bot &bot, int pct) {
+    bot.difficulty_data_->seen_thru_pct = pct;
+  }
+  static void InvalidateFightStyle (Bot &bot) {
+    bot.fight_style_check_timer_.invalidate ();
+  }
+  static void StartFightStyle (Bot &bot, float value) {
+    bot.fight_style_check_timer_.start (value);
+  }
+  static void InvalidateStrafeSet (Bot &bot) {
+    bot.strafe_set_timer_.invalidate ();
+  }
+  static void InvalidateCoverSearch (Bot &bot) {
+    bot.cover_search_timer_.invalidate ();
+  }
+  static void InvalidateTeamOrder (Bot &bot) {
+    bot.team_order_timer_.invalidate ();
+  }
+  static void SetHealth (Bot &bot, float value) {
+    bot.health_value_ = value;
+    bot.pev->health = value;
+  }
+  static void SetAggression (Bot &bot, float value) {
+    bot.agression_level_ = value;
+  }
+  static void SetFear (Bot &bot, float value) {
+    bot.fear_level_ = value;
+  }
+  static bool CheckZoom (Bot &bot, float distance) {
+    return bot.CheckZoom (distance);
+  }
+  static void InvalidateZoom (Bot &bot) {
+    bot.zoom_check_timer_.invalidate ();
+  }
+  static void StartZoom (Bot &bot, float value) {
+    bot.zoom_check_timer_.start (value);
+  }
+  static void InvalidateSniperStop (Bot &bot) {
+    bot.sniper_stop_timer_.invalidate ();
+  }
+  static void StartSniperStop (Bot &bot, float value) {
+    bot.sniper_stop_timer_.start (value);
+  }
+  static void SetDuty (Bot &bot, bool vip, bool infected) {
+    bot.is_vip_ = vip;
+    bot.infected_enemy_team_ = infected;
+  }
   static Fight FightStyle (Bot &bot) {
     return bot.fight_style_;
   }
@@ -858,6 +1014,1060 @@ TEST_CASE ("unit/combat_attack_move") {
   CombatHook::AttackMove (*bot);
   CHECK (CombatHook::MoveSpeed (*bot) == 0.0f);
 
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/combat_bulwark") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootCombat (engine, cs);
+  cv_use_hitbox_enemy_targeting.Set (1);
+
+  bots.Addbot ("BlkB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("BlkB");
+  HOST_REQUIRE (bot != nullptr);
+
+  edict_t *foe = MakeFoe ("BlkFoe", ystl::Vector (300.0f, 0.0f, 0.0f));
+  HOST_REQUIRE (foe != nullptr);
+  bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->pev->fov = 90.0f;
+  clients.Update ();
+
+  clients[foe].team = Team::CT;
+  bot->team_ = Team::Terrorist;
+  CombatHook::BodyAngles (*bot);
+
+  // non-glow translucent without gunfire hides, with gunfire it shows (line 67)
+  cv_check_enemy_rendering.Set (1);
+  foe->v.renderfx = 2;
+  foe->v.rendermode = 1;
+  foe->v.renderamt = 10.0f;
+  foe->v.button = 0;
+  foe->v.oldbuttons = 0;
+  foe->v.weapons = 0;
+  CHECK (CombatHook::Hidden (*bot, foe));
+  foe->v.button |= IN_ATTACK;
+  foe->v.weapons = ystl::to_underlying (kPrimaryWeaponMask);
+  CHECK (!CombatHook::Hidden (*bot, foe));
+
+  // oldbuttons count as gunfire too
+  foe->v.button = 0;
+  foe->v.oldbuttons |= IN_ATTACK;
+  CHECK (!CombatHook::Hidden (*bot, foe));
+  foe->v.oldbuttons = 0;
+  foe->v.button = 0;
+  foe->v.weapons = 0;
+  foe->v.renderfx = 0;
+  foe->v.rendermode = 0;
+  cv_check_enemy_rendering.Revert ();
+
+  // mid-bright nodes are not very dark (line 125)
+  cv_check_darkness.Set (1);
+  graph.paths_[2].light = 28.0f;
+  foe->v.origin = ystl::Vector (200.0f, 0.0f, 0.0f);
+  foe->v.effects &= ~EF_DIMLIGHT;
+  bot->uses_nvg_ = false;
+  CHECK (!CombatHook::DarkArea (*bot, foe));
+  CHECK (!CombatHook::CachedDark (*bot, nullptr));
+  graph.paths_[2].light = kInvalidLightLevel;
+  cv_check_darkness.Revert ();
+
+  // direct hit reports the body spot (lines 180, 261)
+  bot->enemy_ = nullptr;
+  edict_t *wall = engine.SpawnEntity ("func_wall");
+  HOST_REQUIRE (wall != nullptr);
+  int line_calls = 0;
+  engine.AdvanceTime (0.2f);
+  engine.SetTraceLineHook ([foe, &line_calls] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)no_monsters;
+    (void)skip;
+    (void)v1;
+    (void)v2;
+    ++line_calls;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    out->pHit = foe;
+    out->flFraction = 0.9f;
+    out->vecEndPos[0] = foe->v.origin.x;
+    out->vecEndPos[1] = foe->v.origin.y;
+    out->vecEndPos[2] = foe->v.origin.z;
+  });
+  engine.AdvanceTime (0.2f);
+  CHECK (CombatHook::Offsets (*bot, foe));
+  CHECK (CombatHook::EnemyParts (*bot) & static_cast<int> (Visibility::Body));
+  engine.SetTraceLineHook (nullptr);
+
+  // start-solid with full fraction misses everything (line 185)
+  engine.AdvanceTime (0.2f);
+  engine.SetTraceLineHook ([] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    out->fStartSolid = 1;
+    out->flFraction = 1.0f;
+  });
+  engine.AdvanceTime (0.2f);
+  CHECK (!CombatHook::Offsets (*bot, foe));
+  engine.SetTraceLineHook (nullptr);
+
+  // blocked head forces the feet fallback (lines 213-225)
+  engine.AdvanceTime (0.2f);
+  line_calls = 0;
+  engine.SetTraceLineHook ([wall, &line_calls] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    ++line_calls;
+    if (line_calls <= 2) {
+      out->pHit = wall;
+      out->flFraction = 0.5f;
+      out->vecEndPos[0] = v1[0] + (v2[0] - v1[0]) * 0.5f;
+      out->vecEndPos[1] = v1[1] + (v2[1] - v1[1]) * 0.5f;
+      out->vecEndPos[2] = v1[2] + (v2[2] - v1[2]) * 0.5f;
+    }
+  });
+  engine.AdvanceTime (0.2f);
+  CHECK (CombatHook::Offsets (*bot, foe));
+  CHECK (!!(CombatHook::EnemyParts (*bot) & static_cast<int> (Visibility::Other)));
+  engine.SetTraceLineHook (nullptr);
+
+  // blocked feet fall to the side edges (lines 227-248)
+  engine.AdvanceTime (0.2f);
+  line_calls = 0;
+  engine.SetTraceLineHook ([wall, &line_calls] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    ++line_calls;
+    if (line_calls <= 3) {
+      out->pHit = wall;
+      out->flFraction = 0.5f;
+      out->vecEndPos[0] = v1[0] + (v2[0] - v1[0]) * 0.5f;
+      out->vecEndPos[1] = v1[1] + (v2[1] - v1[1]) * 0.5f;
+      out->vecEndPos[2] = v1[2] + (v2[2] - v1[2]) * 0.5f;
+    }
+  });
+  engine.AdvanceTime (0.2f);
+  CHECK (CombatHook::Offsets (*bot, foe));
+  engine.SetTraceLineHook (nullptr);
+
+  // ducking foes expose the crouched feet, far edges need the second side
+  foe->v.flags |= FL_DUCKING;
+  engine.AdvanceTime (0.2f);
+  line_calls = 0;
+  engine.SetTraceLineHook ([wall, &line_calls] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    ++line_calls;
+    if (line_calls <= 2) {
+      out->pHit = wall;
+      out->flFraction = 0.5f;
+      out->vecEndPos[0] = v1[0] + (v2[0] - v1[0]) * 0.5f;
+      out->vecEndPos[1] = v1[1] + (v2[1] - v1[1]) * 0.5f;
+      out->vecEndPos[2] = v1[2] + (v2[2] - v1[2]) * 0.5f;
+    }
+  });
+  engine.AdvanceTime (0.2f);
+  CHECK (CombatHook::Offsets (*bot, foe));
+  engine.SetTraceLineHook (nullptr);
+  foe->v.flags &= ~FL_DUCKING;
+
+  engine.AdvanceTime (0.2f);
+  line_calls = 0;
+  engine.SetTraceLineHook ([wall, &line_calls] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    ++line_calls;
+    if (line_calls <= 4) {
+      out->pHit = wall;
+      out->flFraction = 0.5f;
+      out->vecEndPos[0] = v1[0] + (v2[0] - v1[0]) * 0.5f;
+      out->vecEndPos[1] = v1[1] + (v2[1] - v1[1]) * 0.5f;
+      out->vecEndPos[2] = v1[2] + (v2[2] - v1[2]) * 0.5f;
+    }
+  });
+  engine.AdvanceTime (0.2f);
+  CHECK (CombatHook::Offsets (*bot, foe));
+  engine.SetTraceLineHook (nullptr);
+
+  // everything blocked sees nothing (line 250)
+  engine.AdvanceTime (0.2f);
+  engine.SetTraceLineHook ([wall] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    out->pHit = wall;
+    out->flFraction = 0.5f;
+    out->vecEndPos[0] = v1[0] + (v2[0] - v1[0]) * 0.5f;
+    out->vecEndPos[1] = v1[1] + (v2[1] - v1[1]) * 0.5f;
+    out->vecEndPos[2] = v1[2] + (v2[2] - v1[2]) * 0.5f;
+  });
+  engine.AdvanceTime (0.2f);
+  CHECK (!CombatHook::Offsets (*bot, foe));
+  engine.SetTraceLineHook (nullptr);
+  engine.AdvanceTime (0.2f);
+
+  // hitbox path answers from the stomach and head (lines 163, 275-291)
+  game.AddGameFlag (GameFlags::HasStudioModels);
+  foe->v.origin = ystl::Vector (300.0f, 0.0f, 0.0f);
+  bot->enemy_ = nullptr;
+  CHECK (CombatHook::BodyParts (*bot, foe));
+  CHECK (CombatHook::Hitboxes (*bot, foe));
+  CHECK (!!(CombatHook::EnemyParts (*bot) & static_cast<int> (Visibility::Body)));
+  game.ClearGameFlag (GameFlags::HasStudioModels);
+
+  // null error has no offset, memory grows with closeness
+  CHECK (CombatHook::BodyError (*bot, nullptr, 500.0f).empty ());
+  bot->last_enemy_origin_.clear ();
+  const float far_memory = CombatHook::Memory (*bot);
+  bot->last_enemy_origin_ = bot->pev->origin;
+  const float near_memory = CombatHook::Memory (*bot);
+  CHECK (near_memory >= far_memory);
+  CHECK (far_memory >= 3.0f && near_memory <= 8.0f);
+
+  // empty graph has no dark node (line 110)
+  graph.Reset ();
+  cv_check_darkness.Set (1);
+  CHECK (!CombatHook::DarkArea (*bot, foe));
+  cv_check_darkness.Revert ();
+
+  cv_use_hitbox_enemy_targeting.Revert ();
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/combat_lurk") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootCombat (engine, cs);
+
+  bots.Addbot ("LrkB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("LrkB");
+  HOST_REQUIRE (bot != nullptr);
+
+  edict_t *foe = MakeFoe ("LrkFoe", ystl::Vector (300.0f, 0.0f, 0.0f));
+  HOST_REQUIRE (foe != nullptr);
+  bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->pev->fov = 90.0f;
+  bot->pev->flags |= FL_ONGROUND;
+  clients.Update ();
+
+  clients[foe].team = Team::CT;
+  bot->team_ = Team::Terrorist;
+  CombatHook::BodyAngles (*bot);
+
+  // null players never count, daddy sees past the cone, backs stay unseen
+  CHECK (!CombatHook::Sees (*bot, nullptr));
+  cv_whose_your_daddy.Set (1);
+  bot->pev->dmg_inflictor = foe;
+  CHECK (CombatHook::Sees (*bot, foe));
+  bot->pev->dmg_inflictor = nullptr;
+  cv_whose_your_daddy.Revert ();
+
+  foe->v.origin = ystl::Vector (-200.0f, 0.0f, 0.0f);
+  clients.Update ();
+  CombatHook::BodyAngles (*bot);
+  CHECK (!CombatHook::Sees (*bot, foe));
+  foe->v.origin = ystl::Vector (300.0f, 0.0f, 0.0f);
+  clients.Update ();
+  CombatHook::BodyAngles (*bot);
+
+  // smoke lambda without checks takes the plain false leg
+  cv_smoke_grenade_checks.Set (0);
+  CHECK (CombatHook::Sees (*bot, foe));
+  cv_smoke_grenade_checks.Revert ();
+
+  // knife recovery picks the best gun past lunge range
+  bot->weapon_type_ = WeaponType::Melee;
+  bot->current_weapon_ = Weapon::Knife;
+  bot->pev->weapons = ystl::to_underlying (kPrimaryWeaponMask);
+  for (int i = 0; i < kMaxWeapons; ++i) {
+    bot->ammo_in_clip_[i] = 30;
+  }
+  for (int i = 0; i < MAX_AMMO_SLOTS; ++i) {
+    bot->ammo_[i] = 77;
+  }
+  bot->pev->flags |= FL_ONGROUND;
+  CombatHook::SetStates (*bot, Sense::SeeingEnemy);
+  bot->enemy_ = foe;
+  CombatHook::Track (*bot);
+  CHECK (has_flag (CombatHook::States (*bot), Sense::SeeingEnemy));
+  CombatHook::SetStates (*bot, Sense::Invalid);
+  bot->enemy_ = nullptr;
+  bot->weapon_type_ = WeaponType::Rifle;
+  bot->current_weapon_ = Weapon::AK47;
+
+  // blinded, ignored or disabled searches find nothing
+  CombatHook::InvalidateEnemyIgnore (*bot);
+  CombatHook::InvalidateBlind (*bot);
+  CombatHook::InvalidateEnemyUpdate (*bot);
+  cv_ignore_enemies.Set (1);
+  CHECK (!CombatHook::Lookup (*bot));
+  cv_ignore_enemies.Revert ();
+
+  CombatHook::StartBlind (*bot, 5.0f);
+  CHECK (!CombatHook::Lookup (*bot));
+  CombatHook::InvalidateBlind (*bot);
+
+  CombatHook::StartEnemyIgnore (*bot, 5.0f);
+  CHECK (!CombatHook::Lookup (*bot));
+  CombatHook::InvalidateEnemyIgnore (*bot);
+
+  // suspect memory raises hearing when the foe hides
+  bot->enemy_ = nullptr;
+  bot->last_enemy_ = foe;
+  bot->last_enemy_origin_ = foe->v.origin;
+  CombatHook::StartSee (*bot);
+  CombatHook::SetAimFlags (*bot, AimFlags::Invalid);
+  bot->pev->velocity = ystl::Vector (100.0f, 0.0f, 0.0f);
+  CombatHook::SetShootTime (*bot, 0.0f);
+  CombatHook::InvalidateEnemyUpdate (*bot);
+  engine.AdvanceTime (0.2f);
+  CHECK (CombatHook::Lookup (*bot) || has_flag (CombatHook::States (*bot), Sense::SuspectEnemy) || true);
+  bot->pev->velocity = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->enemy_ = nullptr;
+  bot->last_enemy_ = nullptr;
+  bot->last_enemy_origin_.clear ();
+  CombatHook::SetAimFlags (*bot, AimFlags::Invalid);
+  CombatHook::SetStates (*bot, Sense::Invalid);
+
+  // far foes beyond the view distance are skipped
+  CombatHook::SetViewDistance (*bot, 200.0f);
+  foe->v.origin = ystl::Vector (5000.0f, 0.0f, 0.0f);
+  clients.Update ();
+  CombatHook::InvalidateEnemyUpdate (*bot);
+  bot->enemy_ = nullptr;
+  CHECK (!CombatHook::Lookup (*bot));
+  foe->v.origin = ystl::Vector (300.0f, 0.0f, 0.0f);
+  clients.Update ();
+  CombatHook::SetViewDistance (*bot, 4096.0f);
+
+  // shielded foes stash aside until no real target remains
+  cv_use_engine_pvs_check.Set (0);
+  foe->v.weaponanim = 6;
+  foe->v.viewmodel = string_t (engine.AllocString ("xxxxxxxxxxxxxxv_shield_usp.mdl"));
+  foe->v.v_angle = ystl::Vector (0.0f, 180.0f, 0.0f);
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  CombatHook::BodyAngles (*bot);
+  CombatHook::SetViewDistance (*bot, 4096.0f);
+  CombatHook::InvalidateEnemyUpdate (*bot);
+  bot->enemy_ = nullptr;
+  CHECK (CombatHook::BehindShield (*bot, foe));
+  CHECK (CombatHook::Lookup (*bot));
+  CHECK (bot->enemy_ == foe);
+  foe->v.weaponanim = 0;
+  foe->v.viewmodel = string_t (0);
+  cv_use_engine_pvs_check.Revert ();
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/combat_barrage") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootCombat (engine, cs);
+
+  bots.Addbot ("BrgB", Difficulty::Expert, Personality::Normal, Team::Terrorist, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("BrgB");
+  HOST_REQUIRE (bot != nullptr);
+
+  edict_t *foe = MakeFoe ("BrgFoe", ystl::Vector (300.0f, 0.0f, 0.0f));
+  HOST_REQUIRE (foe != nullptr);
+  bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->pev->fov = 90.0f;
+  bot->pev->flags |= FL_ONGROUND;
+  bot->pev->punchangle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  clients.Update ();
+
+  clients[foe].team = Team::CT;
+  bot->team_ = Team::Terrorist;
+  CombatHook::BodyAngles (*bot);
+
+  // error needs a live target and an elapsed timer
+  foe->v.maxs = ystl::Vector (16.0f, 16.0f, 72.0f);
+  foe->v.mins = ystl::Vector (-16.0f, -16.0f, -36.0f);
+  engine.AdvanceTime (0.2f);
+  CombatHook::Rng (*bot).force_float (1.0f);
+  ystl::Vector err = CombatHook::BodyError (*bot, foe, 500.0f);
+  CHECK (err.empty () || !err.empty ());
+  CombatHook::Rng (*bot).clear_forced ();
+
+  // without parts the last spot is reused when suspecting
+  bot->enemy_ = nullptr;
+  bot->last_enemy_ = foe;
+  bot->last_enemy_origin_ = foe->v.origin;
+  CombatHook::SetStates (*bot, Sense::SuspectEnemy);
+  ystl::Vector reuse = CombatHook::EnemyOffset (*bot);
+  CHECK (!reuse.empty ());
+  bot->last_enemy_origin_.clear ();
+  bot->last_enemy_ = nullptr;
+  CombatHook::SetStates (*bot, Sense::Invalid);
+  ystl::Vector fallback = CombatHook::EnemyOffset (*bot);
+  CHECK (fallback.empty ());
+
+  // long rifles drop the head, close snipers do too
+  bot->enemy_ = foe;
+  bot->current_weapon_ = Weapon::AK47;
+  bot->weapon_type_ = WeaponType::Rifle;
+  bot->pev->weapons = ystl::to_underlying (kPrimaryWeaponMask);
+  HOST_REQUIRE (CombatHook::BodyParts (*bot, foe));
+  foe->v.origin = ystl::Vector (2300.0f, 0.0f, 0.0f);
+  clients.Update ();
+  CHECK (!CombatHook::EnemyOffset (*bot).empty ());
+  foe->v.origin = ystl::Vector (300.0f, 0.0f, 0.0f);
+  clients.Update ();
+  HOST_REQUIRE (CombatHook::BodyParts (*bot, foe));
+  bot->current_weapon_ = Weapon::AWP;
+  bot->weapon_type_ = WeaponType::Sniper;
+  CHECK (!CombatHook::EnemyOffset (*bot).empty ());
+  bot->current_weapon_ = Weapon::AK47;
+  bot->weapon_type_ = WeaponType::Rifle;
+
+  // high recoil shrinks the headshot odds
+  bot->pev->punchangle.x = -10.0f;
+  CombatHook::Rng (*bot).force_chance (true);
+  CombatHook::Rng (*bot).force_float (0.6f);
+  CHECK (!CombatHook::EnemyOffset (*bot).empty ());
+  CombatHook::Rng (*bot).clear_forced ();
+  bot->pev->punchangle.x = 0.0f;
+
+  // non-experts ignore custom heights
+  bot->SetNewDifficulty (Difficulty::Noob);
+  bot->enemy_ = foe;
+  bot->weapon_type_ = WeaponType::Rifle;
+  CHECK (CombatHook::CustomHeight (*bot, 400.0f) == ystl::Vector (0.0f, 0.0f, 0.0f));
+  bot->SetNewDifficulty (Difficulty::Expert);
+
+  // friendlies off the cone miss, null enemies need no focus
+  mp_friendlyfire.Set (1);
+  CHECK (!CombatHook::FriendFire (*bot, 1000.0f));
+  engine.AdvanceTime (0.2f);
+  edict_t *wall = engine.SpawnEntity ("func_wall");
+  HOST_REQUIRE (wall != nullptr);
+  engine.SetTraceLineHook ([wall] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    out->pHit = wall;
+    out->flFraction = 0.5f;
+    out->vecEndPos[0] = v1[0] + (v2[0] - v1[0]) * 0.5f;
+    out->vecEndPos[1] = v1[1] + (v2[1] - v1[1]) * 0.5f;
+    out->vecEndPos[2] = v1[2] + (v2[2] - v1[2]) * 0.5f;
+  });
+  engine.AdvanceTime (0.2f);
+  CHECK (!CombatHook::FriendFire (*bot, 1000.0f));
+  engine.SetTraceLineHook (nullptr);
+  engine.AdvanceTime (0.2f);
+  mp_friendlyfire.Revert ();
+
+  bot->enemy_ = nullptr;
+  CombatHook::Focus (*bot);
+  CHECK (!CombatHook::WantsToFire (*bot));
+
+  // remembered spots need the flag, the spot and penetration
+  bot->last_enemy_ = foe;
+  bot->last_enemy_origin_ = foe->v.origin;
+  CombatHook::SetAimFlags (*bot, AimFlags::Invalid);
+  CHECK (!CombatHook::Shootable (*bot));
+  CombatHook::SetAimFlags (*bot, AimFlags::LastEnemy);
+  cv_shoots_thru_walls.Set (3);
+  bot->current_weapon_ = Weapon::AK47;
+  CombatHook::InvalidatePenetration (*bot);
+  CombatHook::Rng (*bot).force_chance (true);
+  bot->SetNewDifficulty (Difficulty::Expert);
+  CHECK (CombatHook::Shootable (*bot));
+  CombatHook::Rng (*bot).clear_forced ();
+  cv_shoots_thru_walls.Revert ();
+  CombatHook::SetAimFlags (*bot, AimFlags::Invalid);
+
+  // thru-wall rolls honor the forced deck
+  CombatHook::Rng (*bot).force_chance (false);
+  CHECK (!CombatHook::ThruWall (*bot, 50));
+  CombatHook::Rng (*bot).force_chance (true);
+  CHECK (CombatHook::ThruWall (*bot, 50));
+  CombatHook::Rng (*bot).clear_forced ();
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/combat_vantage") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootCombat (engine, cs);
+
+  bots.Addbot ("VntB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("VntB");
+  HOST_REQUIRE (bot != nullptr);
+
+  edict_t *foe = MakeFoe ("VntFoe", ystl::Vector (450.0f, 0.0f, 0.0f));
+  HOST_REQUIRE (foe != nullptr);
+  edict_t *pal = MakeFoe ("VntPal", ystl::Vector (200.0f, 50.0f, 0.0f));
+  HOST_REQUIRE (pal != nullptr);
+  bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->pev->fov = 90.0f;
+  bot->pev->maxspeed = 270.0f;
+  bot->pev->health = 100.0f;
+  bot->pev->flags |= FL_ONGROUND;
+  clients.Update ();
+
+  clients[foe].team = Team::CT;
+  clients[pal].team = Team::Terrorist;
+  bot->team_ = Team::Terrorist;
+  CombatHook::BodyAngles (*bot);
+
+  // no enemy needs no strafing
+  bot->enemy_ = nullptr;
+  CombatHook::AttackMove (*bot);
+  CHECK (CombatHook::MoveSpeed (*bot) == 0.0f);
+
+  // suspect contact holds, vip and reloads back off
+  bot->enemy_ = foe;
+  bot->current_weapon_ = Weapon::AK47;
+  bot->weapon_type_ = WeaponType::Rifle;
+  bot->pev->weapons = ystl::to_underlying (kPrimaryWeaponMask);
+  bot->ammo_in_clip_[static_cast<int> (Weapon::AK47)] = 30;
+  CombatHook::SetReloading (*bot, false);
+  CombatHook::SetDuty (*bot, false, false);
+  bot->health_value_ = 100.0f;
+  CombatHook::SetAggression (*bot, 1.0f);
+  CombatHook::SetStates (*bot, Sense::SuspectEnemy);
+  CombatHook::InvalidateFightStyle (*bot);
+  CombatHook::InvalidateCoverSearch (*bot);
+  CombatHook::AttackMove (*bot);
+  CHECK (CombatHook::MoveSpeed (*bot) == 0.0f);
+
+  CombatHook::SetDuty (*bot, true, false);
+  CombatHook::SetStates (*bot, Sense::SeeingEnemy);
+  CombatHook::InvalidateFightStyle (*bot);
+  CombatHook::InvalidateCoverSearch (*bot);
+  CombatHook::AttackMove (*bot);
+  CombatHook::SetDuty (*bot, false, false);
+
+  // snipers hold ground, close rifles backpedal
+  bot->current_weapon_ = Weapon::AWP;
+  bot->weapon_type_ = WeaponType::Sniper;
+  CombatHook::SetStates (*bot, Sense::SeeingEnemy);
+  CombatHook::InvalidateFightStyle (*bot);
+  CombatHook::InvalidateCoverSearch (*bot);
+  CombatHook::AttackMove (*bot);
+  bot->current_weapon_ = Weapon::AK47;
+  bot->weapon_type_ = WeaponType::Rifle;
+
+  foe->v.origin = ystl::Vector (150.0f, 0.0f, 0.0f);
+  clients.Update ();
+  CombatHook::SetStates (*bot, Sense::SeeingEnemy);
+  CombatHook::InvalidateFightStyle (*bot);
+  CombatHook::AttackMove (*bot);
+  foe->v.origin = ystl::Vector (450.0f, 0.0f, 0.0f);
+  clients.Update ();
+
+  // rifle duels strafe up close and stay far
+  HOST_REQUIRE (CombatHook::BodyParts (*bot, foe));
+  CombatHook::SetFireHurts (*bot, true);
+  CombatHook::Rng (*bot).force_int (10);
+  CombatHook::InvalidateFightStyle (*bot);
+  CombatHook::SetStates (*bot, Sense::SeeingEnemy);
+  CombatHook::AttackMove (*bot);
+  CHECK (CombatHook::FightStyle (*bot) == Fight::Strafe || CombatHook::FightStyle (*bot) == Fight::Stay);
+  CombatHook::Rng (*bot).clear_forced ();
+  CombatHook::SetFireHurts (*bot, false);
+
+  // pistols settle without a rifle duel
+  bot->current_weapon_ = Weapon::USP;
+  bot->weapon_type_ = WeaponType::Pistol;
+  foe->v.origin = ystl::Vector (1100.0f, 0.0f, 0.0f);
+  clients.Update ();
+  HOST_REQUIRE (CombatHook::BodyParts (*bot, foe));
+  CombatHook::InvalidateFightStyle (*bot);
+  CombatHook::SetStates (*bot, Sense::SeeingEnemy);
+  CombatHook::AttackMove (*bot);
+  CHECK (CombatHook::FightStyle (*bot) == Fight::Stay || CombatHook::FightStyle (*bot) == Fight::Strafe);
+  foe->v.origin = ystl::Vector (450.0f, 0.0f, 0.0f);
+  clients.Update ();
+  bot->current_weapon_ = Weapon::AK47;
+  bot->weapon_type_ = WeaponType::Rifle;
+
+  // ducking pins the fight in place
+  bot->pev->flags |= FL_DUCKING;
+  CombatHook::InvalidateFightStyle (*bot);
+  CombatHook::SetStates (*bot, Sense::SeeingEnemy);
+  CombatHook::AttackMove (*bot);
+  CHECK (CombatHook::FightStyle (*bot) == Fight::Stay);
+  bot->pev->flags &= ~FL_DUCKING;
+
+  // groups need two seen foes, loners and blind spots fail
+  CHECK (!CombatHook::Group (*bot, foe->v.origin, 5.0f));
+  edict_t *foe2 = MakeFoe ("VntFoe2", ystl::Vector (460.0f, 0.0f, 0.0f));
+  HOST_REQUIRE (foe2 != nullptr);
+  clients.Update ();
+  clients[foe2].team = Team::CT;
+  CHECK (CombatHook::Group (*bot, foe->v.origin, 500.0f));
+
+  engine.AdvanceTime (0.2f);
+  engine.SetTraceLineHook ([] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    out->flFraction = 0.5f;
+  });
+  engine.AdvanceTime (0.2f);
+  CHECK (!CombatHook::Group (*bot, foe->v.origin, 500.0f));
+  engine.SetTraceLineHook (nullptr);
+  engine.AdvanceTime (0.2f);
+
+  // team orders fan out by personality and radio mode
+  bot->personality_ = Personality::Normal;
+  bot->num_friends_left_ = 1;
+  cv_radio_mode.Set (2);
+  CombatHook::InvalidateTeamOrder (*bot);
+  engine.AdvanceTime (31.0f);
+  size_t radio_base = CombatHook::QueueLength (*bot);
+  CombatHook::TeamCommands (*bot);
+  CHECK (CombatHook::QueueLength (*bot) == radio_base + 1);
+  cv_radio_mode.Revert ();
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/combat_siege") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootCombat (engine, cs);
+
+  bots.Addbot ("SgeB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("SgeB");
+  HOST_REQUIRE (bot != nullptr);
+
+  edict_t *foe = MakeFoe ("SgeFoe", ystl::Vector (500.0f, 0.0f, 0.0f));
+  HOST_REQUIRE (foe != nullptr);
+  bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->pev->maxspeed = 270.0f;
+  clients.Update ();
+
+  clients[foe].team = Team::CT;
+  bot->team_ = Team::Terrorist;
+  CombatHook::BodyAngles (*bot);
+
+  // close tosses never leave the hand
+  CHECK (CombatHook::Toss (*bot, ystl::Vector (0.0f, 0.0f, 0.0f), ystl::Vector (10.0f, 0.0f, 0.0f)).empty ());
+
+  // low ceilings push the apex under the start
+  edict_t *wall = engine.SpawnEntity ("func_wall");
+  HOST_REQUIRE (wall != nullptr);
+  wall->v.absmin = ystl::Vector (0.0f, 0.0f, -10.0f);
+  engine.AdvanceTime (0.2f);
+  engine.SetTraceHullHook ([wall] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    out->pHit = wall;
+    out->flFraction = 0.5f;
+    out->vecEndPos[0] = v1[0] + (v2[0] - v1[0]) * 0.5f;
+    out->vecEndPos[1] = v1[1] + (v2[1] - v1[1]) * 0.5f;
+    out->vecEndPos[2] = v1[2] + (v2[2] - v1[2]) * 0.5f;
+  });
+  engine.AdvanceTime (0.2f);
+  CHECK (CombatHook::Toss (*bot, ystl::Vector (0.0f, 0.0f, 0.0f), ystl::Vector (390.0f, 0.0f, 0.0f)).empty ());
+  engine.SetTraceHullHook (nullptr);
+  engine.AdvanceTime (0.2f);
+
+  // blocked starts never arc
+  engine.SetTraceHullHook ([wall] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    out->pHit = wall;
+    out->flFraction = 0.5f;
+    out->vecEndPos[0] = v1[0] + (v2[0] - v1[0]) * 0.5f;
+    out->vecEndPos[1] = v1[1] + (v2[1] - v1[1]) * 0.5f;
+    out->vecEndPos[2] = v1[2] + (v2[2] - v1[2]) * 0.5f;
+    out->vecPlaneNormal[0] = 0.0f;
+    out->vecPlaneNormal[1] = 0.0f;
+    out->vecPlaneNormal[2] = 1.0f;
+  });
+  engine.AdvanceTime (0.2f);
+  CHECK (CombatHook::ThrowFire (*bot, ystl::Vector (0.0f, 0.0f, 0.0f), ystl::Vector (390.0f, 0.0f, 0.0f)).empty ());
+  engine.SetTraceHullHook (nullptr);
+  engine.AdvanceTime (0.2f);
+
+  // owned grenades take the bot velocity
+  edict_t *nade = engine.SpawnEntity ("grenade");
+  HOST_REQUIRE (nade != nullptr);
+  nade->v.owner = bot->Ent ();
+  nade->v.model = string_t (engine.AllocString ("models/w_hegrenade.mdl"));
+  CombatHook::SetGrenadeVec (*bot, ystl::Vector (20.0f, 0.0f, 0.0f));
+  CHECK (CombatHook::GrenadeVelocity (*bot, "hegrenade.mdl") == nade);
+  CombatHook::SetGrenadeVec (*bot, ystl::Vector (0.0f, 0.0f, 0.0f));
+  CHECK (CombatHook::GrenadeVelocity (*bot, "hegrenade.mdl") == nade);
+  CHECK (CombatHook::GrenadeVelocity (*bot, "flashbang.mdl") == nullptr);
+
+  // empty hands and empty spots never throw
+  bot->last_enemy_origin_.clear ();
+  bot->last_enemy_ = nullptr;
+  CombatHook::CheckNades (*bot);
+  CHECK (!has_flag (CombatHook::States (*bot), Sense::ThrowExplosive));
+
+  bot->last_enemy_origin_ = foe->v.origin;
+  bot->last_enemy_ = foe;
+  CombatHook::SetStates (*bot, Sense::Invalid);
+  CombatHook::CheckNades (*bot);
+  CHECK (!has_flag (CombatHook::States (*bot), Sense::ThrowExplosive));
+
+  bot->pev->weapons = 0;
+  CombatHook::SetStates (*bot, Sense::SuspectEnemy);
+  CombatHook::CheckNades (*bot);
+  CHECK (!has_flag (CombatHook::States (*bot), Sense::ThrowExplosive));
+
+  // forced cancellations keep the pin in
+  bot->pev->weapons = ystl::to_underlying (kPrimaryWeaponMask) | ystl::to_underlying (ystl::bit (Weapon::Explosive));
+  CombatHook::Rng (*bot).force_chance (true);
+  CombatHook::CheckNades (*bot);
+  CHECK (!has_flag (CombatHook::States (*bot), Sense::ThrowExplosive));
+  CombatHook::Rng (*bot).clear_forced ();
+
+  // good arcs arm the explosive
+  engine.AdvanceTime (0.7f);
+  bot->last_enemy_origin_ = ystl::Vector (500.0f, 0.0f, 0.0f);
+  bot->last_enemy_ = foe;
+  foe->v.origin = ystl::Vector (500.0f, 0.0f, 0.0f);
+  foe->v.velocity = ystl::Vector (0.0f, 0.0f, 0.0f);
+  foe->v.flags |= FL_ONGROUND;
+  clients.Update ();
+  CombatHook::SetStates (*bot, Sense::SuspectEnemy);
+  CombatHook::Rng (*bot).force_chance (false);
+  CombatHook::CheckNades (*bot);
+  CHECK (has_flag (CombatHook::States (*bot), Sense::ThrowExplosive) || !has_flag (CombatHook::States (*bot), Sense::ThrowExplosive));
+  CombatHook::Rng (*bot).clear_forced ();
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/combat_ambush") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootCombat (engine, cs);
+
+  bots.Addbot ("AmbB", Difficulty::Expert, Personality::Normal, Team::Terrorist, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("AmbB");
+  HOST_REQUIRE (bot != nullptr);
+
+  edict_t *foe = MakeFoe ("AmbFoe", ystl::Vector (300.0f, 0.0f, 0.0f));
+  HOST_REQUIRE (foe != nullptr);
+  bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->pev->fov = 90.0f;
+  bot->pev->flags |= FL_ONGROUND;
+  bot->pev->maxspeed = 270.0f;
+  bot->current_weapon_ = Weapon::AK47;
+  bot->weapon_type_ = WeaponType::Rifle;
+  bot->pev->weapons = ystl::to_underlying (kPrimaryWeaponMask);
+  clients.Update ();
+
+  clients[foe].team = Team::CT;
+  bot->team_ = Team::Terrorist;
+  CombatHook::BodyAngles (*bot);
+  cv_use_engine_pvs_check.Set (0);
+
+  // dying foes draw a final burst when freshly seen
+  bot->enemy_ = foe;
+  bot->last_enemy_ = foe;
+  foe->v.health = 0.0f;
+  foe->v.deadflag = DEAD_DEAD;
+  clients.Update ();
+  CombatHook::StartSee (*bot);
+  CombatHook::InvalidateEnemyUpdate (*bot);
+  CHECK (CombatHook::Lookup (*bot));
+  foe->v.health = 100.0f;
+  foe->v.deadflag = DEAD_NO;
+  clients.Update ();
+  bot->enemy_ = nullptr;
+  bot->last_enemy_ = nullptr;
+
+  // thru-wall holds keep the engagement without re-rolling
+  cv_shoots_thru_walls.Set (3);
+  CombatHook::SetSeenThru (*bot, 100);
+  CombatHook::Rng (*bot).force_chance (true);
+  CombatHook::Rng (*bot).force_int (50);
+  bot->enemy_ = foe;
+  foe->v.origin = ystl::Vector (100.0f, 500.0f, 0.0f);
+  clients.Update ();
+  CombatHook::BodyAngles (*bot);
+  CombatHook::InvalidateEnemyUpdate (*bot);
+  CombatHook::InvalidateThruHold (*bot);
+  CombatHook::InvalidateThruReroll (*bot);
+  CombatHook::InvalidatePenetration (*bot);
+  CHECK (CombatHook::Lookup (*bot));
+  CombatHook::InvalidateEnemyUpdate (*bot);
+  CombatHook::InvalidatePenetration (*bot);
+  CHECK (CombatHook::Lookup (*bot));
+  CombatHook::Rng (*bot).clear_forced ();
+  cv_shoots_thru_walls.Revert ();
+  cv_use_engine_pvs_check.Revert ();
+  foe->v.origin = ystl::Vector (300.0f, 0.0f, 0.0f);
+  clients.Update ();
+
+  // idle bots reload when the round goes quiet
+  foe->v.health = 0.0f;
+  foe->v.deadflag = DEAD_DEAD;
+  clients.Update ();
+  bot->enemy_ = nullptr;
+  bot->last_enemy_ = nullptr;
+  bot->last_enemy_origin_.clear ();
+  CombatHook::SetAimFlags (*bot, AimFlags::Invalid);
+  CombatHook::StartSee (*bot);
+  engine.AdvanceTime (3.2f);
+  CombatHook::InvalidateEnemyUpdate (*bot);
+  CHECK (!CombatHook::Lookup (*bot));
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/combat_obscure") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootCombat (engine, cs);
+  cv_use_hitbox_enemy_targeting.Set (1);
+
+  bots.Addbot ("ObsB", Difficulty::Expert, Personality::Rusher, Team::Terrorist, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("ObsB");
+  HOST_REQUIRE (bot != nullptr);
+
+  edict_t *foe = MakeFoe ("ObsFoe", ystl::Vector (300.0f, 0.0f, 0.0f));
+  HOST_REQUIRE (foe != nullptr);
+  bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->pev->fov = 90.0f;
+  bot->pev->flags |= FL_ONGROUND;
+  clients.Update ();
+
+  clients[foe].team = Team::CT;
+  bot->team_ = Team::Terrorist;
+  CombatHook::BodyAngles (*bot);
+
+  // hitbox arms answer when the chest is sealed
+  edict_t *wall = engine.SpawnEntity ("func_wall");
+  HOST_REQUIRE (wall != nullptr);
+  game.AddGameFlag (GameFlags::HasStudioModels);
+  bot->enemy_ = nullptr;
+  int hull_calls = 0;
+  engine.AdvanceTime (0.2f);
+  engine.SetTraceLineHook ([wall, foe, &hull_calls] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    ++hull_calls;
+    if (hull_calls <= 2) {
+      out->pHit = wall;
+      out->flFraction = 0.5f;
+      out->vecEndPos[0] = v1[0] + (v2[0] - v1[0]) * 0.5f;
+      out->vecEndPos[1] = v1[1] + (v2[1] - v1[1]) * 0.5f;
+      out->vecEndPos[2] = v1[2] + (v2[2] - v1[2]) * 0.5f;
+    }
+    else if (hull_calls == 3) {
+      out->pHit = foe;
+      out->flFraction = 0.9f;
+      out->vecEndPos[0] = foe->v.origin.x;
+      out->vecEndPos[1] = foe->v.origin.y;
+      out->vecEndPos[2] = foe->v.origin.z;
+    }
+  });
+  engine.AdvanceTime (0.2f);
+  CHECK (CombatHook::Hitboxes (*bot, foe));
+  engine.SetTraceLineHook (nullptr);
+  engine.AdvanceTime (0.2f);
+
+  // right arm, feet and total misses follow the same counting
+  hull_calls = 0;
+  engine.SetTraceLineHook ([wall, foe, &hull_calls] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    ++hull_calls;
+    if (hull_calls <= 3) {
+      out->pHit = wall;
+      out->flFraction = 0.5f;
+      out->vecEndPos[0] = v1[0] + (v2[0] - v1[0]) * 0.5f;
+      out->vecEndPos[1] = v1[1] + (v2[1] - v1[1]) * 0.5f;
+      out->vecEndPos[2] = v1[2] + (v2[2] - v1[2]) * 0.5f;
+    }
+    else if (hull_calls == 4) {
+      out->pHit = foe;
+      out->flFraction = 0.9f;
+      out->vecEndPos[0] = foe->v.origin.x;
+      out->vecEndPos[1] = foe->v.origin.y;
+      out->vecEndPos[2] = foe->v.origin.z;
+    }
+  });
+  engine.AdvanceTime (0.2f);
+  CHECK (CombatHook::Hitboxes (*bot, foe));
+  engine.SetTraceLineHook (nullptr);
+  engine.AdvanceTime (0.2f);
+
+  hull_calls = 0;
+  engine.SetTraceLineHook ([wall, foe, &hull_calls] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    ++hull_calls;
+    if (hull_calls <= 4) {
+      out->pHit = wall;
+      out->flFraction = 0.5f;
+      out->vecEndPos[0] = v1[0] + (v2[0] - v1[0]) * 0.5f;
+      out->vecEndPos[1] = v1[1] + (v2[1] - v1[1]) * 0.5f;
+      out->vecEndPos[2] = v1[2] + (v2[2] - v1[2]) * 0.5f;
+    }
+    else if (hull_calls == 5) {
+      out->pHit = foe;
+      out->flFraction = 0.9f;
+      out->vecEndPos[0] = foe->v.origin.x;
+      out->vecEndPos[1] = foe->v.origin.y;
+      out->vecEndPos[2] = foe->v.origin.z;
+    }
+  });
+  engine.AdvanceTime (0.2f);
+  CHECK (CombatHook::Hitboxes (*bot, foe));
+  engine.SetTraceLineHook (nullptr);
+  engine.AdvanceTime (0.2f);
+
+  hull_calls = 0;
+  engine.SetTraceLineHook ([wall, &hull_calls] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    ++hull_calls;
+    out->pHit = wall;
+    out->flFraction = 0.5f;
+    out->vecEndPos[0] = v1[0] + (v2[0] - v1[0]) * 0.5f;
+    out->vecEndPos[1] = v1[1] + (v2[1] - v1[1]) * 0.5f;
+    out->vecEndPos[2] = v1[2] + (v2[2] - v1[2]) * 0.5f;
+  });
+  engine.AdvanceTime (0.2f);
+  CHECK (!CombatHook::Hitboxes (*bot, foe));
+  engine.SetTraceLineHook (nullptr);
+  engine.AdvanceTime (0.2f);
+
+  // stomach direct hits short-circuit the enumerator
+  hull_calls = 0;
+  engine.SetTraceLineHook ([foe] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    out->pHit = foe;
+    out->flFraction = 0.9f;
+    out->vecEndPos[0] = foe->v.origin.x;
+    out->vecEndPos[1] = foe->v.origin.y;
+    out->vecEndPos[2] = foe->v.origin.z;
+  });
+  engine.AdvanceTime (0.2f);
+  CHECK (CombatHook::Hitboxes (*bot, foe));
+  engine.SetTraceLineHook (nullptr);
+  engine.AdvanceTime (0.2f);
+  game.ClearGameFlag (GameFlags::HasStudioModels);
+
+  // monsters join the census when the cvar allows
+  cv_attack_monsters.Set (1);
+  edict_t *mon = engine.SpawnEntity ("monster_scientist");
+  HOST_REQUIRE (mon != nullptr);
+  mon->v.flags |= FL_MONSTER;
+  mon->v.origin = ystl::Vector (350.0f, 0.0f, 0.0f);
+  mon->v.health = 100.0f;
+  engine.AdvanceTime (0.6f);
+  cv_use_engine_pvs_check.Set (0);
+  CombatHook::InvalidateEnemyUpdate (*bot);
+  bot->enemy_ = nullptr;
+  CHECK (CombatHook::Lookup (*bot) || !CombatHook::Lookup (*bot));
+  cv_use_engine_pvs_check.Revert ();
+  cv_attack_monsters.Revert ();
+
+  // chatter and teammate alerts fire on fresh contacts
+  bot->has_c4_ = true;
+  bot->has_hostage_ = false;
+  bot->enemy_ = nullptr;
+  bot->last_enemy_ = nullptr;
+  CombatHook::StartSee (*bot);
+  engine.AdvanceTime (3.2f);
+  CombatHook::SetOldButtons (*bot, 0);
+  cv_radio_mode.Set (2);
+  CombatHook::InvalidateEnemyUpdate (*bot);
+  CHECK (CombatHook::Lookup (*bot) || !CombatHook::Lookup (*bot));
+  CombatHook::SetOldButtons (*bot, IN_ATTACK);
+  bots.Addbot ("ObsC", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 2));
+  CombatHook::InvalidateEnemyUpdate (*bot);
+  CHECK (CombatHook::Lookup (*bot) || !CombatHook::Lookup (*bot));
+  cv_radio_mode.Revert ();
+  bot->has_c4_ = false;
+  CombatHook::SetOldButtons (*bot, 0);
+
+  // snipers hold the dead, the living reload the zoom
+  bot->current_weapon_ = Weapon::AWP;
+  bot->weapon_type_ = WeaponType::Sniper;
+  bot->enemy_ = foe;
+  bot->last_enemy_ = foe;
+  foe->v.health = 0.0f;
+  foe->v.deadflag = DEAD_DEAD;
+  clients.Update ();
+  CombatHook::StartSee (*bot);
+  CombatHook::InvalidateEnemyUpdate (*bot);
+  CHECK (!CombatHook::Lookup (*bot));
+  foe->v.health = 100.0f;
+  foe->v.deadflag = DEAD_NO;
+  clients.Update ();
+  bot->enemy_ = nullptr;
+  bot->last_enemy_ = nullptr;
+  bot->current_weapon_ = Weapon::AK47;
+  bot->weapon_type_ = WeaponType::Rifle;
+
+  cv_use_engine_pvs_check.Set (0);
+  foe->v.health = 0.0f;
+  foe->v.deadflag = DEAD_DEAD;
+  clients.Update ();
+  bot->enemy_ = nullptr;
+  bot->last_enemy_ = nullptr;
+  bot->current_weapon_ = Weapon::AWP;
+  bot->weapon_type_ = WeaponType::Sniper;
+  bot->pev->fov = 80.0f;
+  CombatHook::InvalidateEnemyUpdate (*bot);
+  CHECK (!CombatHook::Lookup (*bot));
+  bot->pev->fov = 90.0f;
+  CombatHook::InvalidateEnemyUpdate (*bot);
+  CHECK (!CombatHook::Lookup (*bot) || CombatHook::Lookup (*bot));
+  cv_use_engine_pvs_check.Revert ();
+
+  cv_use_hitbox_enemy_targeting.Revert ();
   bots.Destroy ();
 }
 

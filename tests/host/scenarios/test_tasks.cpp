@@ -83,10 +83,129 @@ struct TasksHook {
     bot.is_creature_ = value;
   }
   static void SetCurrentNode (Bot &bot, int index) {
-    bot.current_node_index_ = index;
+    bot.ChangeNodeIndex (index);
   }
   static ystl::Vector DestOrigin (Bot &bot) {
     return bot.dest_origin_;
+  }
+  static void SetAim (Bot &bot, AimFlags flags) {
+    bot.aim_flags_ = flags;
+  }
+  static void SetPathFlags (Bot &bot, NodeFlag flags) {
+    bot.path_flags_ = flags;
+  }
+  static void SetPathOrigin (Bot &bot, const ystl::Vector &pos) {
+    bot.path_origin_ = pos;
+  }
+  static void SetCampButtons (Bot &bot, int buttons) {
+    bot.camp_buttons_ = buttons;
+  }
+  static void SetCampDirection (Bot &bot, int dir) {
+    bot.camp_direction_ = dir;
+  }
+  static void SetTimeCamping (Bot &bot, float value) {
+    bot.time_camping_ = value;
+  }
+  static void SetTravelStart (Bot &bot, int index) {
+    bot.travel_start_index_ = index;
+  }
+  static void SetLift (Bot &bot, edict_t *ent) {
+    bot.lift_entity_ = ent;
+  }
+  static void SetEntityPos (Bot &bot, const ystl::Vector &pos) {
+    bot.entity_ = pos;
+  }
+  static void SetOldButtons (Bot &bot, int buttons) {
+    bot.old_buttons_ = buttons;
+  }
+  static void SetLastDamage (Bot &bot, int damage) {
+    bot.last_damage_type_ = damage;
+  }
+  static void SetLeader (Bot &bot, bool value) {
+    bot.is_leader_ = value;
+  }
+  static void SetInfected (Bot &bot, bool value) {
+    bot.infected_enemy_team_ = value;
+  }
+  static void SetDefended (Bot &bot, bool value) {
+    bot.defended_bomb_ = value;
+  }
+  static void SetEscaped (Bot &bot, bool value) {
+    bot.escaped_from_bomb_ = value;
+  }
+  static void SetDuckDefuse (Bot &bot, bool value) {
+    bot.duck_defuse_ = value;
+  }
+  static void SetBreakable (Bot &bot, edict_t *ent, const ystl::Vector &pos) {
+    bot.breakable_entity_ = ent;
+    bot.breakable_origin_ = pos;
+  }
+  static void SetEnemyOrigin (Bot &bot, const ystl::Vector &pos) {
+    bot.enemy_origin_ = pos;
+  }
+  static void SetPredict (Bot &bot, int index, int length) {
+    bot.last_predict_index_ = index;
+    bot.last_predict_length_ = length;
+  }
+  static void SetReloadState (Bot &bot, Reload state) {
+    bot.reload_data_.state = state;
+  }
+  static void SetReloading (Bot &bot, bool value) {
+    bot.reload_data_.is_reloading = value;
+  }
+  static void FindValid (Bot &bot) {
+    bot.FindValidNode ();
+  }
+  static void EnsureNode (Bot &bot) {
+    bot.EnsureCurrentNodeIndex ();
+  }
+  static ystl::CountdownTimer &CoverTimer (Bot &bot) {
+    return bot.cover_search_timer_;
+  }
+  static ystl::CountdownTimer &NextCampTimer (Bot &bot) {
+    return bot.next_camp_dir_timer_;
+  }
+  static ystl::CountdownTimer &KnifeTimer (Bot &bot) {
+    return bot.knife_attack_timer_;
+  }
+  static ystl::CountdownTimer &AskTimer (Bot &bot) {
+    return bot.ask_check_timer_;
+  }
+  static ystl::CountdownTimer &SniperStopTimer (Bot &bot) {
+    return bot.sniper_stop_timer_;
+  }
+  static ystl::CountdownTimer &DefuseWatchTimer (Bot &bot) {
+    return bot.defuse_watch_timer_;
+  }
+  static ystl::CountdownTimer &DuckCheckTimer (Bot &bot) {
+    return bot.duck_defuse_check_timer_;
+  }
+  static ystl::CountdownTimer &GrenadeCheckTimer (Bot &bot) {
+    return bot.grenade_check_timer_;
+  }
+  static ystl::CountdownTimer &BreakableShootTimer (Bot &bot) {
+    return bot.breakable_shoot_timer_;
+  }
+  static ystl::CountdownTimer &FollowWaitTimer (Bot &bot) {
+    return bot.follow_wait_timer_;
+  }
+  static ystl::CountdownTimer &ButtonPushTimer (Bot &bot) {
+    return bot.button_push_timer_;
+  }
+  static ystl::CountdownTimer &DoorHitTimer (Bot &bot) {
+    return bot.door_hit_timer_;
+  }
+  static ystl::CountdownTimer &LogoTimer (Bot &bot) {
+    return bot.logo_spray_timer_;
+  }
+  static ystl::IntervalTimer &SeeTimer (Bot &bot) {
+    return bot.see_enemy_timer_;
+  }
+  static ystl::IntervalTimer &HeardTimer (Bot &bot) {
+    return bot.heard_sound_timer_;
+  }
+  static ystl::IntervalTimer &NavTimer (Bot &bot) {
+    return bot.nav_timer_;
   }
 };
 
@@ -922,6 +1041,1015 @@ TEST_CASE ("unit/tasks_desires") {
   bot->pickup_type_ = Pickup::Weapon;
   TasksHook::Filter (*bot);
   CHECK (bot->GetTaskId () == TaskId::PickupItem);
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/tasks_seek") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootTasks (engine, cs);
+
+  bots.Addbot ("SkA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("SkA");
+  HOST_REQUIRE (bot != nullptr);
+  bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->team_ = Team::Terrorist;
+
+  edict_t *foe = game.CreateFakeClient ("SkFoe");
+  HOST_REQUIRE (!game.IsNullEntity (foe));
+  foe->v.flags &= ~FL_FAKECLIENT;
+  foe->v.health = 100.0f;
+  foe->v.origin = ystl::Vector (600.0f, 0.0f, 0.0f);
+  foe->v.solid = SOLID_BBOX;
+  foe->v.takedamage = DAMAGE_YES;
+  clients.Update ();
+  clients[foe].team = Team::CT;
+
+  // reached cover turns into a hide with a camp look...
+  TasksHook::SetLastEnemy (*bot, foe);
+  TasksHook::SetLastEnemyOrigin (*bot, ystl::Vector (600.0f, 0.0f, 0.0f));
+  TasksHook::SetCurrentNode (*bot, 1);
+  TasksHook::FindValid (*bot);
+  bot->pev->origin = graph[1].origin;
+  TasksHook::CoverTimer (*bot).invalidate ();
+  TasksHook::Rng (*bot).force_float (5.0f);
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::SeekCover, TaskPri::kSeekCover, 1, 0.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () == TaskId::Hide);
+  TasksHook::Rng (*bot).clear_forced ();
+
+  // ...a remembered data index is kept without a new search...
+  bot->ClearTasks ();
+  TasksHook::SetCurrentNode (*bot, 1);
+  TasksHook::FindValid (*bot);
+  bot->pev->origin = graph[1].origin;
+  bot->StartTask (TaskId::SeekCover, TaskPri::kSeekCover, 3, 0.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () == TaskId::SeekCover);
+  CHECK (bot->Task ()->data == 3);
+
+  // ...seeing foes from a poor spot folds the hide...
+  bot->ClearTasks ();
+  TasksHook::SetPathFlags (*bot, static_cast<NodeFlag> (0));
+  bot->StartTask (TaskId::Hide, TaskPri::kHide, kInvalidNodeIndex, game.Time () + 100.0f, true);
+  TasksHook::SetStates (*bot, Sense::SeeingEnemy);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () != TaskId::Hide);
+
+  // ...and with no memory of the foe it folds as well...
+  bot->ClearTasks ();
+  TasksHook::SetLastEnemyOrigin (*bot, ystl::Vector {});
+  TasksHook::SetStates (*bot, Sense::Invalid);
+  bot->StartTask (TaskId::Hide, TaskPri::kHide, kInvalidNodeIndex, game.Time () + 100.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () != TaskId::Hide);
+
+  // ...expired hides stand down even from a good camp spot...
+  TasksHook::SetLastEnemyOrigin (*bot, ystl::Vector (600.0f, 0.0f, 0.0f));
+  TasksHook::SetPathFlags (*bot, NodeFlag::Camp);
+  TasksHook::SetCampButtons (*bot, 0);
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::Hide, TaskPri::kHide, kInvalidNodeIndex, game.Time () - 1.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () != TaskId::Hide);
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/tasks_assault") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootTasks (engine, cs);
+
+  bots.Addbot ("AsA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("AsA");
+  HOST_REQUIRE (bot != nullptr);
+  bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->team_ = Team::Terrorist;
+
+  edict_t *foe = game.CreateFakeClient ("AsFoe");
+  HOST_REQUIRE (!game.IsNullEntity (foe));
+  foe->v.flags &= ~FL_FAKECLIENT;
+  foe->v.health = 100.0f;
+  foe->v.origin = ystl::Vector (300.0f, 0.0f, 0.0f);
+  clients.Update ();
+  clients[foe].team = Team::CT;
+
+  edict_t *pal = game.CreateFakeClient ("AsPal");
+  HOST_REQUIRE (!game.IsNullEntity (pal));
+  pal->v.flags &= ~FL_FAKECLIENT;
+  pal->v.health = 100.0f;
+  pal->v.origin = ystl::Vector (300.0f, 0.0f, 0.0f);
+  clients.Update ();
+  clients[pal].team = Team::Terrorist;
+
+  // knife fighters remember the last known spot as their destination...
+  bot->weapon_type_ = WeaponType::Melee;
+  TasksHook::SetEnemy (*bot, nullptr);
+  TasksHook::SetLastEnemyOrigin (*bot, ystl::Vector (300.0f, 0.0f, 0.0f));
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::Attack, TaskPri::kAttack, kInvalidNodeIndex, 0.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (TasksHook::DestOrigin (*bot) == ystl::Vector (300.0f, 0.0f, 0.0f));
+  bot->weapon_type_ = WeaponType::Rifle;
+
+  // ...teammates are never hunted...
+  TasksHook::SetEnemy (*bot, nullptr);
+  TasksHook::SetLastEnemy (*bot, pal);
+  TasksHook::SetLastEnemyOrigin (*bot, ystl::Vector (300.0f, 0.0f, 0.0f));
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::Hunt, TaskPri::kNormal, kInvalidNodeIndex, 0.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () != TaskId::Hunt);
+
+  // ...reaching the remembered spot forgets it...
+  TasksHook::SetLastEnemy (*bot, foe);
+  TasksHook::SetLastEnemyOrigin (*bot, ystl::Vector (100.0f, 0.0f, 0.0f));
+  TasksHook::SetCurrentNode (*bot, 1);
+  TasksHook::FindValid (*bot);
+  bot->pev->origin = graph[1].origin;
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::Hunt, TaskPri::kNormal, 1, 0.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () != TaskId::Hunt);
+
+  // ...a fresh hunt without a path picks the nearest node...
+  TasksHook::SetLastEnemy (*bot, foe);
+  TasksHook::SetLastEnemyOrigin (*bot, ystl::Vector (500.0f, 0.0f, 0.0f));
+  TasksHook::SetCurrentNode (*bot, 1);
+  TasksHook::FindValid (*bot);
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::Hunt, TaskPri::kNormal, kInvalidNodeIndex, 0.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () == TaskId::Hunt);
+
+  // ...close hunts slow to a walk when the ears are fresh...
+  TasksHook::SeeTimer (*bot).start ();
+  bot->pev->maxspeed = 270.0f;
+  TasksHook::Rng (*bot).force_chance (true);
+  TasksHook::Execute (*bot);
+  TasksHook::Rng (*bot).clear_forced ();
+  CHECK (bot->GetTaskId () == TaskId::Hunt);
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/tasks_guard") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootTasks (engine, cs);
+
+  bots.Addbot ("GdA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("GdA");
+  HOST_REQUIRE (bot != nullptr);
+  bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->team_ = Team::Terrorist;
+  bot->pev->maxspeed = 270.0f;
+
+  // knife rushers slash on the move when the timer lapses...
+  bot->weapon_type_ = WeaponType::Melee;
+  bot->current_weapon_ = Weapon::Knife;
+  TasksHook::SetLastEnemy (*bot, nullptr);
+  TasksHook::SetEnemy (*bot, nullptr);
+  TasksHook::KnifeTimer (*bot).invalidate ();
+  TasksHook::Rng (*bot).force_chance (true);
+  bot->ClearTasks ();
+  TasksHook::Execute (*bot);
+  CHECK (!!(bot->pev->button & IN_ATTACK));
+  bot->pev->button = 0;
+
+  // ...and stab otherwise...
+  TasksHook::Rng (*bot).force_chance (false);
+  TasksHook::KnifeTimer (*bot).invalidate ();
+  bot->ClearTasks ();
+  TasksHook::Execute (*bot);
+  CHECK (!!(bot->pev->button & IN_ATTACK2));
+  bot->pev->button = 0;
+  TasksHook::Rng (*bot).clear_forced ();
+  bot->weapon_type_ = WeaponType::Rifle;
+
+  // low clips request a reload on the walk...
+  bot->current_weapon_ = Weapon::AK47;
+  for (int i = 0; i < kMaxWeapons; ++i) {
+    bot->ammo_in_clip_[static_cast<size_t> (i)] = 30;
+  }
+  bot->ammo_in_clip_[static_cast<size_t> (ystl::to_underlying (Weapon::AK47))] = 2;
+  bot->ammo_[static_cast<size_t> (1)] = 90;
+  TasksHook::SetReloadState (*bot, Reload::None);
+  bot->ClearTasks ();
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () == TaskId::Normal);
+
+  // planted bombs retarget cts away from plain goals...
+  game_state.SetBombPlanted (true);
+  game_state.SetBombOrigin (false, ystl::Vector (600.0f, 0.0f, 0.0f));
+  bot->team_ = Team::CT;
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::Normal, TaskPri::kNormal, 1, 0.0f, true);
+  TasksHook::SetCurrentNode (*bot, 1);
+  TasksHook::FindValid (*bot);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () == TaskId::Normal);
+  game_state.SetBombPlanted (false);
+  bot->team_ = Team::Terrorist;
+
+  // camped walls fall back to a random direction...
+  bot->ClearTasks ();
+  TasksHook::SetCurrentNode (*bot, 1);
+  TasksHook::FindValid (*bot);
+  bot->pev->origin = graph[1].origin;
+  TasksHook::SetPathFlags (*bot, NodeFlag::Camp);
+  TasksHook::NextCampTimer (*bot).invalidate ();
+  TasksHook::Rng (*bot).force_float (2.0f);
+  engine.SetTraceLineHook ([] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    out->flFraction = 0.2f;
+  });
+  engine.AdvanceTime (0.2f);
+  bot->StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, game.Time () + 100.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () == TaskId::Camp);
+  CHECK (!TasksHook::LookSafe (*bot).empty ());
+
+  // ...clear views keep the node direction...
+  engine.SetTraceLineHook ([] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    out->flFraction = 1.0f;
+  });
+  engine.AdvanceTime (0.2f);
+  TasksHook::NextCampTimer (*bot).invalidate ();
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () == TaskId::Camp);
+  engine.SetTraceLineHook (nullptr);
+  engine.AdvanceTime (0.2f);
+  TasksHook::Rng (*bot).clear_forced ();
+
+  // ...expired camps stand down...
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, game.Time () - 1.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () != TaskId::Camp);
+
+  // reached moves complete, fresh ones path...
+  TasksHook::SetCurrentNode (*bot, 2);
+  TasksHook::FindValid (*bot);
+  bot->pev->origin = graph[2].origin;
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::MoveTo, TaskPri::kMoveTo, 2, 0.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () != TaskId::MoveTo);
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::MoveTo, TaskPri::kMoveTo, 5, 0.0f, true);
+  TasksHook::SetCurrentNode (*bot, 1);
+  TasksHook::FindValid (*bot);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () == TaskId::MoveTo);
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/tasks_shelter") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootTasks (engine, cs);
+
+  bots.Addbot ("ShA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("ShA");
+  HOST_REQUIRE (bot != nullptr);
+  bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->pev->maxspeed = 270.0f;
+  bot->team_ = Team::Terrorist;
+
+  // clamped blind spray never exceeds the top speed...
+  bot->SetNewDifficulty (Difficulty::Expert);
+  bot->view_distance_ = -200.0f;
+  TasksHook::Rng (*bot).force_chance (true);
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::Pause, TaskPri::kPause, kInvalidNodeIndex, game.Time () + 60.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (TasksHook::MoveSpeed (*bot) == -bot->pev->maxspeed);
+  TasksHook::Rng (*bot).clear_forced ();
+  bot->SetNewDifficulty (Difficulty::Normal);
+  bot->view_distance_ = 100.0f;
+
+  // blind sprayers face the last known foe...
+  edict_t *foe = game.CreateFakeClient ("ShFoe");
+  HOST_REQUIRE (!game.IsNullEntity (foe));
+  foe->v.flags &= ~FL_FAKECLIENT;
+  foe->v.health = 100.0f;
+  foe->v.origin = ystl::Vector (400.0f, 0.0f, 0.0f);
+  clients.Update ();
+  clients[foe].team = Team::CT;
+  TasksHook::SetLastEnemy (*bot, foe);
+  TasksHook::SetLastEnemyOrigin (*bot, ystl::Vector (400.0f, 0.0f, 0.0f));
+  bot->blind_timer_.start (10.0f);
+  TasksHook::Rng (*bot).force_chance (true);
+  TasksHook::Rng (*bot).force_float (0.0f);
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::Blind, TaskPri::kBlind, kInvalidNodeIndex, game.Time () + 60.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (TasksHook::BlindFired (*bot));
+  TasksHook::Rng (*bot).clear_forced ();
+  bot->blind_timer_.invalidate ();
+
+  // ...blind walkers follow the node path when one is remembered...
+  TasksHook::SetLastEnemy (*bot, foe);
+  TasksHook::SetLastEnemyOrigin (*bot, ystl::Vector (400.0f, 0.0f, 0.0f));
+  bot->blind_timer_.start (10.0f);
+  bot->blind_node_index_ = 2;
+  TasksHook::Rng (*bot).force_chance (true);
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::Blind, TaskPri::kBlind, kInvalidNodeIndex, game.Time () + 60.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () == TaskId::Blind);
+  TasksHook::Rng (*bot).clear_forced ();
+  bot->blind_timer_.invalidate ();
+  bot->ClearTasks ();
+
+  // escapees draw the knife and head for the far side...
+  game_state.SetBombPlanted (true);
+  game_state.SetBombOrigin (false, ystl::Vector (3000.0f, 0.0f, 0.0f));
+  bot->weapon_type_ = WeaponType::Rifle;
+  bot->current_weapon_ = Weapon::AK47;
+  TasksHook::SetEnemy (*bot, nullptr);
+  TasksHook::SetLastEnemy (*bot, nullptr);
+  TasksHook::SetCurrentNode (*bot, 1);
+  TasksHook::FindValid (*bot);
+  TasksHook::Rng (*bot).force_float (1600.0f);
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::EscapeFromBomb, TaskPri::kEscapeFromBomb, kInvalidNodeIndex, 0.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK ((bot->GetTaskId () == TaskId::EscapeFromBomb || bot->GetTaskId () == TaskId::Camp));
+  TasksHook::Rng (*bot).clear_forced ();
+
+  // ...reaching the far side camps the spot...
+  TasksHook::SetCurrentNode (*bot, bot->Task ()->data);
+  TasksHook::FindValid (*bot);
+  bot->pev->origin = graph[bot->Task ()->data].origin;
+  TasksHook::Rng (*bot).force_float (1600.0f);
+  TasksHook::Execute (*bot);
+  TasksHook::Rng (*bot).clear_forced ();
+  game_state.SetBombPlanted (false);
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/tasks_covert") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootTasks (engine, cs);
+
+  bots.Addbot ("CvA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("CvA");
+  HOST_REQUIRE (bot != nullptr);
+  bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->pev->maxspeed = 270.0f;
+  bot->team_ = Team::Terrorist;
+
+  edict_t *leader = game.CreateFakeClient ("CvLead");
+  HOST_REQUIRE (!game.IsNullEntity (leader));
+  leader->v.flags &= ~FL_FAKECLIENT;
+  leader->v.health = 100.0f;
+  leader->v.deadflag = DEAD_NO;
+  leader->v.solid = SOLID_BBOX;
+  leader->v.takedamage = DAMAGE_YES;
+  leader->v.origin = ystl::Vector (500.0f, 0.0f, 0.0f);
+  leader->v.maxspeed = 100.0f;
+  clients.Update ();
+  clients[leader].team = Team::Terrorist;
+
+  // dead leaders are dropped at once...
+  TasksHook::SetTargetEntity (*bot, nullptr);
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::FollowUser, TaskPri::kFollowUser, kInvalidNodeIndex, 0.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () != TaskId::FollowUser);
+
+  // ...live ones are tailed at their own pace...
+  TasksHook::SetTargetEntity (*bot, leader);
+  TasksHook::SetCurrentNode (*bot, 1);
+  TasksHook::FindValid (*bot);
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::FollowUser, TaskPri::kFollowUser, kInvalidNodeIndex, 0.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () == TaskId::FollowUser);
+
+  // ...waiting too long sends the point on...
+  bot->pev->origin = leader->v.origin;
+  TasksHook::FollowWaitTimer (*bot).start (0.0f);
+  engine.AdvanceTime (0.2f);
+  TasksHook::Execute (*bot);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () != TaskId::FollowUser);
+
+  // ...spotted foes steal the follow...
+  leader->v.origin = ystl::Vector (500.0f, 0.0f, 0.0f);
+  leader->v.button |= IN_ATTACK;
+  bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  TasksHook::SetTargetEntity (*bot, leader);
+  TasksHook::SetCurrentNode (*bot, 1);
+  TasksHook::FindValid (*bot);
+  edict_t *foe = game.CreateFakeClient ("CvFoe");
+  HOST_REQUIRE (!game.IsNullEntity (foe));
+  foe->v.flags &= ~FL_FAKECLIENT;
+  foe->v.health = 100.0f;
+  foe->v.origin = ystl::Vector (600.0f, 0.0f, 0.0f);
+  clients.Update ();
+  clients[foe].team = Team::CT;
+  engine.SetTraceLineHook ([foe] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)v1;
+    (void)v2;
+    (void)no_monsters;
+    (void)skip;
+    out->fAllSolid = 0;
+    out->fStartSolid = 0;
+    out->fInOpen = 1;
+    out->fInWater = 0;
+    out->flFraction = 0.5f;
+    out->vecEndPos.x = v2[0];
+    out->vecEndPos.y = v2[1];
+    out->vecEndPos.z = v2[2];
+    out->pHit = foe;
+    out->iHitgroup = 0;
+  });
+  engine.AdvanceTime (0.2f);
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::FollowUser, TaskPri::kFollowUser, kInvalidNodeIndex, 0.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () != TaskId::FollowUser);
+  engine.SetTraceLineHook (nullptr);
+  engine.AdvanceTime (0.2f);
+  leader->v.button = 0;
+
+  // double jumps without a partner reset at once...
+  TasksHook::SetDoubleJumpEntity (*bot, nullptr);
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::DoubleJump, TaskPri::kDoubleJump, kInvalidNodeIndex, 0.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () != TaskId::DoubleJump);
+
+  // ...live lifts are walked up to...
+  edict_t *mate = game.CreateFakeClient ("CvMate");
+  HOST_REQUIRE (!game.IsNullEntity (mate));
+  mate->v.flags &= ~FL_FAKECLIENT;
+  mate->v.health = 100.0f;
+  mate->v.origin = ystl::Vector (200.0f, 0.0f, 0.0f);
+  mate->v.deadflag = DEAD_NO;
+  clients.Update ();
+  clients[mate].team = Team::Terrorist;
+  TasksHook::SetDoubleJumpEntity (*bot, mate);
+  TasksHook::SetCurrentNode (*bot, 1);
+  TasksHook::FindValid (*bot);
+  bot->pev->angles.y = 0.0f;
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::DoubleJump, TaskPri::kDoubleJump, kInvalidNodeIndex, game.Time () + 100.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () == TaskId::DoubleJump);
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/tasks_vault") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
+  HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
+  cs.reset ();
+  GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
+  HOST_REQUIRE (cs.entered () != 0);
+  gamefuncs_t table {};
+  HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
+  game.Precache ();
+  HOST_REQUIRE (engine.SpawnEntity ("func_bomb_target") != nullptr);
+  table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
+  if (analyzer.IsAnalyzing ()) {
+    analyzer.Suspend ();
+  }
+  BuildTasksGraph ();
+  HOST_REQUIRE (game.MapIs (MapFlags::Demolition));
+  bots.InitQuota ();
+  cv_quota.Set (10);
+  practice.Load ();
+
+  bots.Addbot ("VlA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("VlA");
+  HOST_REQUIRE (bot != nullptr);
+  bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->team_ = Team::Terrorist;
+  bot->pev->maxspeed = 270.0f;
+
+  // planting without the bomb guards the site...
+  bot->has_c4_ = false;
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::PlantBomb, TaskPri::kPlantBomb, kInvalidNodeIndex, 0.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () != TaskId::PlantBomb);
+
+  // ...live foes stall the plant...
+  bot->has_c4_ = true;
+  bot->in_bomb_zone_ = true;
+  bot->current_weapon_ = Weapon::C4;
+  bot->weapon_type_ = WeaponType::Pistol;
+  edict_t *foe = game.CreateFakeClient ("VlFoe");
+  HOST_REQUIRE (!game.IsNullEntity (foe));
+  foe->v.flags &= ~FL_FAKECLIENT;
+  foe->v.health = 100.0f;
+  foe->v.origin = ystl::Vector (200.0f, 0.0f, 0.0f);
+  clients.Update ();
+  clients[foe].team = Team::CT;
+  TasksHook::SetEnemy (*bot, foe);
+  bot->has_progress_bar_ = false;
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::PlantBomb, TaskPri::kPlantBomb, kInvalidNodeIndex, 0.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () != TaskId::PlantBomb);
+
+  // ...ducked planters hold both buttons...
+  TasksHook::SetEnemy (*bot, nullptr);
+  bot->pev->flags |= FL_DUCKING;
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::PlantBomb, TaskPri::kPlantBomb, kInvalidNodeIndex, 0.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (!!(bot->pev->button & IN_ATTACK));
+  CHECK (!!(bot->pev->button & IN_DUCK));
+  bot->pev->button = 0;
+  bot->pev->flags &= ~FL_DUCKING;
+  bot->has_c4_ = false;
+  bot->in_bomb_zone_ = false;
+
+  // hopeless defuses hold the line when the use is held...
+  mp_c4timer.Set (35);
+  game_state.SetBombPlanted (true);
+  game_state.SetBombOrigin (false, ystl::Vector (500.0f, 0.0f, 0.0f));
+  bot->team_ = Team::CT;
+  bot->has_defuser_ = false;
+  bot->has_progress_bar_ = false;
+  TasksHook::SetOldButtons (*bot, IN_USE);
+  TasksHook::Rng (*bot).force_float (4.0f);
+  TasksHook::DefuseWatchTimer (*bot).invalidate ();
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::DefuseBomb, TaskPri::kDefuseBomb, kInvalidNodeIndex, 0.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () == TaskId::DefuseBomb);
+
+  // ...stalled approaches give up after the watch lapses...
+  engine.AdvanceTime (5.0f);
+  TasksHook::Execute (*bot);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () != TaskId::DefuseBomb);
+  TasksHook::Rng (*bot).clear_forced ();
+  TasksHook::SetOldButtons (*bot, 0);
+
+  // ...close defuses hold use and duck...
+  game_state.SetBombPlanted (true);
+  game_state.SetBombOrigin (false, ystl::Vector (120.0f, 0.0f, 0.0f));
+  bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  bot->has_progress_bar_ = true;
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::DefuseBomb, TaskPri::kDefuseBomb, kInvalidNodeIndex, 0.0f, true);
+  engine.AdvanceTime (0.1f);
+  TasksHook::SetDuckDefuse (*bot, true);
+  TasksHook::Execute (*bot);
+  CHECK (!!(bot->pev->button & IN_USE));
+  CHECK (!!(bot->pev->button & IN_DUCK));
+  bot->pev->button = 0;
+  bot->has_progress_bar_ = false;
+  game_state.SetBombPlanted (false);
+  mp_c4timer.Revert ();
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/tasks_panic") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootTasks (engine, cs);
+
+  bots.Addbot ("PnA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("PnA");
+  HOST_REQUIRE (bot != nullptr);
+  bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->team_ = Team::Terrorist;
+  bot->pev->maxspeed = 270.0f;
+
+  edict_t *foe = game.CreateFakeClient ("PnFoe");
+  HOST_REQUIRE (!game.IsNullEntity (foe));
+  foe->v.flags &= ~FL_FAKECLIENT;
+  foe->v.health = 100.0f;
+  foe->v.origin = ystl::Vector (800.0f, 0.0f, 0.0f);
+  foe->v.velocity = ystl::Vector (10.0f, 0.0f, 0.0f);
+  clients.Update ();
+  clients[foe].team = Team::CT;
+
+  // seeing foes retarget the toss...
+  TasksHook::SetStates (*bot, Sense::SeeingEnemy);
+  TasksHook::SetEnemy (*bot, foe);
+  TasksHook::SetThrow (*bot, ystl::Vector (150.0f, 0.0f, 0.0f));
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::ThrowExplosive, TaskPri::kThrow, kInvalidNodeIndex, 0.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (!!(TasksHook::GetAimFlags (*bot) & static_cast<int> (AimFlags::Grenade)));
+
+  // ...grenadier mode skips the self-blast guard...
+  cv_grenadier_mode.Set (1);
+  TasksHook::SetStates (*bot, Sense::Invalid);
+  TasksHook::SetEnemy (*bot, nullptr);
+  TasksHook::SetThrow (*bot, ystl::Vector (120.0f, 0.0f, 0.0f));
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::ThrowExplosive, TaskPri::kThrow, kInvalidNodeIndex, 0.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (!!(TasksHook::GetAimFlags (*bot) & static_cast<int> (AimFlags::Grenade)));
+  cv_grenadier_mode.Set (0);
+
+  // ...owned flashes press the trigger...
+  conf.GetWeaponProp (Weapon::Flashbang).classname = "weapon_flashbang";
+  bot->pev->weapons = ystl::to_underlying (ystl::bit (Weapon::Flashbang));
+  bot->current_weapon_ = Weapon::Flashbang;
+  TasksHook::SetOldButtons (*bot, 0);
+  TasksHook::SetStates (*bot, Sense::Invalid);
+  TasksHook::SetThrow (*bot, ystl::Vector (2000.0f, 0.0f, 0.0f));
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::ThrowFlashbang, TaskPri::kThrow, kInvalidNodeIndex, 0.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (!!(bot->pev->button & IN_ATTACK));
+  bot->pev->button = 0;
+
+  // ...smokes expire on time...
+  TasksHook::SetThrow (*bot, ystl::Vector (2000.0f, 0.0f, 0.0f));
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::ThrowSmoke, TaskPri::kThrow, kInvalidNodeIndex, game.Time () - 1.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () != TaskId::ThrowSmoke);
+
+  // ...kept motion sticks the camp buttons...
+  conf.GetWeaponProp (Weapon::Smoke).classname = "weapon_smokegrenade";
+  bot->pev->weapons = ystl::to_underlying (ystl::bit (Weapon::Smoke));
+  bot->current_weapon_ = Weapon::Smoke;
+  TasksHook::SetOldButtons (*bot, 0);
+  cv_move_during_throw.Set (0);
+  TasksHook::SetThrow (*bot, ystl::Vector (2000.0f, 0.0f, 0.0f));
+  TasksHook::SetCampButtons (*bot, IN_DUCK);
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::ThrowSmoke, TaskPri::kThrow, kInvalidNodeIndex, game.Time () + 100.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (!!(bot->pev->button & IN_DUCK));
+  bot->pev->button = 0;
+  cv_move_during_throw.Revert ();
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/tasks_flame") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootTasks (engine, cs);
+
+  bots.Addbot ("FlA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("FlA");
+  HOST_REQUIRE (bot != nullptr);
+  bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->team_ = Team::Terrorist;
+  bot->pev->maxspeed = 270.0f;
+
+  // secondary swaps drop the dry pistol...
+  edict_t *box = engine.SpawnEntity ("weaponbox");
+  HOST_REQUIRE (box != nullptr);
+  box->v.model = string_t (engine.AllocString ("models/w_usp.mdl"));
+  const float box_pos[3] = { 110.0f, 0.0f, 0.0f };
+  engine.Funcs ().pfnSetOrigin (box, box_pos);
+  bot->pev->weapons = ystl::to_underlying (ystl::bit (Weapon::USP));
+  bot->current_weapon_ = Weapon::USP;
+  for (int i = 0; i < kMaxWeapons; ++i) {
+    bot->ammo_in_clip_[static_cast<size_t> (i)] = 0;
+  }
+  bot->pickup_item_ = box;
+  bot->pickup_type_ = Pickup::Weapon;
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::PickupItem, 50.0f, kInvalidNodeIndex, 0.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () == TaskId::PickupItem);
+
+  // ...owned shields skip the pickup...
+  bot->pickup_item_ = box;
+  bot->pickup_type_ = Pickup::Shield;
+  bot->pev->viewmodel = string_t (engine.AllocString ("models/v_shield_dummy"));
+  TasksHook::Execute (*bot);
+  CHECK (bot->pickup_item_ == nullptr || bot->GetTaskId () == TaskId::PickupItem);
+
+  // ...planted bombs become defuses up close...
+  game_state.SetBombPlanted (false);
+  edict_t *c4 = engine.SpawnEntity ("grenade");
+  HOST_REQUIRE (c4 != nullptr);
+  c4->v.model = string_t (engine.AllocString ("models/w_c4.mdl"));
+  const float c4_pos[3] = { 110.0f, 0.0f, 0.0f };
+  engine.Funcs ().pfnSetOrigin (c4, c4_pos);
+  bot->team_ = Team::CT;
+  bot->num_enemies_left_ = 0;
+  bot->num_friends_left_ = 0;
+  bot->pickup_item_ = c4;
+  bot->pickup_type_ = Pickup::PlantedC4;
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::PickupItem, 50.0f, kInvalidNodeIndex, 0.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () == TaskId::DefuseBomb || bot->GetTaskId () == TaskId::PickupItem);
+  bot->team_ = Team::Terrorist;
+  bot->ClearTasks ();
+
+  // ...live hostages are used face to face...
+  edict_t *hos = engine.SpawnEntity ("hostage_entity");
+  HOST_REQUIRE (hos != nullptr);
+  hos->v.health = 100.0f;
+  const float hos_pos[3] = { 120.0f, 0.0f, 0.0f };
+  engine.Funcs ().pfnSetOrigin (hos, hos_pos);
+  TasksHook::Rng (*bot).force_chance (false);
+  bot->pickup_item_ = hos;
+  bot->pickup_type_ = Pickup::Hostage;
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::PickupItem, 50.0f, kInvalidNodeIndex, 0.0f, true);
+  TasksHook::Execute (*bot);
+  TasksHook::Rng (*bot).clear_forced ();
+  CHECK (bot->pickup_item_ == nullptr || bot->GetTaskId () != TaskId::PickupItem);
+
+  // ...carried kits skip the pickup...
+  edict_t *kit = engine.SpawnEntity ("weaponbox");
+  HOST_REQUIRE (kit != nullptr);
+  const float kit_pos[3] = { 110.0f, 0.0f, 0.0f };
+  engine.Funcs ().pfnSetOrigin (kit, kit_pos);
+  bot->has_defuser_ = true;
+  bot->pickup_item_ = kit;
+  bot->pickup_type_ = Pickup::DefusalKit;
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::PickupItem, 50.0f, kInvalidNodeIndex, 0.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (bot->pickup_item_ == nullptr);
+  bot->has_defuser_ = false;
+
+  // ...close buttons are pressed face to face...
+  edict_t *btn = engine.SpawnEntity ("func_button");
+  HOST_REQUIRE (btn != nullptr);
+  const float btn_pos[3] = { 110.0f, 0.0f, 0.0f };
+  engine.Funcs ().pfnSetOrigin (btn, btn_pos);
+  bot->pickup_item_ = btn;
+  bot->pickup_type_ = Pickup::Button;
+  TasksHook::SetLift (*bot, nullptr);
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::PickupItem, 50.0f, kInvalidNodeIndex, 0.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (bot->pickup_item_ == nullptr || bot->GetTaskId () != TaskId::PickupItem);
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/tasks_frost") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
+  HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
+  cs.reset ();
+  GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
+  HOST_REQUIRE (cs.entered () != 0);
+  gamefuncs_t table {};
+  HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
+  game.Precache ();
+  edict_t *brk = engine.SpawnEntity ("func_breakable");
+  HOST_REQUIRE (brk != nullptr);
+  brk->v.health = 50.0f;
+  brk->v.takedamage = 1.0f;
+  brk->v.impulse = 0;
+  brk->v.spawnflags = 0;
+  brk->v.movetype = MOVETYPE_PUSH;
+  brk->v.origin = ystl::Vector (400.0f, 0.0f, 0.0f);
+  table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
+  if (analyzer.IsAnalyzing ()) {
+    analyzer.Suspend ();
+  }
+  BuildTasksGraph ();
+  HOST_REQUIRE (game.HasBreakables ());
+  bots.InitQuota ();
+  cv_quota.Set (10);
+  practice.Load ();
+
+  bots.Addbot ("FrA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("FrA");
+  HOST_REQUIRE (bot != nullptr);
+  bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->pev->maxspeed = 270.0f;
+  bot->team_ = Team::Terrorist;
+  engine.AdvanceTime (6.0f);
+
+  // visible foes preempt the glass...
+  edict_t *foe = game.CreateFakeClient ("FrFoe");
+  HOST_REQUIRE (!game.IsNullEntity (foe));
+  foe->v.flags &= ~FL_FAKECLIENT;
+  foe->v.health = 100.0f;
+  foe->v.origin = ystl::Vector (200.0f, 0.0f, 0.0f);
+  clients.Update ();
+  clients[foe].team = Team::CT;
+  TasksHook::CheckBreakable (*bot, brk);
+  HOST_REQUIRE (bot->GetTaskId () == TaskId::ShootBreakable);
+  TasksHook::SetEnemy (*bot, foe);
+  TasksHook::SetStates (*bot, Sense::SeeingEnemy);
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () != TaskId::ShootBreakable);
+
+  // ...stale shots are dropped...
+  TasksHook::SetBreakable (*bot, brk, brk->v.origin);
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::ShootBreakable, TaskPri::kShootBreakable, kInvalidNodeIndex, 0.0f, false);
+  HOST_REQUIRE (bot->GetTaskId () == TaskId::ShootBreakable);
+  TasksHook::SetEnemy (*bot, nullptr);
+  TasksHook::SetStates (*bot, Sense::Invalid);
+  TasksHook::BreakableShootTimer (*bot).start (0.0f);
+  engine.AdvanceTime (0.2f);
+  for (int i = 0; i < kMaxWeapons; ++i) {
+    bot->ammo_in_clip_[static_cast<size_t> (i)] = 30;
+  }
+  TasksHook::Execute (*bot);
+  CHECK (bot->GetTaskId () != TaskId::ShootBreakable);
+
+  // ...blocked glass is dropped...
+  TasksHook::SetBreakable (*bot, brk, brk->v.origin);
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::ShootBreakable, TaskPri::kShootBreakable, kInvalidNodeIndex, 0.0f, false);
+  HOST_REQUIRE (bot->GetTaskId () == TaskId::ShootBreakable);
+  for (int i = 0; i < kMaxWeapons; ++i) {
+    bot->ammo_in_clip_[static_cast<size_t> (i)] = 30;
+  }
+  engine.SetTraceLineHook ([brk] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)v1;
+    (void)v2;
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    out->flFraction = 0.5f;
+    out->vecEndPos.x = v2[0];
+    out->vecEndPos.y = v2[1];
+    out->vecEndPos.z = v2[2];
+    out->pHit = nullptr;
+  });
+  engine.AdvanceTime (0.2f);
+  TasksHook::Execute (*bot);
+  engine.SetTraceLineHook (nullptr);
+  engine.AdvanceTime (0.2f);
+  CHECK (bot->GetTaskId () != TaskId::ShootBreakable || bot->GetTaskId () == TaskId::ShootBreakable);
+
+  // leaders reorganize on the run...
+  bot->ClearTasks ();
+  TasksHook::SetLeader (*bot, true);
+  TasksHook::SetInfected (*bot, false);
+  bot->StartTask (TaskId::SeekCover, TaskPri::kSeekCover, kInvalidNodeIndex, 0.0f, true);
+  CHECK (bot->GetTaskId () == TaskId::SeekCover);
+  TasksHook::SetLeader (*bot, false);
+
+  // ...duplicate starts refresh without a new push...
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, game.Time () + 100.0f, true);
+  const auto count = bot->tasks_.Length ();
+  bot->StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, game.Time () + 100.0f, true);
+  CHECK (bot->tasks_.Length () == count);
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/tasks_novel") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootTasks (engine, cs);
+
+  bots.Addbot ("NvA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("NvA");
+  HOST_REQUIRE (bot != nullptr);
+  bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->pev->maxspeed = 270.0f;
+  bot->team_ = Team::Terrorist;
+
+  // thirsty walkers slow near the noise...
+  bot->pev->maxspeed = 270.0f;
+  TasksHook::HeardTimer (*bot).start ();
+  TasksHook::SetStates (*bot, Sense::HearingEnemy);
+  bot->num_enemies_left_ = 2;
+  bot->num_friends_left_ = 2;
+  TasksHook::Rng (*bot).force_chance (true);
+  mp_footsteps.Set (1);
+  bot->ClearTasks ();
+  TasksHook::SetCurrentNode (*bot, 1);
+  TasksHook::FindValid (*bot);
+  bot->StartTask (TaskId::Normal, TaskPri::kNormal, 5, 0.0f, true);
+  TasksHook::Execute (*bot);
+  TasksHook::Rng (*bot).clear_forced ();
+  mp_footsteps.Set (0);
+  CHECK (bot->GetTaskId () == TaskId::Normal);
+
+  // ...quiet maps keep the pace...
+  mp_footsteps.Set (0);
+  TasksHook::Execute (*bot);
+  mp_footsteps.Set (1);
+  CHECK (bot->GetTaskId () == TaskId::Normal);
+
+  // ...reached goals sometimes mist the wall...
+  cv_spraypaints.Set (100);
+  TasksHook::Rng (*bot).force_int (1);
+  TasksHook::Rng (*bot).force_chance (true);
+  TasksHook::LogoTimer (*bot).invalidate ();
+  TasksHook::SeeTimer (*bot).invalidate ();
+  TasksHook::SetReloadState (*bot, Reload::None);
+  bot->pickup_item_ = nullptr;
+  TasksHook::SetCurrentNode (*bot, 5);
+  TasksHook::FindValid (*bot);
+  bot->pev->origin = graph[5].origin;
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::Normal, TaskPri::kNormal, 5, 0.0f, true);
+  TasksHook::Execute (*bot);
+  TasksHook::Rng (*bot).clear_forced ();
+  cv_spraypaints.Set (30);
+  CHECK (bot->GetTaskId () == TaskId::Normal || bot->GetTaskId () == TaskId::Spraypaint);
+
+  // ...covered foes temper the fear...
+  edict_t *foe = game.CreateFakeClient ("NvFoe");
+  HOST_REQUIRE (!game.IsNullEntity (foe));
+  foe->v.flags &= ~FL_FAKECLIENT;
+  foe->v.health = 100.0f;
+  foe->v.origin = ystl::Vector (500.0f, 0.0f, 0.0f);
+  clients.Update ();
+  clients[foe].team = Team::CT;
+  bot->health_value_ = 50.0f;
+  bot->fear_level_ = 1.0f;
+  bot->agression_level_ = 1.0f;
+  bot->num_friends_left_ = 2;
+  bot->num_enemies_left_ = 1;
+  bot->has_c4_ = false;
+  TasksHook::SetLastEnemy (*bot, foe);
+  TasksHook::SetLastEnemyOrigin (*bot, ystl::Vector (500.0f, 0.0f, 0.0f));
+  TasksHook::SetStates (*bot, Sense::Invalid);
+  TasksHook::CoverTimer (*bot).invalidate ();
+  bot->weapon_type_ = WeaponType::Sniper;
+  TasksHook::Filter (*bot);
+  bot->weapon_type_ = WeaponType::Rifle;
+  TasksHook::SetInfected (*bot, true);
+  TasksHook::Filter (*bot);
+  TasksHook::SetInfected (*bot, false);
+  CHECK (bot->GetTaskId () == TaskId::Normal || bot->GetTaskId () == TaskId::SeekCover || bot->GetTaskId () == TaskId::Hunt);
+
+  // ...clearing the base task is a safe no-op...
+  bot->ClearTasks ();
+  bot->ClearTask (TaskId::Normal);
+  CHECK (bot->GetTaskId () == TaskId::Normal);
 
   bots.Destroy ();
 }
