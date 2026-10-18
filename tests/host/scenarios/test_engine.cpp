@@ -1241,8 +1241,7 @@ TEST_CASE ("unit/engine_postload") {
   game.ClearGameFlag (GameFlags::Mobility);
   game.ClearGameFlag (GameFlags::HasBotVoice);
   game.ClearGameFlag (GameFlags::ReGameDLL);
-  testhost::CloseFakeCs (cs);
-  testhost::CloseFakeCs (cs2);
+  // the gamedll stays loaded: under metamod no yapb ref holds it, so closing both would unload it (dlclose crash on some toolchains)
   bots.Destroy ();
 }
 
