@@ -108,7 +108,7 @@ void Manager::ForEach (ForEachBot handler) {
   }
 }
 
-CreateResult Manager::Create (ystl::StringRef name, Difficulty difficulty, Personality personality, Team team, int skin) {
+CreateResult Manager::Create (ystl::StringRef name, Difficulty difficulty, Personality personality, Team team, int skin, bool diff_locked) {
   // prepare bot entity for creation with team, difficulty and name
 
   edict_t *bot = nullptr;
@@ -204,7 +204,7 @@ CreateResult Manager::Create (ystl::StringRef name, Difficulty difficulty, Perso
   if (game.IsNullEntity (bot)) {
     return CreateResult::MaxPlayersReached;
   }
-  auto object = ystl::make_unique<Bot> (bot, difficulty, personality, team, skin);
+  auto object = ystl::make_unique<Bot> (bot, difficulty, personality, team, skin, diff_locked);
   const auto index = object->Index ();
 
   // seed random number generator
@@ -361,7 +361,14 @@ uint8_t TickManager::ComputeMsec (const Bot *bot) const {
 void Manager::Addbot (ystl::StringRef name, Difficulty difficulty, Personality personality, Team team, int skin, bool manual) {
   // this function putting bot creation process to queue to prevent engine crashes
 
-  Request request { .manual = manual, .skin = skin, .team = team, .personality = personality, .difficulty = difficulty, .name = name };
+  const bool explicit_difficulty = difficulty >= Difficulty::Noob && difficulty <= Difficulty::Expert;
+  Request request { .manual = manual,
+    .diff_locked = manual && explicit_difficulty,
+    .skin = skin,
+    .team = team,
+    .personality = personality,
+    .difficulty = difficulty,
+    .name = name };
 
   QueueBotRequest (ystl::move (request));
 }
@@ -379,6 +386,7 @@ void Manager::QueueBotRequest (Request &&request) {
       request.personality = saved.personality;
       request.team = saved.team;
       request.skin = saved.skin;
+      request.diff_locked = saved.diff_locked;
     }
   }
 
@@ -396,11 +404,15 @@ void Manager::Addbot (
     return value.empty () || value == any ? -1 : value.as<int> ();
   };
 
+  const auto difficulty_value = static_cast<Difficulty> (handle_param (difficulty));
+  const bool explicit_difficulty = difficulty_value >= Difficulty::Noob && difficulty_value <= Difficulty::Expert;
+
   Request request { .manual = manual,
+    .diff_locked = manual && explicit_difficulty,
     .skin = handle_param (skin),
     .team = util.ConvertFromCsTeam (static_cast<CSTeam> (handle_param (team))),
     .personality = static_cast<Personality> (handle_param (personality)),
-    .difficulty = static_cast<Difficulty> (handle_param (difficulty)),
+    .difficulty = difficulty_value,
     .name = name.empty () || name == any ? ystl::StringRef ("\0") : name };
 
   QueueBotRequest (ystl::move (request));
@@ -436,7 +448,8 @@ void Manager::MaintainQuota () {
 
       return;
     }
-    const auto create_result = Create (request.name, request.difficulty, request.personality, request.team, request.skin);
+    const auto create_result =
+      Create (request.name, request.difficulty, request.personality, request.team, request.skin, request.diff_locked);
 
     // only increment quota for manual add on successful creation
     if (request.manual && create_result == CreateResult::Success) {
@@ -1141,8 +1154,11 @@ void Manager::UpdateBotDifficulties () {
 
   if (difficulty != last_difficulty_) {
 
-    // sets new difficulty for all bots
+    // sets new difficulty for all bots, but keep manually pinned ones (honoring the runtime switch)
     for (auto &bot : bots_) {
+      if (cv_difficulty_lock && bot.diff_locked_) {
+        continue;
+      }
       bot.SetNewDifficulty (difficulty);
     }
     last_difficulty_ = difficulty;
@@ -1190,6 +1206,10 @@ void Manager::BalanceBotDifficulties () {
 
     // calculate for each the bot
     for (auto &bot : bots_) {
+      // manually pinned difficulties never drift (honoring the runtime switch)
+      if (cv_difficulty_lock && bot.diff_locked_) {
+        continue;
+      }
       // in human-team-only mode, skip bots on teams without humans
       if (human_team_only) {
         const bool bot_on_t = (bot.team_ == Team::Terrorist);
@@ -1229,7 +1249,7 @@ void Manager::Destroy () {
   ystl::memzero (bots_by_index_, sizeof (bots_by_index_));
 }
 
-Bot::Bot (edict_t *bot, Difficulty difficulty, Personality personality, Team team, int skin) {
+Bot::Bot (edict_t *bot, Difficulty difficulty, Personality personality, Team team, int skin, bool diff_locked) {
   // this function does core operation of creating bot, it's called by addbot, when bot setup completed,
 
   const int client_index = game.IndexOfEntity (bot);
@@ -1298,13 +1318,15 @@ Bot::Bot (edict_t *bot, Difficulty difficulty, Personality personality, Team tea
 
   is_alive_ = false;
   weapon_burst_mode_ = BurstMode::Off;
+  diff_locked_ = diff_locked;
   SetNewDifficulty (ystl::clamp (static_cast<Difficulty> (difficulty), Difficulty::Noob, Difficulty::Expert));
 
   auto min_difficulty = cv_difficulty_min.As<int> ();
   auto max_difficulty = cv_difficulty_max.As<int> ();
 
-  // if we're have min/max difficulty specified, choose value from they
-  if (min_difficulty != ystl::to_underlying (Difficulty::Invalid) && max_difficulty != ystl::to_underlying (Difficulty::Invalid)) {
+  // if we're have min/max difficulty specified, choose value from they (pinned manual difficulty ignores the range)
+  if (!(diff_locked_ && cv_difficulty_lock) && min_difficulty != ystl::to_underlying (Difficulty::Invalid) &&
+      max_difficulty != ystl::to_underlying (Difficulty::Invalid)) {
     if (min_difficulty > max_difficulty) {
       ystl::swap (max_difficulty, min_difficulty);
     }
@@ -1510,6 +1532,7 @@ void Manager::DisconnectBot (Bot *bot) {
       saved.personality = bot->personality_;
       saved.team = bot->team_;
       saved.skin = bot->wanted_skin_;
+      saved.diff_locked = bot->diff_locked_;
     }
     saved_bots_.emplace_last (ystl::move (saved));
   }

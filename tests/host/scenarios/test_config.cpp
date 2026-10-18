@@ -105,8 +105,7 @@ void WriteConfFile (const ystl::String &path, ystl::StringRef text) {
 }
 
 ystl::String MapSpecificFile () {
-  return ystl::strings.join_path (
-    bstor.GetRunningPath (), folders.config, "maps", ystl::strings.format ("de_test.%s", kConfigExtension));
+  return ystl::strings.join_path (bstor.GetRunningPath (), folders.config, "maps", ystl::strings.format ("de_test.%s", kConfigExtension));
 }
 
 ystl::String MaterialsFile () {
@@ -357,7 +356,7 @@ TEST_CASE ("unit/config_files") {
   edict_t *ent = game.CreateFakeClient ("CfgBot");
   HOST_REQUIRE (!game.IsNullEntity (ent));
 
-  auto bot = ystl::make_unique<Bot> (ent, Difficulty::Normal, Personality::Normal, Team::CT, 0);
+  auto bot = ystl::make_unique<Bot> (ent, Difficulty::Normal, Personality::Normal, Team::CT, 0, false);
   HOST_REQUIRE (bot.get () != nullptr && bot->Index () == 0);
 
   conf.ClearUsedName (bot.get ());
@@ -589,8 +588,7 @@ TEST_CASE ("unit/config_armory") {
   careful += "MAC10 UMP45 AK47 SG552 M4A1 Galil Famas AUG Scout G3SG1 SG550 M249 Shield";
   ystl::String rusher = "M4A1 Knife USP Glock18 Deagle P228 Elite FiveSeven M3 XM1014 MP5 TMP P90 ";
   rusher += "MAC10 UMP45 AK47 SG552 Galil Famas AUG Scout AWP G3SG1 SG550 M249 Shield";
-  ystl::String weapon_v3 = ystl::strings.format ("Preferences {\n  Normal = %s\n  Rusher = %s\n  Careful = %s\n}\n", order,
-    rusher, careful);
+  ystl::String weapon_v3 = ystl::strings.format ("Preferences {\n  Normal = %s\n  Rusher = %s\n  Careful = %s\n}\n", order, rusher, careful);
 
   WriteConfFile (ConfFile ("weapon"), weapon_v3);
   conf.LoadWeaponsConfig ();

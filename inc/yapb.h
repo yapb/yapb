@@ -929,6 +929,7 @@ public:
   CSTeam wanted_team_ {}; // player team bot wants select
   int wanted_skin_ {}; // player model bot wants to select
   Difficulty difficulty_ {}; // bots hard level
+  bool diff_locked_ {}; // manual difficulty, keep it fixed against cvar/auto changes
 
   int ping_base_ {}; // base ping level for randomizing
   ystl::Atomic<int> ping_ {}; // bot's acutal ping
@@ -982,7 +983,7 @@ public:
   }
 
 public:
-  Bot (edict_t *bot, Difficulty difficulty, Personality personality, Team team, int skin);
+  Bot (edict_t *bot, Difficulty difficulty, Personality personality, Team team, int skin, bool diff_locked);
   ~Bot () = default;
 
 public:

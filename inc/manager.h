@@ -45,6 +45,7 @@ struct DifficultyData {
 // bot creation tab
 struct Request {
   bool manual {};
+  bool diff_locked {}; // keep difficulty fixed, ignore global/auto changes
   int skin {};
   Team team {};
   Personality personality {};
@@ -93,7 +94,7 @@ private:
   ystl::CountdownTimer hold_quota_management_timer_ {}; // prevent from running quota management for some time
 
 protected:
-  CreateResult Create (ystl::StringRef name, Difficulty difficulty, Personality personality, Team team, int skin);
+  CreateResult Create (ystl::StringRef name, Difficulty difficulty, Personality personality, Team team, int skin, bool diff_locked);
 
 public:
   Manager ();

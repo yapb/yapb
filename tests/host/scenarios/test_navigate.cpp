@@ -561,7 +561,7 @@ ystl::UniquePtr<Bot> CreateNavBot (const char *name, const ystl::Vector &pos) {
   if (game.IsNullEntity (ent)) {
     return {};
   }
-  auto bot = ystl::make_unique<Bot> (ent, Difficulty::Normal, Personality::Normal, Team::CT, 0);
+  auto bot = ystl::make_unique<Bot> (ent, Difficulty::Normal, Personality::Normal, Team::CT, 0, false);
 
   bot->pev->origin = pos;
   bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
@@ -3066,1036 +3066,1035 @@ TEST_CASE ("unit/navigate_jump_retime") {
 }
 
 TEST_CASE ("unit/navigate_tactics") {
-   testhost::FakeEngine engine;
-   engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
+  testhost::FakeEngine engine;
+  engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
 
-   // multi-mode map: assassination + hostage + demolition + escape legs live together
-   edict_t *bomb_target = engine.SpawnEntity ("func_bomb_target");
-   HOST_REQUIRE (bomb_target != nullptr);
-   edict_t *vip_zone = engine.SpawnEntity ("func_vip_safetyzone");
-   HOST_REQUIRE (vip_zone != nullptr);
-   edict_t *escape_zone = engine.SpawnEntity ("func_escapezone");
-   HOST_REQUIRE (escape_zone != nullptr);
-   edict_t *hostage_ent = engine.SpawnEntity ("hostage_entity");
-   HOST_REQUIRE (hostage_ent != nullptr);
+  // multi-mode map: assassination + hostage + demolition + escape legs live together
+  edict_t *bomb_target = engine.SpawnEntity ("func_bomb_target");
+  HOST_REQUIRE (bomb_target != nullptr);
+  edict_t *vip_zone = engine.SpawnEntity ("func_vip_safetyzone");
+  HOST_REQUIRE (vip_zone != nullptr);
+  edict_t *escape_zone = engine.SpawnEntity ("func_escapezone");
+  HOST_REQUIRE (escape_zone != nullptr);
+  edict_t *hostage_ent = engine.SpawnEntity ("hostage_entity");
+  HOST_REQUIRE (hostage_ent != nullptr);
 
-   testhost::FakeCSApi cs {};
-   HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
-   cs.reset ();
+  testhost::FakeCSApi cs {};
+  HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
+  cs.reset ();
 
-   GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
-   HOST_REQUIRE (cs.entered () != 0);
+  GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
+  HOST_REQUIRE (cs.entered () != 0);
 
-   gamefuncs_t table {};
-   HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
+  gamefuncs_t table {};
+  HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
 
-   game.Precache ();
-   table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
-   HOST_REQUIRE (game.MapIs (MapFlags::Demolition));
+  game.Precache ();
+  table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
+  HOST_REQUIRE (game.MapIs (MapFlags::Demolition));
 
-   // flagged chain: 0 plain, 1 T, 2 CT, 3 goal, 4 camp, 5 rescue, 6 sniper
-   graph.Reset ();
+  // flagged chain: 0 plain, 1 T, 2 CT, 3 goal, 4 camp, 5 rescue, 6 sniper
+  graph.Reset ();
 
-   const ystl::Vector spots[7] = {
-     ystl::Vector (0.0f, 0.0f, 0.0f),
-     ystl::Vector (100.0f, 0.0f, 0.0f),
-     ystl::Vector (200.0f, 0.0f, 0.0f),
-     ystl::Vector (300.0f, 0.0f, 0.0f),
-     ystl::Vector (400.0f, 0.0f, 0.0f),
-     ystl::Vector (500.0f, 0.0f, 0.0f),
-     ystl::Vector (600.0f, 0.0f, 0.0f),
-   };
-   const int32_t flag_of[7] = {
-     0,
-     ystl::to_underlying (NodeFlag::TerroristOnly),
-     ystl::to_underlying (NodeFlag::CTOnly),
-     ystl::to_underlying (NodeFlag::Goal),
-     ystl::to_underlying (NodeFlag::Camp),
-     ystl::to_underlying (NodeFlag::Rescue),
-     ystl::to_underlying (NodeFlag::Camp),
-   };
+  const ystl::Vector spots[7] = {
+    ystl::Vector (0.0f, 0.0f, 0.0f),
+    ystl::Vector (100.0f, 0.0f, 0.0f),
+    ystl::Vector (200.0f, 0.0f, 0.0f),
+    ystl::Vector (300.0f, 0.0f, 0.0f),
+    ystl::Vector (400.0f, 0.0f, 0.0f),
+    ystl::Vector (500.0f, 0.0f, 0.0f),
+    ystl::Vector (600.0f, 0.0f, 0.0f),
+  };
+  const int32_t flag_of[7] = {
+    0,
+    ystl::to_underlying (NodeFlag::TerroristOnly),
+    ystl::to_underlying (NodeFlag::CTOnly),
+    ystl::to_underlying (NodeFlag::Goal),
+    ystl::to_underlying (NodeFlag::Camp),
+    ystl::to_underlying (NodeFlag::Rescue),
+    ystl::to_underlying (NodeFlag::Camp),
+  };
 
-   for (int i = 0; i < 7; ++i) {
-     Path path {};
-     path.origin = spots[i];
-     path.number = i;
-     path.flags = flag_of[i];
-     path.light = kInvalidLightLevel;
+  for (int i = 0; i < 7; ++i) {
+    Path path {};
+    path.origin = spots[i];
+    path.number = i;
+    path.flags = flag_of[i];
+    path.light = kInvalidLightLevel;
 
-     for (auto &link : path.links) {
-       link.index = kInvalidNodeIndex;
-     }
-     graph.paths_.push (path);
-   }
+    for (auto &link : path.links) {
+      link.index = kInvalidNodeIndex;
+    }
+    graph.paths_.push (path);
+  }
 
-   auto link = [] (int from, int to, int distance) {
-     for (auto &slot : graph.paths_[static_cast<size_t> (from)].links) {
-       if (slot.index == kInvalidNodeIndex) {
-         slot.index = static_cast<int16_t> (to);
-         slot.distance = distance;
-         return;
-       }
-     }
-     HOST_REQUIRE (false);
-   };
+  auto link = [] (int from, int to, int distance) {
+    for (auto &slot : graph.paths_[static_cast<size_t> (from)].links) {
+      if (slot.index == kInvalidNodeIndex) {
+        slot.index = static_cast<int16_t> (to);
+        slot.distance = distance;
+        return;
+      }
+    }
+    HOST_REQUIRE (false);
+  };
 
-   for (int i = 0; i < 6; ++i) {
-     link (i, i + 1, 100);
-     link (i + 1, i, 100);
-   }
-   graph.PopulateNodes ();
-   planner.Init ();
+  for (int i = 0; i < 6; ++i) {
+    link (i, i + 1, 100);
+    link (i + 1, i, 100);
+  }
+  graph.PopulateNodes ();
+  planner.Init ();
 
-   auto bot = CreateNavBot ("Goal2Bot", ystl::Vector (0.0f, 0.0f, 0.0f));
-   HOST_REQUIRE (bot.get () != nullptr);
-   NavigateHook::SetTeam (*bot, Team::Terrorist);
-   NavigateHook::SetDifficulty (*bot, Difficulty::Normal);
-   NavigateHook::SetAggression (*bot, 0.5f, 0.5f);
+  auto bot = CreateNavBot ("Goal2Bot", ystl::Vector (0.0f, 0.0f, 0.0f));
+  HOST_REQUIRE (bot.get () != nullptr);
+  NavigateHook::SetTeam (*bot, Team::Terrorist);
+  NavigateHook::SetDifficulty (*bot, Difficulty::Normal);
+  NavigateHook::SetAggression (*bot, 0.5f, 0.5f);
 
-   // ...assassination/hostage T legs: rusher pushes offensive, others camp...
-   NavigateHook::SetPersonality (*bot, Personality::Rusher);
-   CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
+  // ...assassination/hostage T legs: rusher pushes offensive, others camp...
+  NavigateHook::SetPersonality (*bot, Personality::Rusher);
+  CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
 
-   NavigateHook::SetPersonality (*bot, Personality::Careful);
-   CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
+  NavigateHook::SetPersonality (*bot, Personality::Careful);
+  CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
 
-   // ...normal coin flip both ways under pinned rolls...
-   NavigateHook::SetPersonality (*bot, Personality::Normal);
-   NavigateHook::Rng (*bot).force_chance (true);
-   CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
-   NavigateHook::Rng (*bot).force_chance (false);
-   CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
-   NavigateHook::Rng (*bot).clear_forced ();
+  // ...normal coin flip both ways under pinned rolls...
+  NavigateHook::SetPersonality (*bot, Personality::Normal);
+  NavigateHook::Rng (*bot).force_chance (true);
+  CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
+  NavigateHook::Rng (*bot).force_chance (false);
+  CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
+  NavigateHook::Rng (*bot).clear_forced ();
 
-   // ...CT on hostage maps always pushes offensive...
-   NavigateHook::SetTeam (*bot, Team::CT);
-   NavigateHook::SetPersonality (*bot, Personality::Normal);
-   CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
+  // ...CT on hostage maps always pushes offensive...
+  NavigateHook::SetTeam (*bot, Team::CT);
+  NavigateHook::SetPersonality (*bot, Personality::Normal);
+  CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
 
-   // ...escape map: T rusher takes the goal post, others rate it...
-   NavigateHook::SetTeam (*bot, Team::Terrorist);
-   NavigateHook::SetPersonality (*bot, Personality::Rusher);
-   CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
+  // ...escape map: T rusher takes the goal post, others rate it...
+  NavigateHook::SetTeam (*bot, Team::Terrorist);
+  NavigateHook::SetPersonality (*bot, Personality::Rusher);
+  CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
 
-   NavigateHook::Rng (*bot).force_chance (true);
-   CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
-   NavigateHook::Rng (*bot).force_chance (false);
-   NavigateHook::SetPersonality (*bot, Personality::Careful);
-   CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
-   NavigateHook::Rng (*bot).clear_forced ();
-   NavigateHook::SetPersonality (*bot, Personality::Normal);
+  NavigateHook::Rng (*bot).force_chance (true);
+  CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
+  NavigateHook::Rng (*bot).force_chance (false);
+  NavigateHook::SetPersonality (*bot, Personality::Careful);
+  CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
+  NavigateHook::Rng (*bot).clear_forced ();
+  NavigateHook::SetPersonality (*bot, Personality::Normal);
 
-   NavigateHook::SetTeam (*bot, Team::CT);
-   CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
+  NavigateHook::SetTeam (*bot, Team::CT);
+  CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
 
-   // ...tactic lottery: camp/forward/goal desires reshaped by personality...
-   NavigateHook::Rng (*bot).force_float (69.0f);
-   NavigateHook::SetPersonality (*bot, Personality::Rusher);
-   CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
-   NavigateHook::SetPersonality (*bot, Personality::Careful);
-   CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
-   NavigateHook::SetPersonality (*bot, Personality::Normal);
-   NavigateHook::Rng (*bot).force_chance (true);
-   CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
-   NavigateHook::Rng (*bot).force_chance (false);
-   CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
-   NavigateHook::Rng (*bot).clear_forced ();
+  // ...tactic lottery: camp/forward/goal desires reshaped by personality...
+  NavigateHook::Rng (*bot).force_float (69.0f);
+  NavigateHook::SetPersonality (*bot, Personality::Rusher);
+  CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
+  NavigateHook::SetPersonality (*bot, Personality::Careful);
+  CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
+  NavigateHook::SetPersonality (*bot, Personality::Normal);
+  NavigateHook::Rng (*bot).force_chance (true);
+  CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
+  NavigateHook::Rng (*bot).force_chance (false);
+  CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
+  NavigateHook::Rng (*bot).clear_forced ();
 
-   // ...non-camp guns zero the camp desire, snipers inflate it...
-   bot->weapon_type_ = WeaponType::Rifle;
-   CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
-   bot->weapon_type_ = WeaponType::Sniper;
-   bot->current_weapon_ = Weapon::AWP;
-   NavigateHook::Rng (*bot).force_float (2.0f);
-   CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
-   NavigateHook::Rng (*bot).clear_forced ();
-   bot->weapon_type_ = WeaponType::Rifle;
+  // ...non-camp guns zero the camp desire, snipers inflate it...
+  bot->weapon_type_ = WeaponType::Rifle;
+  CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
+  bot->weapon_type_ = WeaponType::Sniper;
+  bot->current_weapon_ = Weapon::AWP;
+  NavigateHook::Rng (*bot).force_float (2.0f);
+  CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
+  NavigateHook::Rng (*bot).clear_forced ();
+  bot->weapon_type_ = WeaponType::Rifle;
 
-   // ...rush endgame inflates goal/forward and kills camp/backoff...
-   NavigateHook::SetPersonality (*bot, Personality::Rusher);
-   NavigateHook::SetHealthValue (*bot, 100.0f);
-   NavigateHook::SetAggression (*bot, 0.9f, 0.0f);
-   CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
+  // ...rush endgame inflates goal/forward and kills camp/backoff...
+  NavigateHook::SetPersonality (*bot, Personality::Rusher);
+  NavigateHook::SetHealthValue (*bot, 100.0f);
+  NavigateHook::SetAggression (*bot, 0.9f, 0.0f);
+  CHECK (graph.Exists (NavigateHook::BestGoal (*bot)));
 
-   // ...hostage carrier with rush takes the nearest rescue directly...
-   game_state.RoundStart (); // stop the rush clock for the next legs
-   NavigateHook::SetTeam (*bot, Team::CT);
-   NavigateHook::SetHasHostage (*bot, true);
-   ystl::SmallArray<int32_t> defensive {};
-   defensive.push (2);
-   ystl::SmallArray<int32_t> offensive {};
-   offensive.push (1);
-   CHECK (graph.Exists (NavigateHook::HostageActionGoal (*bot, &defensive, &offensive)));
-   NavigateHook::SetHasHostage (*bot, false);
+  // ...hostage carrier with rush takes the nearest rescue directly...
+  game_state.RoundStart (); // stop the rush clock for the next legs
+  NavigateHook::SetTeam (*bot, Team::CT);
+  NavigateHook::SetHasHostage (*bot, true);
+  ystl::SmallArray<int32_t> defensive {};
+  defensive.push (2);
+  ystl::SmallArray<int32_t> offensive {};
+  offensive.push (1);
+  CHECK (graph.Exists (NavigateHook::HostageActionGoal (*bot, &defensive, &offensive)));
+  NavigateHook::SetHasHostage (*bot, false);
 
-   // ...camp tactic with a sniper picks sniper points, others camp...
-   graph.GetPoints (PointType::Sniper).push (6);
-   bot->weapon_type_ = WeaponType::Sniper;
-   bot->current_weapon_ = Weapon::AWP;
-   CHECK (NavigateHook::GoalPost (*bot, GoalTactic::Camp, &defensive, &offensive) == 6);
-   bot->weapon_type_ = WeaponType::Rifle;
-   CHECK (graph.Exists (NavigateHook::GoalPost (*bot, GoalTactic::Camp, &defensive, &offensive)));
+  // ...camp tactic with a sniper picks sniper points, others camp...
+  graph.GetPoints (PointType::Sniper).push (6);
+  bot->weapon_type_ = WeaponType::Sniper;
+  bot->current_weapon_ = Weapon::AWP;
+  CHECK (NavigateHook::GoalPost (*bot, GoalTactic::Camp, &defensive, &offensive) == 6);
+  bot->weapon_type_ = WeaponType::Rifle;
+  CHECK (graph.Exists (NavigateHook::GoalPost (*bot, GoalTactic::Camp, &defensive, &offensive)));
 
-   // ...rusher takes a random top-4 goal, history/area filter covered below...
-   NavigateHook::SetPersonality (*bot, Personality::Rusher);
-   NavigateHook::Rng (*bot).force_int (0);
-   CHECK (graph.Exists (NavigateHook::GoalPost (*bot, GoalTactic::Goal, &defensive, &offensive)));
-   NavigateHook::Rng (*bot).clear_forced ();
-   NavigateHook::SetPersonality (*bot, Personality::Normal);
+  // ...rusher takes a random top-4 goal, history/area filter covered below...
+  NavigateHook::SetPersonality (*bot, Personality::Rusher);
+  NavigateHook::Rng (*bot).force_int (0);
+  CHECK (graph.Exists (NavigateHook::GoalPost (*bot, GoalTactic::Goal, &defensive, &offensive)));
+  NavigateHook::Rng (*bot).clear_forced ();
+  NavigateHook::SetPersonality (*bot, Personality::Normal);
 
-   // ...post-process: exact history hit, area rule, occupied and wall filters...
-   NavigateHook::ClearHistory (*bot);
-   NavigateHook::PushHistory (*bot, 1);
-   ystl::SmallArray<int32_t> pool {};
-   pool.push (1);
-   pool.push (2);
-   pool.push (3);
-   pool.push (4);
-   pool.push (5);
-   int picked[4] = { kInvalidNodeIndex, kInvalidNodeIndex, kInvalidNodeIndex, kInvalidNodeIndex };
-   NavigateHook::PostGoals (*bot, pool, picked);
+  // ...post-process: exact history hit, area rule, occupied and wall filters...
+  NavigateHook::ClearHistory (*bot);
+  NavigateHook::PushHistory (*bot, 1);
+  ystl::SmallArray<int32_t> pool {};
+  pool.push (1);
+  pool.push (2);
+  pool.push (3);
+  pool.push (4);
+  pool.push (5);
+  int picked[4] = { kInvalidNodeIndex, kInvalidNodeIndex, kInvalidNodeIndex, kInvalidNodeIndex };
+  NavigateHook::PostGoals (*bot, pool, picked);
 
-   for (int i = 0; i < 4; ++i) {
-     CHECK (picked[i] >= 1 && picked[i] <= 5);
-   }
-   NavigateHook::ClearHistory (*bot);
+  for (int i = 0; i < 4; ++i) {
+    CHECK (picked[i] >= 1 && picked[i] <= 5);
+  }
+  NavigateHook::ClearHistory (*bot);
 
-   table.pfnServerDeactivate ();
-   testhost::CloseFakeCs (cs);
+  table.pfnServerDeactivate ();
+  testhost::CloseFakeCs (cs);
 }
 
 TEST_CASE ("unit/navigate_ordnance") {
-   testhost::FakeEngine engine;
-   engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
+  testhost::FakeEngine engine;
+  engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
 
-   edict_t *bomb_target = engine.SpawnEntity ("func_bomb_target");
-   HOST_REQUIRE (bomb_target != nullptr);
+  edict_t *bomb_target = engine.SpawnEntity ("func_bomb_target");
+  HOST_REQUIRE (bomb_target != nullptr);
 
-   testhost::FakeCSApi cs {};
-   HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
-   cs.reset ();
+  testhost::FakeCSApi cs {};
+  HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
+  cs.reset ();
 
-   GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
-   HOST_REQUIRE (cs.entered () != 0);
+  GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
+  HOST_REQUIRE (cs.entered () != 0);
 
-   gamefuncs_t table {};
-   HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
+  gamefuncs_t table {};
+  HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
 
-   game.Precache ();
-   table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
-   HOST_REQUIRE (game.MapIs (MapFlags::Demolition));
+  game.Precache ();
+  table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
+  HOST_REQUIRE (game.MapIs (MapFlags::Demolition));
 
-   BuildNavGraph ();
-   planner.Init ();
+  BuildNavGraph ();
+  planner.Init ();
 
-   auto bot = CreateNavBot ("Bomb2Bot", ystl::Vector (0.0f, 0.0f, 0.0f));
-   HOST_REQUIRE (bot.get () != nullptr);
-   NavigateHook::SetTeam (*bot, Team::Terrorist);
-   NavigateHook::SetHasC4 (*bot, false);
+  auto bot = CreateNavBot ("Bomb2Bot", ystl::Vector (0.0f, 0.0f, 0.0f));
+  HOST_REQUIRE (bot.get () != nullptr);
+  NavigateHook::SetTeam (*bot, Team::Terrorist);
+  NavigateHook::SetHasC4 (*bot, false);
 
-   // ...loose bomb: ignored entry clears the ignore list...
-   edict_t *loose = engine.SpawnEntity ("weaponbox");
-   HOST_REQUIRE (loose != nullptr);
-   loose->v.model = string_t (engine.AllocString ("models/p_backpack.mdl"));
-   const float loose_pos[3] = { 150.0f, 0.0f, 0.0f };
-   engine.Funcs ().pfnSetOrigin (loose, loose_pos);
-   NavigateHook::AddIgnored (*bot, loose);
-   CHECK (NavigateHook::BombActionGoal (*bot) == 1);
-   CHECK (NavigateHook::LoosedBomb (*bot) == 1);
+  // ...loose bomb: ignored entry clears the ignore list...
+  edict_t *loose = engine.SpawnEntity ("weaponbox");
+  HOST_REQUIRE (loose != nullptr);
+  loose->v.model = string_t (engine.AllocString ("models/p_backpack.mdl"));
+  const float loose_pos[3] = { 150.0f, 0.0f, 0.0f };
+  engine.Funcs ().pfnSetOrigin (loose, loose_pos);
+  NavigateHook::AddIgnored (*bot, loose);
+  CHECK (NavigateHook::BombActionGoal (*bot) == 1);
+  CHECK (NavigateHook::LoosedBomb (*bot) == 1);
 
-   // ...in the zone with the c4 and no loose bomb: hold the nearest goal...
-   game_state.SetBombPlanted (false);
-   engine.AdvanceTime (0.2f);
-   NavigateHook::SetInBombZone (*bot, true);
-   NavigateHook::SetProgressBar (*bot, false);
-   NavigateHook::SetHasC4 (*bot, true);
-   // (remove the loose bomb so the zone leg runs)
-   engine.Funcs ().pfnSetOrigin (loose, loose_pos);
-   loose->v.model = string_t (engine.AllocString ("models/w_knife.mdl"));
-   engine.AdvanceTime (0.2f);
-   const int zone_goal = NavigateHook::BombActionGoal (*bot);
-   CHECK (zone_goal == kInvalidNodeIndex || graph.Exists (zone_goal)); // plain chain has no Goal flag
-   NavigateHook::SetInBombZone (*bot, false);
-   NavigateHook::SetHasC4 (*bot, false);
+  // ...in the zone with the c4 and no loose bomb: hold the nearest goal...
+  game_state.SetBombPlanted (false);
+  engine.AdvanceTime (0.2f);
+  NavigateHook::SetInBombZone (*bot, true);
+  NavigateHook::SetProgressBar (*bot, false);
+  NavigateHook::SetHasC4 (*bot, true);
+  // (remove the loose bomb so the zone leg runs)
+  engine.Funcs ().pfnSetOrigin (loose, loose_pos);
+  loose->v.model = string_t (engine.AllocString ("models/w_knife.mdl"));
+  engine.AdvanceTime (0.2f);
+  const int zone_goal = NavigateHook::BombActionGoal (*bot);
+  CHECK (zone_goal == kInvalidNodeIndex || graph.Exists (zone_goal)); // plain chain has no Goal flag
+  NavigateHook::SetInBombZone (*bot, false);
+  NavigateHook::SetHasC4 (*bot, false);
 
-   // ...planted bomb, T guard: early timer camps the site, late timer radios...
-   game_state.SetBombPlanted (true);
-   game_state.SetBombOrigin (false, ystl::Vector (200.0f, 0.0f, 0.0f));
-   NavigateHook::SetDefendedBomb (*bot, false);
-   mp_c4timer.Set (35);
-   const int guard_goal = NavigateHook::BombActionGoal (*bot);
-   CHECK (graph.Exists (guard_goal) || guard_goal == kInvalidNodeIndex);
-   NavigateHook::SetDefendedBomb (*bot, false);
-   mp_c4timer.Set (5);
-   const int late_goal = NavigateHook::BombActionGoal (*bot);
-   CHECK (graph.Exists (late_goal) || late_goal == kInvalidNodeIndex);
+  // ...planted bomb, T guard: early timer camps the site, late timer radios...
+  game_state.SetBombPlanted (true);
+  game_state.SetBombOrigin (false, ystl::Vector (200.0f, 0.0f, 0.0f));
+  NavigateHook::SetDefendedBomb (*bot, false);
+  mp_c4timer.Set (35);
+  const int guard_goal = NavigateHook::BombActionGoal (*bot);
+  CHECK (graph.Exists (guard_goal) || guard_goal == kInvalidNodeIndex);
+  NavigateHook::SetDefendedBomb (*bot, false);
+  mp_c4timer.Set (5);
+  const int late_goal = NavigateHook::BombActionGoal (*bot);
+  CHECK (graph.Exists (late_goal) || late_goal == kInvalidNodeIndex);
 
-   // ...planted lookup: model mismatch keeps invalid, match resolves...
-   edict_t *planted = engine.SpawnEntity ("grenade");
-   HOST_REQUIRE (planted != nullptr);
-   planted->v.model = string_t (engine.AllocString ("models/w_knife.mdl"));
-   const float planted_pos[3] = { 200.0f, 0.0f, 0.0f };
-   engine.Funcs ().pfnSetOrigin (planted, planted_pos);
-   CHECK (NavigateHook::NearestPlanted (*bot) == kInvalidNodeIndex);
-   planted->v.model = string_t (engine.AllocString ("models/w_c4.mdl"));
-   CHECK (graph.Exists (NavigateHook::NearestPlanted (*bot)));
-   NavigateHook::AddIgnored (*bot, planted);
-   CHECK (graph.Exists (NavigateHook::NearestPlanted (*bot)));
+  // ...planted lookup: model mismatch keeps invalid, match resolves...
+  edict_t *planted = engine.SpawnEntity ("grenade");
+  HOST_REQUIRE (planted != nullptr);
+  planted->v.model = string_t (engine.AllocString ("models/w_knife.mdl"));
+  const float planted_pos[3] = { 200.0f, 0.0f, 0.0f };
+  engine.Funcs ().pfnSetOrigin (planted, planted_pos);
+  CHECK (NavigateHook::NearestPlanted (*bot) == kInvalidNodeIndex);
+  planted->v.model = string_t (engine.AllocString ("models/w_c4.mdl"));
+  CHECK (graph.Exists (NavigateHook::NearestPlanted (*bot)));
+  NavigateHook::AddIgnored (*bot, planted);
+  CHECK (graph.Exists (NavigateHook::NearestPlanted (*bot)));
 
-   // ...visited marking: invalid input no-ops, goal marks its site...
-   NavigateHook::MarkSite (*bot, kInvalidNodeIndex);
-   CHECK (!graph.IsVisited (99));
+  // ...visited marking: invalid input no-ops, goal marks its site...
+  NavigateHook::MarkSite (*bot, kInvalidNodeIndex);
+  CHECK (!graph.IsVisited (99));
 
-   game_state.SetBombPlanted (false);
-   table.pfnServerDeactivate ();
-   testhost::CloseFakeCs (cs);
+  game_state.SetBombPlanted (false);
+  table.pfnServerDeactivate ();
+  testhost::CloseFakeCs (cs);
 }
 
 TEST_CASE ("unit/navigate_avoid2") {
-   testhost::FakeEngine engine;
-   engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
+  testhost::FakeEngine engine;
+  engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
 
-   testhost::FakeCSApi cs {};
-   HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
-   cs.reset ();
+  testhost::FakeCSApi cs {};
+  HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
+  cs.reset ();
 
-   GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
-   HOST_REQUIRE (cs.entered () != 0);
+  GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
+  HOST_REQUIRE (cs.entered () != 0);
 
-   gamefuncs_t table {};
-   HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
+  gamefuncs_t table {};
+  HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
 
-   game.Precache ();
-   table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
+  game.Precache ();
+  table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
 
-   if (analyzer.IsAnalyzing ()) {
-     analyzer.Suspend (); // autostart would block bot creation below
-   }
-   BuildNavGraph ();
-   planner.Init ();
+  if (analyzer.IsAnalyzing ()) {
+    analyzer.Suspend (); // autostart would block bot creation below
+  }
+  BuildNavGraph ();
+  planner.Init ();
 
-   bots.InitQuota ();
-   cv_quota.Set (10);
+  bots.InitQuota ();
+  cv_quota.Set (10);
 
-   bots.Addbot ("Av2A", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
-   bots.Addbot ("Av2B", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("Av2A", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("Av2B", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
 
-   Bot *bot = nullptr, *mate = nullptr;
+  Bot *bot = nullptr, *mate = nullptr;
 
-   for (int i = 0; i < 40 && (bot == nullptr || mate == nullptr); ++i) {
-     engine.AdvanceTime (0.2f);
-     bots.MaintainQuota ();
+  for (int i = 0; i < 40 && (bot == nullptr || mate == nullptr); ++i) {
+    engine.AdvanceTime (0.2f);
+    bots.MaintainQuota ();
 
-     bots.ForEach ([&] (Bot *candidate) {
-       if (ystl::StringRef (candidate->pev->netname.chars ()) == "Av2A") {
-         bot = candidate;
-       }
-       else if (ystl::StringRef (candidate->pev->netname.chars ()) == "Av2B") {
-         mate = candidate;
-       }
-       return false;
-     });
-   }
-   HOST_REQUIRE (bot != nullptr && mate != nullptr);
+    bots.ForEach ([&] (Bot *candidate) {
+      if (ystl::StringRef (candidate->pev->netname.chars ()) == "Av2A") {
+        bot = candidate;
+      }
+      else if (ystl::StringRef (candidate->pev->netname.chars ()) == "Av2B") {
+        mate = candidate;
+      }
+      return false;
+    });
+  }
+  HOST_REQUIRE (bot != nullptr && mate != nullptr);
 
-   bots.ForEach ([&] (Bot *candidate) {
-     if (candidate != bot && candidate != mate) {
-       candidate->pev->origin = ystl::Vector (5000.0f, 0.0f, 0.0f);
-     }
-     return false;
-   });
+  bots.ForEach ([&] (Bot *candidate) {
+    if (candidate != bot && candidate != mate) {
+      candidate->pev->origin = ystl::Vector (5000.0f, 0.0f, 0.0f);
+    }
+    return false;
+  });
 
-   bot->team_ = Team::CT;
-   mate->team_ = Team::CT;
-   clients[bot->Ent ()].team = Team::CT;
-   clients[mate->Ent ()].team = Team::CT;
+  bot->team_ = Team::CT;
+  mate->team_ = Team::CT;
+  clients[bot->Ent ()].team = Team::CT;
+  clients[mate->Ent ()].team = Team::CT;
 
-   auto prep_bot = [] (Bot *target, const ystl::Vector &pos) {
-     target->pev->origin = pos;
-     target->pev->velocity = ystl::Vector (0.0f, 0.0f, 0.0f);
-     target->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
-     target->pev->angles = ystl::Vector (0.0f, 0.0f, 0.0f);
-     target->pev->health = 100.0f;
-     target->pev->max_health = 100.0f;
-     target->pev->deadflag = DEAD_NO;
-     target->pev->takedamage = DAMAGE_YES;
-     target->pev->solid = SOLID_BBOX;
-     target->pev->movetype = MOVETYPE_WALK;
-     target->pev->maxspeed = 100.0f;
-     target->pev->flags |= FL_ONGROUND;
-     target->is_alive_ = true;
-   };
-   prep_bot (bot, ystl::Vector (0.0f, 0.0f, 0.0f));
-   prep_bot (mate, ystl::Vector (60.0f, 0.0f, 0.0f));
-   NavigateHook::ChangeNode (*bot, 0);
-   NavigateHook::ChangeNode (*mate, 0);
+  auto prep_bot = [] (Bot *target, const ystl::Vector &pos) {
+    target->pev->origin = pos;
+    target->pev->velocity = ystl::Vector (0.0f, 0.0f, 0.0f);
+    target->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+    target->pev->angles = ystl::Vector (0.0f, 0.0f, 0.0f);
+    target->pev->health = 100.0f;
+    target->pev->max_health = 100.0f;
+    target->pev->deadflag = DEAD_NO;
+    target->pev->takedamage = DAMAGE_YES;
+    target->pev->solid = SOLID_BBOX;
+    target->pev->movetype = MOVETYPE_WALK;
+    target->pev->maxspeed = 100.0f;
+    target->pev->flags |= FL_ONGROUND;
+    target->is_alive_ = true;
+  };
+  prep_bot (bot, ystl::Vector (0.0f, 0.0f, 0.0f));
+  prep_bot (mate, ystl::Vector (60.0f, 0.0f, 0.0f));
+  NavigateHook::ChangeNode (*bot, 0);
+  NavigateHook::ChangeNode (*mate, 0);
 
-   // ...inverted priority: we camp on the shared node, the mate yields...
-   bot->StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, 0.0f, true);
-   clients.Update ();
-   NavigateHook::SetMoveAngles (*bot, ystl::Vector (0.0f, 0.0f, 0.0f));
-   NavigateHook::SetStrafe (*bot, 0.0f);
-   NavigateHook::SetMoveSpeed (*bot, 0.0f);
-   NavigateHook::Avoid (*mate, ystl::Vector (1.0f, 0.0f, 0.0f));
-   CHECK (NavigateHook::Hindrance (*mate) == bot->Ent ());
+  // ...inverted priority: we camp on the shared node, the mate yields...
+  bot->StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, 0.0f, true);
+  clients.Update ();
+  NavigateHook::SetMoveAngles (*bot, ystl::Vector (0.0f, 0.0f, 0.0f));
+  NavigateHook::SetStrafe (*bot, 0.0f);
+  NavigateHook::SetMoveSpeed (*bot, 0.0f);
+  NavigateHook::Avoid (*mate, ystl::Vector (1.0f, 0.0f, 0.0f));
+  CHECK (NavigateHook::Hindrance (*mate) == bot->Ent ());
 
-   // ...we outrank the mate, so our avoidance clears the shared camp...
-   mate->ClearTasks ();
-   NavigateHook::Avoid (*bot, ystl::Vector (1.0f, 0.0f, 0.0f));
+  // ...we outrank the mate, so our avoidance clears the shared camp...
+  mate->ClearTasks ();
+  NavigateHook::Avoid (*bot, ystl::Vector (1.0f, 0.0f, 0.0f));
 
-   // ...dead hindrance clears instead of steering...
-   NavigateHook::SetHindranceEnt (*bot, mate->Ent ());
-   mate->pev->deadflag = DEAD_DEAD;
-   mate->pev->health = 0.0f;
-   clients.Update ();
-   NavigateHook::Avoid (*bot, ystl::Vector (1.0f, 0.0f, 0.0f));
-   mate->pev->deadflag = DEAD_NO;
-   mate->pev->health = 100.0f;
-   mate->pev->takedamage = DAMAGE_YES;
-   clients.Update ();
+  // ...dead hindrance clears instead of steering...
+  NavigateHook::SetHindranceEnt (*bot, mate->Ent ());
+  mate->pev->deadflag = DEAD_DEAD;
+  mate->pev->health = 0.0f;
+  clients.Update ();
+  NavigateHook::Avoid (*bot, ystl::Vector (1.0f, 0.0f, 0.0f));
+  mate->pev->deadflag = DEAD_NO;
+  mate->pev->health = 100.0f;
+  mate->pev->takedamage = DAMAGE_YES;
+  clients.Update ();
 
-   // ...stuck with a hindrance copies the other's goal when usable...
-   bot->ClearTasks ();
-   mate->StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, 0.0f, true);
-   mate->StartTask (TaskId::MoveTo, TaskPri::kMoveTo, 3, 0.0f, true);
-   NavigateHook::SetMoveSpeed (*bot, 100.0f);
-   NavigateHook::SetMovedDistance (*bot, 0.0f);
-   NavigateHook::SetPrevSpeed (*bot, 100.0f);
-   NavigateHook::StuckStatus (*bot, ystl::Vector (1.0f, 0.0f, 0.0f));
-   NavigateHook::SetMoveAngles (*bot, ystl::Vector (0.0f, 0.0f, 0.0f));
-   NavigateHook::Avoid (*bot, ystl::Vector (1.0f, 0.0f, 0.0f));
-   CHECK (NavigateHook::Hindrance (*bot) != nullptr);
+  // ...stuck with a hindrance copies the other's goal when usable...
+  bot->ClearTasks ();
+  mate->StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, 0.0f, true);
+  mate->StartTask (TaskId::MoveTo, TaskPri::kMoveTo, 3, 0.0f, true);
+  NavigateHook::SetMoveSpeed (*bot, 100.0f);
+  NavigateHook::SetMovedDistance (*bot, 0.0f);
+  NavigateHook::SetPrevSpeed (*bot, 100.0f);
+  NavigateHook::StuckStatus (*bot, ystl::Vector (1.0f, 0.0f, 0.0f));
+  NavigateHook::SetMoveAngles (*bot, ystl::Vector (0.0f, 0.0f, 0.0f));
+  NavigateHook::Avoid (*bot, ystl::Vector (1.0f, 0.0f, 0.0f));
+  CHECK (NavigateHook::Hindrance (*bot) != nullptr);
 
-   // ...vertical split softens the near/far thresholds without crashing...
-   mate->pev->origin = ystl::Vector (60.0f, 0.0f, 200.0f);
-   clients.Update ();
-   NavigateHook::Avoid (*bot, ystl::Vector (1.0f, 0.0f, 0.0f));
-   mate->pev->origin = ystl::Vector (60.0f, 0.0f, 0.0f);
-   clients.Update ();
+  // ...vertical split softens the near/far thresholds without crashing...
+  mate->pev->origin = ystl::Vector (60.0f, 0.0f, 200.0f);
+  clients.Update ();
+  NavigateHook::Avoid (*bot, ystl::Vector (1.0f, 0.0f, 0.0f));
+  mate->pev->origin = ystl::Vector (60.0f, 0.0f, 0.0f);
+  clients.Update ();
 
-   // ...semiclip and ladder shortcuts return immediately...
-   bot->pev->movetype = MOVETYPE_FLY;
-   NavigateHook::Avoid (*bot, ystl::Vector (1.0f, 0.0f, 0.0f));
-   bot->pev->movetype = MOVETYPE_WALK;
-   cv_has_team_semiclip.Set (1);
-   NavigateHook::Avoid (*bot, ystl::Vector (1.0f, 0.0f, 0.0f));
-   cv_has_team_semiclip.Set (0);
+  // ...semiclip and ladder shortcuts return immediately...
+  bot->pev->movetype = MOVETYPE_FLY;
+  NavigateHook::Avoid (*bot, ystl::Vector (1.0f, 0.0f, 0.0f));
+  bot->pev->movetype = MOVETYPE_WALK;
+  cv_has_team_semiclip.Set (1);
+  NavigateHook::Avoid (*bot, ystl::Vector (1.0f, 0.0f, 0.0f));
+  cv_has_team_semiclip.Set (0);
 
-   // ...creature under fire with speed resets the collision timers...
-   NavigateHook::SetCreature (*bot, true);
-   NavigateHook::SetLastDamage (*bot, game.Time () + 10.0f);
-   bot->pev->velocity = ystl::Vector (100.0f, 0.0f, 0.0f);
-   CHECK (!NavigateHook::StuckStatus (*bot, ystl::Vector (1.0f, 0.0f, 0.0f)));
-   NavigateHook::SetCreature (*bot, false);
-   NavigateHook::SetLastDamage (*bot, 0.0f);
-   bot->pev->velocity = ystl::Vector (0.0f, 0.0f, 0.0f);
+  // ...creature under fire with speed resets the collision timers...
+  NavigateHook::SetCreature (*bot, true);
+  NavigateHook::SetLastDamage (*bot, game.Time () + 10.0f);
+  bot->pev->velocity = ystl::Vector (100.0f, 0.0f, 0.0f);
+  CHECK (!NavigateHook::StuckStatus (*bot, ystl::Vector (1.0f, 0.0f, 0.0f)));
+  NavigateHook::SetCreature (*bot, false);
+  NavigateHook::SetLastDamage (*bot, 0.0f);
+  bot->pev->velocity = ystl::Vector (0.0f, 0.0f, 0.0f);
 
-   bots.Destroy ();
-   table.pfnServerDeactivate ();
-   testhost::CloseFakeCs (cs);
+  bots.Destroy ();
+  table.pfnServerDeactivate ();
+  testhost::CloseFakeCs (cs);
 }
 
 TEST_CASE ("unit/navigate_lift2") {
-   testhost::FakeEngine engine;
-   engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
+  testhost::FakeEngine engine;
+  engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
 
-   edict_t *door = engine.SpawnEntity ("func_door");
-   HOST_REQUIRE (door != nullptr);
-   const float door_pos[3] = { 400.0f, 0.0f, 0.0f };
-   engine.Funcs ().pfnSetOrigin (door, door_pos);
+  edict_t *door = engine.SpawnEntity ("func_door");
+  HOST_REQUIRE (door != nullptr);
+  const float door_pos[3] = { 400.0f, 0.0f, 0.0f };
+  engine.Funcs ().pfnSetOrigin (door, door_pos);
 
-   testhost::FakeCSApi cs {};
-   HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
-   cs.reset ();
+  testhost::FakeCSApi cs {};
+  HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
+  cs.reset ();
 
-   GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
-   HOST_REQUIRE (cs.entered () != 0);
+  GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
+  HOST_REQUIRE (cs.entered () != 0);
 
-   gamefuncs_t table {};
-   HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
+  gamefuncs_t table {};
+  HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
 
-   game.Precache ();
-   table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
+  game.Precache ();
+  table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
 
-   if (analyzer.IsAnalyzing ()) {
-     analyzer.Suspend ();
-   }
-   BuildNavGraph ();
-   planner.Init ();
+  if (analyzer.IsAnalyzing ()) {
+    analyzer.Suspend ();
+  }
+  BuildNavGraph ();
+  planner.Init ();
 
-   bots.InitQuota ();
-   cv_quota.Set (10);
-   bots.Addbot ("LiftA", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
-   bots.Addbot ("LiftB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.InitQuota ();
+  cv_quota.Set (10);
+  bots.Addbot ("LiftA", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("LiftB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
 
-   Bot *bot = nullptr, *mate = nullptr;
+  Bot *bot = nullptr, *mate = nullptr;
 
-   for (int i = 0; i < 40 && (bot == nullptr || mate == nullptr); ++i) {
-     engine.AdvanceTime (0.2f);
-     bots.MaintainQuota ();
+  for (int i = 0; i < 40 && (bot == nullptr || mate == nullptr); ++i) {
+    engine.AdvanceTime (0.2f);
+    bots.MaintainQuota ();
 
-     bots.ForEach ([&] (Bot *candidate) {
-       if (ystl::StringRef (candidate->pev->netname.chars ()) == "LiftA") {
-         bot = candidate;
-       }
-       else if (ystl::StringRef (candidate->pev->netname.chars ()) == "LiftB") {
-         mate = candidate;
-       }
-       return false;
-     });
-   }
-   HOST_REQUIRE (bot != nullptr && mate != nullptr);
-   bot->team_ = Team::CT;
-   mate->team_ = Team::CT;
+    bots.ForEach ([&] (Bot *candidate) {
+      if (ystl::StringRef (candidate->pev->netname.chars ()) == "LiftA") {
+        bot = candidate;
+      }
+      else if (ystl::StringRef (candidate->pev->netname.chars ()) == "LiftB") {
+        mate = candidate;
+      }
+      return false;
+    });
+  }
+  HOST_REQUIRE (bot != nullptr && mate != nullptr);
+  bot->team_ = Team::CT;
+  mate->team_ = Team::CT;
 
-   auto prep_lift = [] (Bot *target, const ystl::Vector &pos) {
-     target->pev->origin = pos;
-     target->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
-     target->pev->angles = ystl::Vector (0.0f, 0.0f, 0.0f);
-     target->pev->health = 100.0f;
-     target->pev->max_health = 100.0f;
-     target->pev->deadflag = DEAD_NO;
-     target->pev->takedamage = DAMAGE_YES;
-     target->pev->solid = SOLID_BBOX;
-     target->pev->movetype = MOVETYPE_WALK;
-     target->pev->maxspeed = 270.0f;
-     target->pev->flags |= FL_ONGROUND;
-     target->is_alive_ = true;
-   };
-   prep_lift (bot, ystl::Vector (200.0f, 0.0f, 0.0f));
-   prep_lift (mate, ystl::Vector (200.0f, 0.0f, 0.0f));
-   NavigateHook::ChangeNode (*bot, 2);
+  auto prep_lift = [] (Bot *target, const ystl::Vector &pos) {
+    target->pev->origin = pos;
+    target->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+    target->pev->angles = ystl::Vector (0.0f, 0.0f, 0.0f);
+    target->pev->health = 100.0f;
+    target->pev->max_health = 100.0f;
+    target->pev->deadflag = DEAD_NO;
+    target->pev->takedamage = DAMAGE_YES;
+    target->pev->solid = SOLID_BBOX;
+    target->pev->movetype = MOVETYPE_WALK;
+    target->pev->maxspeed = 270.0f;
+    target->pev->flags |= FL_ONGROUND;
+    target->is_alive_ = true;
+  };
+  prep_lift (bot, ystl::Vector (200.0f, 0.0f, 0.0f));
+  prep_lift (mate, ystl::Vector (200.0f, 0.0f, 0.0f));
+  NavigateHook::ChangeNode (*bot, 2);
 
-   ystl::Array<int32_t> walk {};
-   walk.push (3);
-   NavigateHook::SetWalk (*bot, walk);
+  ystl::Array<int32_t> walk {};
+  walk.push (3);
+  NavigateHook::SetWalk (*bot, walk);
 
-   // ...freed lift entity resets the state...
+  // ...freed lift entity resets the state...
   edict_t *plat = engine.SpawnEntity ("func_plat");
   HOST_REQUIRE (plat != nullptr);
   const float plat_pos[3] = { 200.0f, 0.0f, -50.0f };
   engine.Funcs ().pfnSetOrigin (plat, plat_pos);
   plat->v.velocity = ystl::Vector (0.0f, 0.0f, 0.0f);
-   NavigateHook::SetLiftEntity (*bot, plat);
-   NavigateHook::SetLiftState (*bot, LiftState::WaitingFor);
-   plat->v.flags |= FL_KILLME;
-   CHECK (NavigateHook::LiftH (*bot));
-   CHECK (NavigateHook::GetLiftState (*bot) == ystl::to_underlying (LiftState::None));
-   plat->v.flags &= ~FL_KILLME;
-   NavigateHook::SetLiftEntity (*bot, nullptr);
+  NavigateHook::SetLiftEntity (*bot, plat);
+  NavigateHook::SetLiftState (*bot, LiftState::WaitingFor);
+  plat->v.flags |= FL_KILLME;
+  CHECK (NavigateHook::LiftH (*bot));
+  CHECK (NavigateHook::GetLiftState (*bot) == ystl::to_underlying (LiftState::None));
+  plat->v.flags &= ~FL_KILLME;
+  NavigateHook::SetLiftEntity (*bot, nullptr);
 
-   // ...traveling without ground leaves, riding extends the window...
-   NavigateHook::ChangeNode (*bot, 2);
-   NavigateHook::SetWalk (*bot, walk);
-   NavigateHook::SetLiftEntity (*bot, plat);
-   NavigateHook::SetLiftState (*bot, LiftState::TravelingBy);
-   bot->pev->groundentity = nullptr;
-   CHECK (NavigateHook::LiftS (*bot));
-   CHECK (NavigateHook::GetLiftState (*bot) == ystl::to_underlying (LiftState::Leaving));
-   bot->pev->groundentity = plat;
-   plat->v.velocity = ystl::Vector (0.0f, 0.0f, 100.0f);
-   NavigateHook::SetLiftState (*bot, LiftState::TravelingBy);
-   NavigateHook::SetTargetEntity (*bot, nullptr);
-   graph.paths_[2].flags |= NodeFlag::Lift;
-   NavigateHook::ChangeNode (*bot, 2); // refresh cached flags with the lift bit
-   CHECK (NavigateHook::LiftS (*bot));
-   CHECK (NavigateHook::GetLiftState (*bot) == ystl::to_underlying (LiftState::TravelingBy));
-   plat->v.velocity = ystl::Vector (0.0f, 0.0f, 0.0f);
-   bot->pev->groundentity = nullptr;
-   graph.paths_[2].flags &= ~NodeFlag::Lift;
+  // ...traveling without ground leaves, riding extends the window...
+  NavigateHook::ChangeNode (*bot, 2);
+  NavigateHook::SetWalk (*bot, walk);
+  NavigateHook::SetLiftEntity (*bot, plat);
+  NavigateHook::SetLiftState (*bot, LiftState::TravelingBy);
+  bot->pev->groundentity = nullptr;
+  CHECK (NavigateHook::LiftS (*bot));
+  CHECK (NavigateHook::GetLiftState (*bot) == ystl::to_underlying (LiftState::Leaving));
+  bot->pev->groundentity = plat;
+  plat->v.velocity = ystl::Vector (0.0f, 0.0f, 100.0f);
+  NavigateHook::SetLiftState (*bot, LiftState::TravelingBy);
+  NavigateHook::SetTargetEntity (*bot, nullptr);
+  graph.paths_[2].flags |= NodeFlag::Lift;
+  NavigateHook::ChangeNode (*bot, 2); // refresh cached flags with the lift bit
+  CHECK (NavigateHook::LiftS (*bot));
+  CHECK (NavigateHook::GetLiftState (*bot) == ystl::to_underlying (LiftState::TravelingBy));
+  plat->v.velocity = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->pev->groundentity = nullptr;
+  graph.paths_[2].flags &= ~NodeFlag::Lift;
 
-   // ...every lift state runs through the handler...
-   for (int s = 0; s <= 7; ++s) {
-     NavigateHook::SetLiftState (*bot, static_cast<LiftState> (s));
-     NavigateHook::SetLiftEntity (*bot, (s == 0) ? nullptr : plat);
-     NavigateHook::LiftH (*bot);
-   }
-   NavigateHook::SetLiftState (*bot, LiftState::None);
-   NavigateHook::SetLiftEntity (*bot, nullptr);
+  // ...every lift state runs through the handler...
+  for (int s = 0; s <= 7; ++s) {
+    NavigateHook::SetLiftState (*bot, static_cast<LiftState> (s));
+    NavigateHook::SetLiftEntity (*bot, (s == 0) ? nullptr : plat);
+    NavigateHook::LiftH (*bot);
+  }
+  NavigateHook::SetLiftState (*bot, LiftState::None);
+  NavigateHook::SetLiftEntity (*bot, nullptr);
 
-   // ...follow teammate on the lift holds the door...
-   mate->pev->groundentity = plat;
-   NavigateHook::SetLiftEntity (*mate, plat);
-   mate->StartTask (TaskId::FollowUser, TaskPri::kFollowUser, 0, 0.0f, true);
-   NavigateHook::SetTargetEntity (*mate, bot->Ent ());
-   NavigateHook::ChangeNode (*bot, 2);
-   NavigateHook::SetWalk (*bot, walk);
-   NavigateHook::LiftH (*bot);
-   mate->ClearTasks ();
-   mate->pev->groundentity = nullptr;
+  // ...follow teammate on the lift holds the door...
+  mate->pev->groundentity = plat;
+  NavigateHook::SetLiftEntity (*mate, plat);
+  mate->StartTask (TaskId::FollowUser, TaskPri::kFollowUser, 0, 0.0f, true);
+  NavigateHook::SetTargetEntity (*mate, bot->Ent ());
+  NavigateHook::ChangeNode (*bot, 2);
+  NavigateHook::SetWalk (*bot, walk);
+  NavigateHook::LiftH (*bot);
+  mate->ClearTasks ();
+  mate->pev->groundentity = nullptr;
 
-   bots.Destroy ();
-   table.pfnServerDeactivate ();
-   testhost::CloseFakeCs (cs);
+  bots.Destroy ();
+  table.pfnServerDeactivate ();
+  testhost::CloseFakeCs (cs);
 }
 
 TEST_CASE ("unit/navigate_strafe") {
-   testhost::FakeEngine engine;
-   engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
+  testhost::FakeEngine engine;
+  engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
 
-   edict_t *wall = engine.SpawnEntity ("func_wall");
-   HOST_REQUIRE (wall != nullptr);
-   edict_t *door = engine.SpawnEntity ("func_door");
-   HOST_REQUIRE (door != nullptr);
+  edict_t *wall = engine.SpawnEntity ("func_wall");
+  HOST_REQUIRE (wall != nullptr);
+  edict_t *door = engine.SpawnEntity ("func_door");
+  HOST_REQUIRE (door != nullptr);
 
-   testhost::FakeCSApi cs {};
-   HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
-   cs.reset ();
+  testhost::FakeCSApi cs {};
+  HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
+  cs.reset ();
 
-   GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
-   HOST_REQUIRE (cs.entered () != 0);
+  GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
+  HOST_REQUIRE (cs.entered () != 0);
 
-   gamefuncs_t table {};
-   HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
+  gamefuncs_t table {};
+  HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
 
-   game.Precache ();
-   table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
+  game.Precache ();
+  table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
 
-   BuildNavGraph ();
-   planner.Init ();
-   vistab.StartRebuild ();
+  BuildNavGraph ();
+  planner.Init ();
+  vistab.StartRebuild ();
 
-   for (int i = 0; i < 40 && !vistab.IsReady (); ++i) {
-     vistab.Rebuild ();
-   }
-   HOST_REQUIRE (vistab.IsReady ());
+  for (int i = 0; i < 40 && !vistab.IsReady (); ++i) {
+    vistab.Rebuild ();
+  }
+  HOST_REQUIRE (vistab.IsReady ());
 
-   auto bot = CreateNavBot ("Move2Bot", ystl::Vector (0.0f, 0.0f, 0.0f));
-   HOST_REQUIRE (bot.get () != nullptr);
-   bot->pev->angles = ystl::Vector (0.0f, 0.0f, 0.0f);
-   bot->pev->flags |= FL_ONGROUND;
-   bot->pev->maxspeed = 270.0f;
-   bot->team_ = Team::CT;
-   NavigateHook::ChangeNode (*bot, 0);
+  auto bot = CreateNavBot ("Move2Bot", ystl::Vector (0.0f, 0.0f, 0.0f));
+  HOST_REQUIRE (bot.get () != nullptr);
+  bot->pev->angles = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->pev->flags |= FL_ONGROUND;
+  bot->pev->maxspeed = 270.0f;
+  bot->team_ = Team::CT;
+  NavigateHook::ChangeNode (*bot, 0);
 
-   const ystl::Vector forward (1.0f, 0.0f, 0.0f);
-   Trace::Result strafe {};
+  const ystl::Vector forward (1.0f, 0.0f, 0.0f);
+  Trace::Result strafe {};
 
-   // ...door on the strafe lane never blocks...
-   engine.AdvanceTime (0.2f);
-   engine.SetTraceLineHook ([&] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
-     (void)v2;
-     (void)no_monsters;
-     (void)skip;
-     testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
-     out->flFraction = 0.5f;
-     out->pHit = door;
-   });
-   CHECK (NavigateHook::StrafeLeft (*bot, &strafe));
-   CHECK (NavigateHook::StrafeRight (*bot, &strafe));
-   engine.SetTraceLineHook (nullptr);
-   engine.AdvanceTime (0.2f);
+  // ...door on the strafe lane never blocks...
+  engine.AdvanceTime (0.2f);
+  engine.SetTraceLineHook ([&] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)v2;
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    out->flFraction = 0.5f;
+    out->pHit = door;
+  });
+  CHECK (NavigateHook::StrafeLeft (*bot, &strafe));
+  CHECK (NavigateHook::StrafeRight (*bot, &strafe));
+  engine.SetTraceLineHook (nullptr);
+  engine.AdvanceTime (0.2f);
 
-   // ...wall on the second leg blocks each side...
-   engine.SetTraceLineHook ([&] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
-     (void)no_monsters;
-     (void)skip;
-     testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+  // ...wall on the second leg blocks each side...
+  engine.SetTraceLineHook ([&] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
 
-     if (v1[1] != v2[1] || v1[0] != v2[0]) {
-       out->flFraction = 0.5f; // sideways and forward probes hit
-       out->pHit = wall;
-     }
-   });
-   CHECK (!NavigateHook::StrafeLeft (*bot, &strafe));
-   CHECK (!NavigateHook::StrafeRight (*bot, &strafe));
-   engine.SetTraceLineHook (nullptr);
-   engine.AdvanceTime (0.2f);
+    if (v1[1] != v2[1] || v1[0] != v2[0]) {
+      out->flFraction = 0.5f; // sideways and forward probes hit
+      out->pHit = wall;
+    }
+  });
+  CHECK (!NavigateHook::StrafeLeft (*bot, &strafe));
+  CHECK (!NavigateHook::StrafeRight (*bot, &strafe));
+  engine.SetTraceLineHook (nullptr);
+  engine.AdvanceTime (0.2f);
 
-   // ...blocked predicates read the hull, doors exempt...
-   engine.SetTraceHullHook ([&] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
-     (void)v2;
-     (void)no_monsters;
-     (void)skip;
-     testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
-     out->flFraction = 0.5f;
-     out->pHit = wall;
-   });
-   NavigateHook::SetMoveSpeed (*bot, 100.0f);
-   CHECK (NavigateHook::BlockedLeft (*bot));
-   CHECK (NavigateHook::BlockedRight (*bot));
-   NavigateHook::SetMoveSpeed (*bot, -100.0f);
-   CHECK (NavigateHook::BlockedLeft (*bot));
-   CHECK (NavigateHook::BlockedRight (*bot));
-   NavigateHook::SetMoveSpeed (*bot, 0.0f);
-   engine.SetTraceHullHook (nullptr);
-   engine.AdvanceTime (0.2f);
+  // ...blocked predicates read the hull, doors exempt...
+  engine.SetTraceHullHook ([&] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)v2;
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    out->flFraction = 0.5f;
+    out->pHit = wall;
+  });
+  NavigateHook::SetMoveSpeed (*bot, 100.0f);
+  CHECK (NavigateHook::BlockedLeft (*bot));
+  CHECK (NavigateHook::BlockedRight (*bot));
+  NavigateHook::SetMoveSpeed (*bot, -100.0f);
+  CHECK (NavigateHook::BlockedLeft (*bot));
+  CHECK (NavigateHook::BlockedRight (*bot));
+  NavigateHook::SetMoveSpeed (*bot, 0.0f);
+  engine.SetTraceHullHook (nullptr);
+  engine.AdvanceTime (0.2f);
 
-   // ...walls on every side read through the wall checks...
-   engine.SetTraceLineHook ([&] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
-     (void)v2;
-     (void)no_monsters;
-     (void)skip;
-     testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
-     out->flFraction = 0.5f;
-     out->pHit = wall;
-   });
-   CHECK (NavigateHook::WallLeft (*bot, 40.0f));
-   CHECK (NavigateHook::WallRight (*bot, 40.0f));
-   CHECK (NavigateHook::WallBehind (*bot, 40.0f));
-   engine.SetTraceLineHook (nullptr);
-   engine.AdvanceTime (0.2f);
+  // ...walls on every side read through the wall checks...
+  engine.SetTraceLineHook ([&] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)v2;
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    out->flFraction = 0.5f;
+    out->pHit = wall;
+  });
+  CHECK (NavigateHook::WallLeft (*bot, 40.0f));
+  CHECK (NavigateHook::WallRight (*bot, 40.0f));
+  CHECK (NavigateHook::WallBehind (*bot, 40.0f));
+  engine.SetTraceLineHook (nullptr);
+  engine.AdvanceTime (0.2f);
 
-   // ...deadly/start-solid legs and the safe predicate...
-   engine.SetTraceLineHook ([&] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
-     (void)v2;
-     (void)no_monsters;
-     (void)skip;
-     testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
-     out->fStartSolid = 1;
-   });
-   CHECK (!NavigateHook::DeadlyMove (*bot, ystl::Vector (100.0f, 0.0f, 0.0f)));
-   CHECK (NavigateHook::SafeToMove (*bot, ystl::Vector (100.0f, 0.0f, 0.0f)));
-   engine.SetTraceLineHook (nullptr);
-   engine.AdvanceTime (0.2f);
+  // ...deadly/start-solid legs and the safe predicate...
+  engine.SetTraceLineHook ([&] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)v2;
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    out->fStartSolid = 1;
+  });
+  CHECK (!NavigateHook::DeadlyMove (*bot, ystl::Vector (100.0f, 0.0f, 0.0f)));
+  CHECK (NavigateHook::SafeToMove (*bot, ystl::Vector (100.0f, 0.0f, 0.0f)));
+  engine.SetTraceLineHook (nullptr);
+  engine.AdvanceTime (0.2f);
 
-   // ...water ignores the fall check...
-   bot->pev->waterlevel = 3;
-   CHECK (!NavigateHook::DeadlyMove (*bot, ystl::Vector (100.0f, 0.0f, 0.0f)));
-   bot->pev->waterlevel = 0;
+  // ...water ignores the fall check...
+  bot->pev->waterlevel = 3;
+  CHECK (!NavigateHook::DeadlyMove (*bot, ystl::Vector (100.0f, 0.0f, 0.0f)));
+  bot->pev->waterlevel = 0;
 
-   // ...ascent rejects zero steps and sudden lips...
-   sv_stepsize.Set (0);
-   CHECK (!NavigateHook::WalkableAscent (*bot, ystl::Vector (0.0f, 0.0f, 0.0f), ystl::Vector (10.0f, 0.0f, 0.0f)));
-   sv_stepsize.Set (18);
-   CHECK (!NavigateHook::WalkableAscent (*bot, ystl::Vector (0.0f, 0.0f, 0.0f), ystl::Vector (0.0f, 0.0f, 30.0f)));
+  // ...ascent rejects zero steps and sudden lips...
+  sv_stepsize.Set (0);
+  CHECK (!NavigateHook::WalkableAscent (*bot, ystl::Vector (0.0f, 0.0f, 0.0f), ystl::Vector (10.0f, 0.0f, 0.0f)));
+  sv_stepsize.Set (18);
+  CHECK (!NavigateHook::WalkableAscent (*bot, ystl::Vector (0.0f, 0.0f, 0.0f), ystl::Vector (0.0f, 0.0f, 30.0f)));
 
-   // ...camp direction: visible far node, enemy prediction, blind fallback...
-   NavigateHook::Rng (*bot).force_int (0);
-   CHECK (graph.Exists (NavigateHook::CampDir (*bot)));
-   NavigateHook::Rng (*bot).clear_forced ();
-   NavigateHook::SetEnemyOrigin (*bot, ystl::Vector (300.0f, 0.0f, 0.0f));
-   CHECK (graph.Exists (NavigateHook::CampDir (*bot)));
+  // ...camp direction: visible far node, enemy prediction, blind fallback...
+  NavigateHook::Rng (*bot).force_int (0);
+  CHECK (graph.Exists (NavigateHook::CampDir (*bot)));
+  NavigateHook::Rng (*bot).clear_forced ();
+  NavigateHook::SetEnemyOrigin (*bot, ystl::Vector (300.0f, 0.0f, 0.0f));
+  CHECK (graph.Exists (NavigateHook::CampDir (*bot)));
 
-   // ...aiming: invalid dest, visible path, blind fallback...
-   int aim_length = 0;
-   CHECK (NavigateHook::AimingNode (*bot, ystl::Vector (300.0f, 0.0f, 0.0f), aim_length) != kInvalidNodeIndex
-     || aim_length >= 0);
+  // ...aiming: invalid dest, visible path, blind fallback...
+  int aim_length = 0;
+  CHECK (NavigateHook::AimingNode (*bot, ystl::Vector (300.0f, 0.0f, 0.0f), aim_length) != kInvalidNodeIndex || aim_length >= 0);
 
-   // ...farest within/over range, cover blind, defend with visibility...
-   CHECK (NavigateHook::FarestNode (*bot, ystl::Vector (0.0f, 0.0f, 0.0f), 1000.0f) == 4);
-   CHECK (NavigateHook::FarestNode (*bot, ystl::Vector (0.0f, 0.0f, 0.0f), 10000.0f) == kInvalidNodeIndex);
-   NavigateHook::SetEnemyOrigin (*bot, ystl::Vector (400.0f, 0.0f, 0.0f));
-   CHECK (NavigateHook::CoverNode (*bot, 1000.0f) != kInvalidNodeIndex || true);
-   CHECK (graph.Exists (NavigateHook::DefendNode (*bot, ystl::Vector (300.0f, 0.0f, 0.0f))));
+  // ...farest within/over range, cover blind, defend with visibility...
+  CHECK (NavigateHook::FarestNode (*bot, ystl::Vector (0.0f, 0.0f, 0.0f), 1000.0f) == 4);
+  CHECK (NavigateHook::FarestNode (*bot, ystl::Vector (0.0f, 0.0f, 0.0f), 10000.0f) == kInvalidNodeIndex);
+  NavigateHook::SetEnemyOrigin (*bot, ystl::Vector (400.0f, 0.0f, 0.0f));
+  CHECK (NavigateHook::CoverNode (*bot, 1000.0f) != kInvalidNodeIndex || true);
+  CHECK (graph.Exists (NavigateHook::DefendNode (*bot, ystl::Vector (300.0f, 0.0f, 0.0f))));
 
-   // ...strafe speed: walls force the open side, water always moves...
-   NavigateHook::StrafeSpeedRaw (*bot, 100.0f);
-   NavigateHook::StrafeSpeedRaw (*bot, -100.0f);
-   NavigateHook::StrafeSpeedRaw (*bot, 0.0f);
-   bot->pev->waterlevel = 2;
-   CHECK (NavigateHook::Reachable (*bot, 1));
-   bot->pev->waterlevel = 0;
+  // ...strafe speed: walls force the open side, water always moves...
+  NavigateHook::StrafeSpeedRaw (*bot, 100.0f);
+  NavigateHook::StrafeSpeedRaw (*bot, -100.0f);
+  NavigateHook::StrafeSpeedRaw (*bot, 0.0f);
+  bot->pev->waterlevel = 2;
+  CHECK (NavigateHook::Reachable (*bot, 1));
+  bot->pev->waterlevel = 0;
 
-   // ...ladder path origin through a nearby ladder entity...
-   edict_t *ladder = engine.SpawnEntity ("func_ladder");
-   HOST_REQUIRE (ladder != nullptr);
-   const float ladder_pos[3] = { 10.0f, 0.0f, 0.0f };
-   engine.Funcs ().pfnSetOrigin (ladder, ladder_pos);
-   bot->pev->movetype = MOVETYPE_FLY;
-   NavigateHook::ChangeNode (*bot, 0);
-   NavigateHook::SetPathOr (*bot);
-   CHECK (NavigateHook::PathOrigin (*bot).x != 99999.0f);
-   bot->pev->movetype = MOVETYPE_WALK;
+  // ...ladder path origin through a nearby ladder entity...
+  edict_t *ladder = engine.SpawnEntity ("func_ladder");
+  HOST_REQUIRE (ladder != nullptr);
+  const float ladder_pos[3] = { 10.0f, 0.0f, 0.0f };
+  engine.Funcs ().pfnSetOrigin (ladder, ladder_pos);
+  bot->pev->movetype = MOVETYPE_FLY;
+  NavigateHook::ChangeNode (*bot, 0);
+  NavigateHook::SetPathOr (*bot);
+  CHECK (NavigateHook::PathOrigin (*bot).x != 99999.0f);
+  bot->pev->movetype = MOVETYPE_WALK;
 
-   table.pfnServerDeactivate ();
-   testhost::CloseFakeCs (cs);
+  table.pfnServerDeactivate ();
+  testhost::CloseFakeCs (cs);
 }
 
 TEST_CASE ("unit/navigate_routing") {
-   testhost::FakeEngine engine;
-   engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
+  testhost::FakeEngine engine;
+  engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
 
-   edict_t *hostage_ent = engine.SpawnEntity ("hostage_entity");
-   HOST_REQUIRE (hostage_ent != nullptr);
-   edict_t *door = engine.SpawnEntity ("func_door");
-   HOST_REQUIRE (door != nullptr);
+  edict_t *hostage_ent = engine.SpawnEntity ("hostage_entity");
+  HOST_REQUIRE (hostage_ent != nullptr);
+  edict_t *door = engine.SpawnEntity ("func_door");
+  HOST_REQUIRE (door != nullptr);
 
-   testhost::FakeCSApi cs {};
-   HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
-   cs.reset ();
+  testhost::FakeCSApi cs {};
+  HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
+  cs.reset ();
 
-   GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
-   HOST_REQUIRE (cs.entered () != 0);
+  GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
+  HOST_REQUIRE (cs.entered () != 0);
 
-   gamefuncs_t table {};
-   HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
+  gamefuncs_t table {};
+  HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
 
-   game.Precache ();
-   table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
-   HOST_REQUIRE (game.MapIs (MapFlags::HostageRescue));
+  game.Precache ();
+  table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
+  HOST_REQUIRE (game.MapIs (MapFlags::HostageRescue));
 
-   BuildNavGraph ();
-   planner.Init ();
-   planner.SetPathsCheckFailed (false); // force the astar legs below
+  BuildNavGraph ();
+  planner.Init ();
+  planner.SetPathsCheckFailed (false); // force the astar legs below
 
-   auto bot = CreateNavBot ("Path2Bot", ystl::Vector (0.0f, 0.0f, 0.0f));
-   HOST_REQUIRE (bot.get () != nullptr);
-   bot->pev->flags |= FL_ONGROUND;
-   bot->pev->maxspeed = 270.0f;
-   NavigateHook::SetTeam (*bot, Team::CT);
+  auto bot = CreateNavBot ("Path2Bot", ystl::Vector (0.0f, 0.0f, 0.0f));
+  HOST_REQUIRE (bot.get () != nullptr);
+  bot->pev->flags |= FL_ONGROUND;
+  bot->pev->maxspeed = 270.0f;
+  NavigateHook::SetTeam (*bot, Team::CT);
 
-   // ...heuristic matrix: fast/optimal/safe/diversity, hostage variants...
-   // (astar may or may not find the chain; the legs still execute)
-   NavigateHook::SyncPath (*bot, 0, 3, FindPathType::Fast);
-   NavigateHook::SyncPath (*bot, 0, 3, FindPathType::Optimal);
-   NavigateHook::SyncPath (*bot, 0, 3, FindPathType::Safe);
-   NavigateHook::SyncPath (*bot, 0, 3, FindPathType::Diversity);
+  // ...heuristic matrix: fast/optimal/safe/diversity, hostage variants...
+  // (astar may or may not find the chain; the legs still execute)
+  NavigateHook::SyncPath (*bot, 0, 3, FindPathType::Fast);
+  NavigateHook::SyncPath (*bot, 0, 3, FindPathType::Optimal);
+  NavigateHook::SyncPath (*bot, 0, 3, FindPathType::Safe);
+  NavigateHook::SyncPath (*bot, 0, 3, FindPathType::Diversity);
 
-   NavigateHook::SetHasHostage (*bot, true);
-   NavigateHook::SyncPath (*bot, 0, 3, FindPathType::Fast);
-   NavigateHook::SyncPath (*bot, 0, 3, FindPathType::Optimal);
-   NavigateHook::SyncPath (*bot, 0, 3, FindPathType::Safe);
-   NavigateHook::SetHasHostage (*bot, false);
+  NavigateHook::SetHasHostage (*bot, true);
+  NavigateHook::SyncPath (*bot, 0, 3, FindPathType::Fast);
+  NavigateHook::SyncPath (*bot, 0, 3, FindPathType::Optimal);
+  NavigateHook::SyncPath (*bot, 0, 3, FindPathType::Safe);
+  NavigateHook::SetHasHostage (*bot, false);
 
-   // ...astar needs 8+ nodes: a 10-chain drives the staging lambda...
-   graph.Reset ();
+  // ...astar needs 8+ nodes: a 10-chain drives the staging lambda...
+  graph.Reset ();
 
-   for (int i = 0; i < 10; ++i) {
-     Path path {};
-     path.origin = ystl::Vector (static_cast<float> (i * 100), 0.0f, 0.0f);
-     path.number = i;
-     path.light = kInvalidLightLevel;
+  for (int i = 0; i < 10; ++i) {
+    Path path {};
+    path.origin = ystl::Vector (static_cast<float> (i * 100), 0.0f, 0.0f);
+    path.number = i;
+    path.light = kInvalidLightLevel;
 
-     for (auto &link : path.links) {
-       link.index = kInvalidNodeIndex;
-     }
-     graph.paths_.push (path);
-   }
+    for (auto &link : path.links) {
+      link.index = kInvalidNodeIndex;
+    }
+    graph.paths_.push (path);
+  }
 
-   for (int i = 0; i < 9; ++i) {
-     for (auto &slot : graph.paths_[static_cast<size_t> (i)].links) {
-       if (slot.index == kInvalidNodeIndex) {
-         slot.index = static_cast<int16_t> (i + 1);
-         slot.distance = 100;
-         break;
-       }
-     }
+  for (int i = 0; i < 9; ++i) {
+    for (auto &slot : graph.paths_[static_cast<size_t> (i)].links) {
+      if (slot.index == kInvalidNodeIndex) {
+        slot.index = static_cast<int16_t> (i + 1);
+        slot.distance = 100;
+        break;
+      }
+    }
 
-     for (auto &slot : graph.paths_[static_cast<size_t> (i + 1)].links) {
-       if (slot.index == kInvalidNodeIndex) {
-         slot.index = static_cast<int16_t> (i);
-         slot.distance = 100;
-         break;
-       }
-     }
-   }
-   graph.PopulateNodes ();
-   planner.Init ();
-   planner.SetPathsCheckFailed (false);
-   bot->pev->origin = ystl::Vector (0.0f, 0.0f, 0.0f);
-   NavigateHook::SyncPath (*bot, 0, 9, FindPathType::Fast);
-   NavigateHook::SyncPath (*bot, 0, 9, FindPathType::Diversity);
-   NavigateHook::SyncPath (*bot, 0, 9, FindPathType::Optimal);
-   NavigateHook::SyncPath (*bot, 0, 9, FindPathType::Safe);
+    for (auto &slot : graph.paths_[static_cast<size_t> (i + 1)].links) {
+      if (slot.index == kInvalidNodeIndex) {
+        slot.index = static_cast<int16_t> (i);
+        slot.distance = 100;
+        break;
+      }
+    }
+  }
+  graph.PopulateNodes ();
+  planner.Init ();
+  planner.SetPathsCheckFailed (false);
+  bot->pev->origin = ystl::Vector (0.0f, 0.0f, 0.0f);
+  NavigateHook::SyncPath (*bot, 0, 9, FindPathType::Fast);
+  NavigateHook::SyncPath (*bot, 0, 9, FindPathType::Diversity);
+  NavigateHook::SyncPath (*bot, 0, 9, FindPathType::Optimal);
+  NavigateHook::SyncPath (*bot, 0, 9, FindPathType::Safe);
 
-   // ...fresh bot sizes its astar from the 10-chain, so the find lambda runs...
-   auto astar_bot = CreateNavBot ("AstarBot", ystl::Vector (0.0f, 0.0f, 0.0f));
-   HOST_REQUIRE (astar_bot.get () != nullptr);
-   astar_bot->pev->flags |= FL_ONGROUND;
-   astar_bot->pev->maxspeed = 270.0f;
-   NavigateHook::SetTeam (*astar_bot, Team::CT);
-   planner.SetPathsCheckFailed (false);
-   NavigateHook::SyncPath (*astar_bot, 0, 9, FindPathType::Fast);
-   NavigateHook::SyncPath (*astar_bot, 0, 9, FindPathType::Diversity);
-   NavigateHook::SyncPath (*astar_bot, 0, 9, FindPathType::Optimal);
-   NavigateHook::SyncPath (*astar_bot, 0, 9, FindPathType::Safe);
+  // ...fresh bot sizes its astar from the 10-chain, so the find lambda runs...
+  auto astar_bot = CreateNavBot ("AstarBot", ystl::Vector (0.0f, 0.0f, 0.0f));
+  HOST_REQUIRE (astar_bot.get () != nullptr);
+  astar_bot->pev->flags |= FL_ONGROUND;
+  astar_bot->pev->maxspeed = 270.0f;
+  NavigateHook::SetTeam (*astar_bot, Team::CT);
+  planner.SetPathsCheckFailed (false);
+  NavigateHook::SyncPath (*astar_bot, 0, 9, FindPathType::Fast);
+  NavigateHook::SyncPath (*astar_bot, 0, 9, FindPathType::Diversity);
+  NavigateHook::SyncPath (*astar_bot, 0, 9, FindPathType::Optimal);
+  NavigateHook::SyncPath (*astar_bot, 0, 9, FindPathType::Safe);
 
-   // ...stale bots skip pathfinding, broken requests fail closed...
-   NavigateHook::SetStale (*bot, true);
-   NavigateHook::SyncPath (*bot, 0, 3, FindPathType::Fast);
-   NavigateHook::SetStale (*bot, false);
-   NavigateHook::SyncPath (*bot, kInvalidNodeIndex, 3, FindPathType::Fast);
-   NavigateHook::SyncPath (*bot, 0, 99, FindPathType::Fast);
-   NavigateHook::SyncPath (*bot, 2, 2, FindPathType::Fast);
+  // ...stale bots skip pathfinding, broken requests fail closed...
+  NavigateHook::SetStale (*bot, true);
+  NavigateHook::SyncPath (*bot, 0, 3, FindPathType::Fast);
+  NavigateHook::SetStale (*bot, false);
+  NavigateHook::SyncPath (*bot, kInvalidNodeIndex, 3, FindPathType::Fast);
+  NavigateHook::SyncPath (*bot, 0, 99, FindPathType::Fast);
+  NavigateHook::SyncPath (*bot, 2, 2, FindPathType::Fast);
 
-   // ...node bookkeeping: change, nearest, random, validity...
-   CHECK (NavigateHook::ChangeNode (*bot, 1) == 1);
-   NavigateHook::ChangeNode (*bot, kInvalidNodeIndex);
-   CHECK (bot->GetCurrentNodeIndex () == 1);
-   CHECK (NavigateHook::NearestNode (*bot) != kInvalidNodeIndex);
-   CHECK (graph.Exists (NavigateHook::RandomNode (*bot, PointType::Count)));
-   NavigateHook::FindValid (*bot);
-   CHECK (bot->GetCurrentNodeIndex () != kInvalidNodeIndex);
-   NavigateHook::SetCurrentRaw (*bot, kInvalidNodeIndex);
-   CHECK (bot->FindNextBestNode ());
-   NavigateHook::SetRechoice (*bot, 99);
-   NavigateHook::FindValid (*bot);
+  // ...node bookkeeping: change, nearest, random, validity...
+  CHECK (NavigateHook::ChangeNode (*bot, 1) == 1);
+  NavigateHook::ChangeNode (*bot, kInvalidNodeIndex);
+  CHECK (bot->GetCurrentNodeIndex () == 1);
+  CHECK (NavigateHook::NearestNode (*bot) != kInvalidNodeIndex);
+  CHECK (graph.Exists (NavigateHook::RandomNode (*bot, PointType::Count)));
+  NavigateHook::FindValid (*bot);
+  CHECK (bot->GetCurrentNodeIndex () != kInvalidNodeIndex);
+  NavigateHook::SetCurrentRaw (*bot, kInvalidNodeIndex);
+  CHECK (bot->FindNextBestNode ());
+  NavigateHook::SetRechoice (*bot, 99);
+  NavigateHook::FindValid (*bot);
 
-   // ...reach time: recently fired, ladder, speed variants...
-   NavigateHook::ChangeNode (*bot, 0);
-   NavigateHook::ChangeNode (*bot, 1);
-   CHECK (NavigateHook::ReachTime (*bot) > 0.0f);
-   engine.AdvanceTime (0.3f);
-   NavigateHook::SetMoveSpeed (*bot, 200.0f);
-   CHECK (NavigateHook::ReachTime (*bot) > 0.0f);
-   NavigateHook::SetMoveSpeed (*bot, 0.0f);
+  // ...reach time: recently fired, ladder, speed variants...
+  NavigateHook::ChangeNode (*bot, 0);
+  NavigateHook::ChangeNode (*bot, 1);
+  CHECK (NavigateHook::ReachTime (*bot) > 0.0f);
+  engine.AdvanceTime (0.3f);
+  NavigateHook::SetMoveSpeed (*bot, 200.0f);
+  CHECK (NavigateHook::ReachTime (*bot) > 0.0f);
+  NavigateHook::SetMoveSpeed (*bot, 0.0f);
 
-   // ...ladder distances across walk shapes...
-   ystl::Array<int32_t> empty_walk {};
-   ystl::Array<int32_t> two_walk {};
-   two_walk.push (1);
-   two_walk.push (2);
-   NavigateHook::SetWalk (*bot, two_walk);
-   CHECK (NavigateHook::LadderDistance (*bot) > 0.0f);
-   NavigateHook::SetWalk (*bot, empty_walk);
-   CHECK (NavigateHook::LadderDistance (*bot) > 0.0f);
+  // ...ladder distances across walk shapes...
+  ystl::Array<int32_t> empty_walk {};
+  ystl::Array<int32_t> two_walk {};
+  two_walk.push (1);
+  two_walk.push (2);
+  NavigateHook::SetWalk (*bot, two_walk);
+  CHECK (NavigateHook::LadderDistance (*bot) > 0.0f);
+  NavigateHook::SetWalk (*bot, empty_walk);
+  CHECK (NavigateHook::LadderDistance (*bot) > 0.0f);
 
-   // ...buttons blind and plain, occupancy, reachability...
-   edict_t *btn = engine.SpawnEntity ("func_button");
-   HOST_REQUIRE (btn != nullptr);
-   btn->v.target = string_t (engine.AllocString ("door9"));
-   CHECK (NavigateHook::LookupBtn (*bot, "door9", true) == btn);
-   CHECK (NavigateHook::LookupBtn (*bot, "door9", false) == btn);
-   CHECK (NavigateHook::LookupBtn (*bot, "none", true) == nullptr);
-   CHECK (!NavigateHook::Occupied (*bot, 1, false));
-   CHECK (NavigateHook::Reachable (*bot, 1));
-   CHECK (!NavigateHook::PrevLadder (*bot));
+  // ...buttons blind and plain, occupancy, reachability...
+  edict_t *btn = engine.SpawnEntity ("func_button");
+  HOST_REQUIRE (btn != nullptr);
+  btn->v.target = string_t (engine.AllocString ("door9"));
+  CHECK (NavigateHook::LookupBtn (*bot, "door9", true) == btn);
+  CHECK (NavigateHook::LookupBtn (*bot, "door9", false) == btn);
+  CHECK (NavigateHook::LookupBtn (*bot, "none", true) == nullptr);
+  CHECK (!NavigateHook::Occupied (*bot, 1, false));
+  CHECK (NavigateHook::Reachable (*bot, 1));
+  CHECK (!NavigateHook::PrevLadder (*bot));
 
-   // ...jump ballistics: level arc, impossible, zero gravity...
-   const ystl::Vector arc = NavigateHook::CalcJump (*bot, ystl::Vector (0.0f, 0.0f, 0.0f), ystl::Vector (100.0f, 0.0f, 0.0f));
-   CHECK (arc.length2d () > 0.0f);
-   CHECK (NavigateHook::CalcJump (*bot, ystl::Vector (0.0f, 0.0f, 0.0f), ystl::Vector (0.0f, 0.0f, 100000.0f)).empty ());
-   sv_gravity.Set (0);
-   CHECK (NavigateHook::CalcJump (*bot, ystl::Vector (0.0f, 0.0f, 0.0f), ystl::Vector (100.0f, 0.0f, 0.0f)).empty ());
-   sv_gravity.Set (800);
+  // ...jump ballistics: level arc, impossible, zero gravity...
+  const ystl::Vector arc = NavigateHook::CalcJump (*bot, ystl::Vector (0.0f, 0.0f, 0.0f), ystl::Vector (100.0f, 0.0f, 0.0f));
+  CHECK (arc.length2d () > 0.0f);
+  CHECK (NavigateHook::CalcJump (*bot, ystl::Vector (0.0f, 0.0f, 0.0f), ystl::Vector (0.0f, 0.0f, 100000.0f)).empty ());
+  sv_gravity.Set (0);
+  CHECK (NavigateHook::CalcJump (*bot, ystl::Vector (0.0f, 0.0f, 0.0f), ystl::Vector (100.0f, 0.0f, 0.0f)).empty ());
+  sv_gravity.Set (800);
 
-   // ...retime gates: water, flat, slow link, light gravity...
-   bot->pev->waterlevel = 2;
-   NavigateHook::SetPathOriginVec (*bot, ystl::Vector (0.0f, 0.0f, 100.0f));
-   NavigateHook::SetDesiredVelocity (*bot, ystl::Vector (130.0f, 0.0f, 0.0f));
-   bot->pev->button = 0;
-   CHECK (!NavigateHook::UpdateNav (*bot));
-   bot->pev->waterlevel = 0;
-   NavigateHook::SetPathOriginVec (*bot, bot->pev->origin);
-   NavigateHook::SetDesiredVelocity (*bot, ystl::Vector (0.0f, 0.0f, 0.0f));
-   bot->pev->button = 0;
-   CHECK (!NavigateHook::UpdateNav (*bot));
-   sv_gravity.Set (0);
-   NavigateHook::SetPathOriginVec (*bot, ystl::Vector (0.0f, 0.0f, 100.0f));
-   NavigateHook::SetDesiredVelocity (*bot, ystl::Vector (130.0f, 0.0f, 0.0f));
-   bot->pev->button = 0;
-   CHECK (!NavigateHook::UpdateNav (*bot));
-   sv_gravity.Set (800);
+  // ...retime gates: water, flat, slow link, light gravity...
+  bot->pev->waterlevel = 2;
+  NavigateHook::SetPathOriginVec (*bot, ystl::Vector (0.0f, 0.0f, 100.0f));
+  NavigateHook::SetDesiredVelocity (*bot, ystl::Vector (130.0f, 0.0f, 0.0f));
+  bot->pev->button = 0;
+  CHECK (!NavigateHook::UpdateNav (*bot));
+  bot->pev->waterlevel = 0;
+  NavigateHook::SetPathOriginVec (*bot, bot->pev->origin);
+  NavigateHook::SetDesiredVelocity (*bot, ystl::Vector (0.0f, 0.0f, 0.0f));
+  bot->pev->button = 0;
+  CHECK (!NavigateHook::UpdateNav (*bot));
+  sv_gravity.Set (0);
+  NavigateHook::SetPathOriginVec (*bot, ystl::Vector (0.0f, 0.0f, 100.0f));
+  NavigateHook::SetDesiredVelocity (*bot, ystl::Vector (130.0f, 0.0f, 0.0f));
+  bot->pev->button = 0;
+  CHECK (!NavigateHook::UpdateNav (*bot));
+  sv_gravity.Set (800);
 
-   // ...movement frame: translate, reset, crouch/ladder/swim legs...
-   NavigateHook::SetMoveSpeed (*bot, 200.0f);
-   NavigateHook::TranslateInput (*bot);
-   CHECK ((bot->pev->button & IN_FORWARD) != 0);
-   NavigateHook::ResetMovement (*bot);
-   NavigateHook::MoveToGoal (*bot);
-   NavigateHook::SetJumpSeq (*bot, true);
-   NavigateHook::CheckTerr (*bot, ystl::Vector (1.0f, 0.0f, 0.0f));
-   NavigateHook::CheckF (*bot);
-   NavigateHook::SetJumpSeq (*bot, false);
+  // ...movement frame: translate, reset, crouch/ladder/swim legs...
+  NavigateHook::SetMoveSpeed (*bot, 200.0f);
+  NavigateHook::TranslateInput (*bot);
+  CHECK ((bot->pev->button & IN_FORWARD) != 0);
+  NavigateHook::ResetMovement (*bot);
+  NavigateHook::MoveToGoal (*bot);
+  NavigateHook::SetJumpSeq (*bot, true);
+  NavigateHook::CheckTerr (*bot, ystl::Vector (1.0f, 0.0f, 0.0f));
+  NavigateHook::CheckF (*bot);
+  NavigateHook::SetJumpSeq (*bot, false);
 
-   table.pfnServerDeactivate ();
-   testhost::CloseFakeCs (cs);
+  table.pfnServerDeactivate ();
+  testhost::CloseFakeCs (cs);
 }
 
 TEST_CASE ("unit/navigate_frame") {
-   testhost::FakeEngine engine;
-   engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
+  testhost::FakeEngine engine;
+  engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
 
-   edict_t *door = engine.SpawnEntity ("func_door");
-   HOST_REQUIRE (door != nullptr);
-   const float door_pos[3] = { 150.0f, 0.0f, 0.0f };
-   engine.Funcs ().pfnSetOrigin (door, door_pos);
+  edict_t *door = engine.SpawnEntity ("func_door");
+  HOST_REQUIRE (door != nullptr);
+  const float door_pos[3] = { 150.0f, 0.0f, 0.0f };
+  engine.Funcs ().pfnSetOrigin (door, door_pos);
 
-   testhost::FakeCSApi cs {};
-   HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
-   cs.reset ();
+  testhost::FakeCSApi cs {};
+  HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
+  cs.reset ();
 
-   GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
-   HOST_REQUIRE (cs.entered () != 0);
+  GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
+  HOST_REQUIRE (cs.entered () != 0);
 
-   gamefuncs_t table {};
-   HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
+  gamefuncs_t table {};
+  HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
 
-   game.Precache ();
-   table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
+  game.Precache ();
+  table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
 
-   if (analyzer.IsAnalyzing ()) {
-     analyzer.Suspend ();
-   }
-   BuildNavGraph ();
-   planner.Init ();
+  if (analyzer.IsAnalyzing ()) {
+    analyzer.Suspend ();
+  }
+  BuildNavGraph ();
+  planner.Init ();
 
-   bots.InitQuota ();
-   cv_quota.Set (10);
-   bots.Addbot ("FrmA", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
-   bots.Addbot ("FrmB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.InitQuota ();
+  cv_quota.Set (10);
+  bots.Addbot ("FrmA", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("FrmB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
 
-   Bot *bot = nullptr, *mate = nullptr;
+  Bot *bot = nullptr, *mate = nullptr;
 
-   for (int i = 0; i < 40 && (bot == nullptr || mate == nullptr); ++i) {
-     engine.AdvanceTime (0.2f);
-     bots.MaintainQuota ();
+  for (int i = 0; i < 40 && (bot == nullptr || mate == nullptr); ++i) {
+    engine.AdvanceTime (0.2f);
+    bots.MaintainQuota ();
 
-     bots.ForEach ([&] (Bot *candidate) {
-       if (ystl::StringRef (candidate->pev->netname.chars ()) == "FrmA") {
-         bot = candidate;
-       }
-       else if (ystl::StringRef (candidate->pev->netname.chars ()) == "FrmB") {
-         mate = candidate;
-       }
-       return false;
-     });
-   }
-   HOST_REQUIRE (bot != nullptr && mate != nullptr);
-   bot->team_ = Team::CT;
-   mate->team_ = Team::CT;
-   clients.Update ();
-   clients[bot->Ent ()].team = Team::CT;
-   clients[mate->Ent ()].team = Team::CT;
+    bots.ForEach ([&] (Bot *candidate) {
+      if (ystl::StringRef (candidate->pev->netname.chars ()) == "FrmA") {
+        bot = candidate;
+      }
+      else if (ystl::StringRef (candidate->pev->netname.chars ()) == "FrmB") {
+        mate = candidate;
+      }
+      return false;
+    });
+  }
+  HOST_REQUIRE (bot != nullptr && mate != nullptr);
+  bot->team_ = Team::CT;
+  mate->team_ = Team::CT;
+  clients.Update ();
+  clients[bot->Ent ()].team = Team::CT;
+  clients[mate->Ent ()].team = Team::CT;
 
-   auto prep_frame = [] (Bot *target, const ystl::Vector &pos) {
-     target->pev->origin = pos;
-     target->pev->velocity = ystl::Vector (0.0f, 0.0f, 0.0f);
-     target->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
-     target->pev->angles = ystl::Vector (0.0f, 0.0f, 0.0f);
-     target->pev->health = 100.0f;
-     target->pev->max_health = 100.0f;
-     target->pev->deadflag = DEAD_NO;
-     target->pev->takedamage = DAMAGE_YES;
-     target->pev->solid = SOLID_BBOX;
-     target->pev->movetype = MOVETYPE_WALK;
-     target->pev->maxspeed = 270.0f;
-     target->pev->flags |= FL_ONGROUND;
-     target->is_alive_ = true;
-     NavigateHook::SetHealthValue (*target, 100.0f);
-     NavigateHook::SetAggression (*target, 0.9f, 0.0f);
-   };
-   prep_frame (bot, ystl::Vector (0.0f, 0.0f, 0.0f));
-   prep_frame (mate, ystl::Vector (60.0f, 0.0f, 0.0f));
+  auto prep_frame = [] (Bot *target, const ystl::Vector &pos) {
+    target->pev->origin = pos;
+    target->pev->velocity = ystl::Vector (0.0f, 0.0f, 0.0f);
+    target->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+    target->pev->angles = ystl::Vector (0.0f, 0.0f, 0.0f);
+    target->pev->health = 100.0f;
+    target->pev->max_health = 100.0f;
+    target->pev->deadflag = DEAD_NO;
+    target->pev->takedamage = DAMAGE_YES;
+    target->pev->solid = SOLID_BBOX;
+    target->pev->movetype = MOVETYPE_WALK;
+    target->pev->maxspeed = 270.0f;
+    target->pev->flags |= FL_ONGROUND;
+    target->is_alive_ = true;
+    NavigateHook::SetHealthValue (*target, 100.0f);
+    NavigateHook::SetAggression (*target, 0.9f, 0.0f);
+  };
+  prep_frame (bot, ystl::Vector (0.0f, 0.0f, 0.0f));
+  prep_frame (mate, ystl::Vector (60.0f, 0.0f, 0.0f));
 
-   // ...jump link presses jump, ladder flag detours through the frame...
-   NavigateHook::ChangeNode (*bot, 0);
-   bot->ClearSearchNodes ();
-   bot->StartTask (TaskId::MoveTo, 50.0f, 3, 0.0f, false);
-   NavigateHook::SetTravelFlags (*bot, PathFlag::Jump);
-   bot->pev->button = 0;
-   CHECK (!NavigateHook::UpdateNav (*bot));
-   CHECK ((bot->pev->button & IN_JUMP) != 0);
-   NavigateHook::SetTravelFlags (*bot, static_cast<PathFlag> (0));
+  // ...jump link presses jump, ladder flag detours through the frame...
+  NavigateHook::ChangeNode (*bot, 0);
+  bot->ClearSearchNodes ();
+  bot->StartTask (TaskId::MoveTo, 50.0f, 3, 0.0f, false);
+  NavigateHook::SetTravelFlags (*bot, PathFlag::Jump);
+  bot->pev->button = 0;
+  CHECK (!NavigateHook::UpdateNav (*bot));
+  CHECK ((bot->pev->button & IN_JUMP) != 0);
+  NavigateHook::SetTravelFlags (*bot, static_cast<PathFlag> (0));
 
-   // ...far door leg clears aim direction without pressing...
-   prep_frame (bot, ystl::Vector (200.0f, 0.0f, 0.0f));
-   NavigateHook::ChangeNode (*bot, 2);
-   ystl::Array<int32_t> walk {};
-   walk.push (3);
-   NavigateHook::SetWalk (*bot, walk);
-   engine.SetTraceLineHook ([&] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
-     (void)v1;
-     (void)no_monsters;
-     (void)skip;
-     testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+  // ...far door leg clears aim direction without pressing...
+  prep_frame (bot, ystl::Vector (200.0f, 0.0f, 0.0f));
+  NavigateHook::ChangeNode (*bot, 2);
+  ystl::Array<int32_t> walk {};
+  walk.push (3);
+  NavigateHook::SetWalk (*bot, walk);
+  engine.SetTraceLineHook ([&] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)v1;
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
 
-     if (v2[0] > 150.0f) {
-       out->flFraction = 0.5f;
-       out->pHit = door;
-     }
-   });
+    if (v2[0] > 150.0f) {
+      out->flFraction = 0.5f;
+      out->pHit = door;
+    }
+  });
   engine.AdvanceTime (0.15f);
   bot->pev->button = 0;
   bot->pev->velocity = ystl::Vector (0.0f, 0.0f, 0.0f);
@@ -4104,46 +4103,46 @@ TEST_CASE ("unit/navigate_frame") {
   engine.SetTraceLineHook (nullptr);
   engine.AdvanceTime (0.2f);
 
-   // ...arrival with goal practice runs the frame to completion...
-   bot->ClearSearchNodes ();
-   bot->StartTask (TaskId::MoveTo, 50.0f, 2, 0.0f, false);
-   NavigateHook::SetChosenGoal (*bot, 2);
-   NavigateHook::SetHealthValue (*bot, 100.0f);
-   CHECK (NavigateHook::UpdateNav (*bot));
-   NavigateHook::SetChosenGoal (*bot, kInvalidNodeIndex);
+  // ...arrival with goal practice runs the frame to completion...
+  bot->ClearSearchNodes ();
+  bot->StartTask (TaskId::MoveTo, 50.0f, 2, 0.0f, false);
+  NavigateHook::SetChosenGoal (*bot, 2);
+  NavigateHook::SetHealthValue (*bot, 100.0f);
+  CHECK (NavigateHook::UpdateNav (*bot));
+  NavigateHook::SetChosenGoal (*bot, kInvalidNodeIndex);
 
-   // ...advance: empty walk validates, occupied tail refinds...
-   ystl::Array<int32_t> empty_walk {};
-   NavigateHook::SetWalk (*bot, empty_walk);
-   CHECK (!NavigateHook::Advance (*bot));
-   mate->pev->origin = ystl::Vector (300.0f, 0.0f, 0.0f);
-   mate->pev->velocity = ystl::Vector (0.0f, 0.0f, 0.0f);
-   clients.Update ();
-   ystl::Array<int32_t> tail_walk {};
-   tail_walk.push (3);
-   NavigateHook::ChangeNode (*bot, 2);
-   NavigateHook::SetWalk (*bot, tail_walk);
-   NavigateHook::Advance (*bot);
+  // ...advance: empty walk validates, occupied tail refinds...
+  ystl::Array<int32_t> empty_walk {};
+  NavigateHook::SetWalk (*bot, empty_walk);
+  CHECK (!NavigateHook::Advance (*bot));
+  mate->pev->origin = ystl::Vector (300.0f, 0.0f, 0.0f);
+  mate->pev->velocity = ystl::Vector (0.0f, 0.0f, 0.0f);
+  clients.Update ();
+  ystl::Array<int32_t> tail_walk {};
+  tail_walk.push (3);
+  NavigateHook::ChangeNode (*bot, 2);
+  NavigateHook::SetWalk (*bot, tail_walk);
+  NavigateHook::Advance (*bot);
 
-   // ...alternative selection: free node bails, ladder bails...
-   bot->pev->movetype = MOVETYPE_FLY;
-   CHECK (!NavigateHook::SelectNext (*bot));
-   bot->pev->movetype = MOVETYPE_WALK;
-   ystl::Array<int32_t> alt_walk {};
-   alt_walk.push (1);
-   alt_walk.push (2);
-   NavigateHook::SetWalk (*bot, alt_walk);
-   CHECK (!NavigateHook::SelectNext (*bot));
+  // ...alternative selection: free node bails, ladder bails...
+  bot->pev->movetype = MOVETYPE_FLY;
+  CHECK (!NavigateHook::SelectNext (*bot));
+  bot->pev->movetype = MOVETYPE_WALK;
+  ystl::Array<int32_t> alt_walk {};
+  alt_walk.push (1);
+  alt_walk.push (2);
+  NavigateHook::SetWalk (*bot, alt_walk);
+  CHECK (!NavigateHook::SelectNext (*bot));
 
-   // ...time camping and rechoice refresh the validity paths...
-   NavigateHook::SetTimeCamping (*bot, game.Time () - 100.0f);
-   NavigateHook::SetRechoice (*bot, 99);
-   NavigateHook::FindValid (*bot);
-   NavigateHook::SetTimeCamping (*bot, game.Time () + 100.0f);
+  // ...time camping and rechoice refresh the validity paths...
+  NavigateHook::SetTimeCamping (*bot, game.Time () - 100.0f);
+  NavigateHook::SetRechoice (*bot, 99);
+  NavigateHook::FindValid (*bot);
+  NavigateHook::SetTimeCamping (*bot, game.Time () + 100.0f);
 
-    bots.Destroy ();
-    table.pfnServerDeactivate ();
-    testhost::CloseFakeCs (cs);
+  bots.Destroy ();
+  table.pfnServerDeactivate ();
+  testhost::CloseFakeCs (cs);
 }
 
 TEST_CASE ("unit/navigate_siege") {
