@@ -130,9 +130,7 @@ inline void CloseFakeCs (FakeCSApi &api) {
   }
 }
 
-// create a directory tree, tolerating mixed separators: ystl::File::make_path
-// only walks kPathSeparator (backslash on windows), while config paths such as
-// cv_chatter_path are written with forward slashes
+// create a directory tree, tolerating mixed separators (make_path walks kPathSeparator only, config paths use forward slashes)
 inline void MakeDirs (ystl::StringRef path) {
   ystl::String dir (path);
 
