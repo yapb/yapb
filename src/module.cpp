@@ -464,7 +464,7 @@ public:
     else if (team == 2) {
       bot_team = Team::CT;
     }
-    bots.Addbot (name, static_cast<Difficulty> (difficulty), static_cast<Personality> (personality), bot_team, -1, false);
+    bots.Addbot (name, static_cast<Difficulty> (difficulty), static_cast<Personality> (personality), bot_team, Skin::Random, false);
 
     return true;
   }

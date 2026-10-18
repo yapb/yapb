@@ -364,7 +364,7 @@ TEST_CASE ("unit/weapons_fire") {
   }
   BootWeapons (engine, cs);
 
-  bots.Addbot ("WpnF", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("WpnF", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("WpnF");
@@ -674,7 +674,7 @@ TEST_CASE ("unit/weapons_materials") {
 
   BootWeapons (engine, cs);
 
-  bots.Addbot ("MatA", Difficulty::Expert, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("MatA", Difficulty::Expert, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("MatA");
@@ -720,7 +720,7 @@ TEST_CASE ("unit/weapons_arms") {
 
   BootWeapons (engine, cs);
 
-  bots.Addbot ("WpnA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("WpnA", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("WpnA");
@@ -906,8 +906,8 @@ TEST_CASE ("unit/weapons_pickup") {
 
   BootWeapons (engine, cs);
 
-  bots.Addbot ("WpnP", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("WpnQ", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("WpnP", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("WpnQ", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
 
   Bot *bot = testhost::FindBot ("WpnP");
@@ -1077,7 +1077,7 @@ TEST_CASE ("unit/weapons_vault") {
   }
   BootWeapons (engine, cs);
 
-  bots.Addbot ("WpnV", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("WpnV", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("WpnV");
@@ -1353,7 +1353,7 @@ TEST_CASE ("unit/weapons_quartz") {
 
   BootWeapons (engine, cs);
 
-  bots.Addbot ("WpnZ", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("WpnZ", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("WpnZ");
@@ -1498,7 +1498,7 @@ TEST_CASE ("unit/weapons_beacon") {
 
   BootWeapons (engine, cs);
 
-  bots.Addbot ("WpnB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("WpnB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("WpnB");
@@ -1890,7 +1890,7 @@ TEST_CASE ("unit/weapons_ledger") {
 
   BootWeapons (engine, cs);
 
-  bots.Addbot ("WpnL", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("WpnL", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("WpnL");
@@ -2095,7 +2095,7 @@ TEST_CASE ("unit/weapons_onyx") {
 
   BootWeapons (engine, cs);
 
-  bots.Addbot ("WpnO", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("WpnO", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("WpnO");
@@ -2314,8 +2314,8 @@ TEST_CASE ("unit/weapons_cobalt") {
   cv_quota.Set (10);
   practice.Load ();
 
-  bots.Addbot ("WpnC", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("WpnD", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("WpnC", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("WpnD", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
 
   Bot *bot = testhost::FindBot ("WpnC");

@@ -927,7 +927,7 @@ public:
 
   int index_ {}; // saved bot index
   CSTeam wanted_team_ {}; // player team bot wants select
-  int wanted_skin_ {}; // player model bot wants to select
+  Skin wanted_skin_ {}; // player model bot wants to select
   Difficulty difficulty_ {}; // bots hard level
   bool diff_locked_ {}; // manual difficulty, keep it fixed against cvar/auto changes
 
@@ -983,7 +983,7 @@ public:
   }
 
 public:
-  Bot (edict_t *bot, Difficulty difficulty, Personality personality, Team team, int skin, bool diff_locked);
+  Bot (edict_t *bot, Difficulty difficulty, Personality personality, Team team, Skin skin, bool diff_locked);
   ~Bot () = default;
 
 public:

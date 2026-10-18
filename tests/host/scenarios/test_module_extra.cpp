@@ -101,7 +101,7 @@ TEST_CASE ("unit/module_extra") {
   api->SetBotLookAt (99, nowhere); // no-op, must not crash
 
   // ...a live bot answers the same getters with live data...
-  bots.Addbot ("ModX", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("ModX", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = nullptr;

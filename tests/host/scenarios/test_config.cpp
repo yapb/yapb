@@ -356,7 +356,7 @@ TEST_CASE ("unit/config_files") {
   edict_t *ent = game.CreateFakeClient ("CfgBot");
   HOST_REQUIRE (!game.IsNullEntity (ent));
 
-  auto bot = ystl::make_unique<Bot> (ent, Difficulty::Normal, Personality::Normal, Team::CT, 0, false);
+  auto bot = ystl::make_unique<Bot> (ent, Difficulty::Normal, Personality::Normal, Team::CT, Skin::Random, false);
   HOST_REQUIRE (bot.get () != nullptr && bot->Index () == 0);
 
   conf.ClearUsedName (bot.get ());

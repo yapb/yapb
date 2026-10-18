@@ -561,7 +561,7 @@ ystl::UniquePtr<Bot> CreateNavBot (const char *name, const ystl::Vector &pos) {
   if (game.IsNullEntity (ent)) {
     return {};
   }
-  auto bot = ystl::make_unique<Bot> (ent, Difficulty::Normal, Personality::Normal, Team::CT, 0, false);
+  auto bot = ystl::make_unique<Bot> (ent, Difficulty::Normal, Personality::Normal, Team::CT, Skin::Random, false);
 
   bot->pev->origin = pos;
   bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
@@ -1275,8 +1275,8 @@ TEST_CASE ("unit/navigate_gaps") {
   bots.InitQuota ();
   cv_quota.Set (10);
 
-  bots.Addbot ("NavA", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
-  bots.Addbot ("NavB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("NavA", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
+  bots.Addbot ("NavB", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
 
   Bot *bot = nullptr, *mate = nullptr;
 
@@ -1687,9 +1687,9 @@ TEST_CASE ("unit/navigate_avoid_commit") {
   bots.InitQuota ();
   cv_quota.Set (10);
 
-  bots.Addbot ("AvoA", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
-  bots.Addbot ("AvoB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
-  bots.Addbot ("AvoC", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("AvoA", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
+  bots.Addbot ("AvoB", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
+  bots.Addbot ("AvoC", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
 
   Bot *bot = nullptr, *mate_a = nullptr, *mate_b = nullptr;
 
@@ -2439,8 +2439,8 @@ TEST_CASE ("unit/navigate_bulk") {
   bots.InitQuota ();
   cv_quota.Set (10);
 
-  bots.Addbot ("BulkA", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
-  bots.Addbot ("BulkB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("BulkA", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
+  bots.Addbot ("BulkB", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
 
   Bot *bot = nullptr, *mate = nullptr;
 
@@ -3377,8 +3377,8 @@ TEST_CASE ("unit/navigate_avoid2") {
   bots.InitQuota ();
   cv_quota.Set (10);
 
-  bots.Addbot ("Av2A", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
-  bots.Addbot ("Av2B", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("Av2A", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
+  bots.Addbot ("Av2B", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
 
   Bot *bot = nullptr, *mate = nullptr;
 
@@ -3525,8 +3525,8 @@ TEST_CASE ("unit/navigate_lift2") {
 
   bots.InitQuota ();
   cv_quota.Set (10);
-  bots.Addbot ("LiftA", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
-  bots.Addbot ("LiftB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("LiftA", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
+  bots.Addbot ("LiftB", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
 
   Bot *bot = nullptr, *mate = nullptr;
 
@@ -4022,8 +4022,8 @@ TEST_CASE ("unit/navigate_frame") {
 
   bots.InitQuota ();
   cv_quota.Set (10);
-  bots.Addbot ("FrmA", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
-  bots.Addbot ("FrmB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("FrmA", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
+  bots.Addbot ("FrmB", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
 
   Bot *bot = nullptr, *mate = nullptr;
 
@@ -4465,9 +4465,9 @@ TEST_CASE ("unit/navigate_bastion") {
   bots.InitQuota ();
   cv_quota.Set (10);
 
-  bots.Addbot ("BasA", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
-  bots.Addbot ("BasB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
-  bots.Addbot ("BasC", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("BasA", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
+  bots.Addbot ("BasB", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
+  bots.Addbot ("BasC", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
 
   Bot *bot = nullptr, *mate = nullptr, *third = nullptr;
 
@@ -4772,9 +4772,9 @@ TEST_CASE ("unit/navigate_pinnacle") {
   bots.InitQuota ();
   cv_quota.Set (10);
 
-  bots.Addbot ("PinA", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
-  bots.Addbot ("PinB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
-  bots.Addbot ("PinE", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("PinA", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
+  bots.Addbot ("PinB", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
+  bots.Addbot ("PinE", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
 
   Bot *bot = nullptr, *mate = nullptr, *foe = nullptr;
 
@@ -5217,8 +5217,8 @@ TEST_CASE ("unit/navigate_harbor") {
   bots.InitQuota ();
   cv_quota.Set (10);
 
-  bots.Addbot ("HarbA", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
-  bots.Addbot ("HarbB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("HarbA", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
+  bots.Addbot ("HarbB", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
 
   Bot *bot = nullptr, *mate = nullptr;
 
@@ -5574,10 +5574,10 @@ TEST_CASE ("unit/navigate_vanguard") {
   bots.InitQuota ();
   cv_quota.Set (10);
 
-  bots.Addbot ("VanA", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
-  bots.Addbot ("VanB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
-  bots.Addbot ("VanE1", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("VanE2", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("VanA", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
+  bots.Addbot ("VanB", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
+  bots.Addbot ("VanE1", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("VanE2", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
 
   Bot *bot = nullptr, *mate = nullptr, *foe1 = nullptr, *foe2 = nullptr;
 
@@ -6185,8 +6185,8 @@ TEST_CASE ("unit/navigate_summit") {
   bots.InitQuota ();
   cv_quota.Set (10);
 
-  bots.Addbot ("SumA", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
-  bots.Addbot ("SumB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("SumA", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
+  bots.Addbot ("SumB", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
 
   Bot *bot = nullptr, *mate = nullptr;
 

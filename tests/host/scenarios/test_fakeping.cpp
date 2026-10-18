@@ -95,7 +95,7 @@ TEST_CASE ("unit/fakeping_calc [modern]") {
     CHECK (base <= hi);
   }
 
-  bots.Addbot ("PingB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("PingB", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("PingB");

@@ -21,6 +21,12 @@
 
 namespace bot {
 
+// team-relative class slots share numeric values (`Terror`==`Urban`, ...)
+static_assert (ystl::to_underlying (Skin::Random) == 0);
+static_assert (ystl::to_underlying (Skin::Terror) == ystl::to_underlying (Skin::Urban));
+static_assert (ystl::to_underlying (Skin::Guerilla) == ystl::to_underlying (Skin::Gign));
+static_assert (ystl::to_underlying (Skin::Militia) == 5 && ystl::to_underlying (Skin::Spetsnaz) == 5);
+
 struct ManagerHook {
   static bool Leader (Bot &bot) {
     return bot.is_leader_;
@@ -177,7 +183,7 @@ TEST_CASE ("unit/manager_create") {
 
   // no graph, no bots: the request stays queued, quota is zeroed
   graph.Reset ();
-  bots.Addbot ("NoGraph", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("NoGraph", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
 
   engine.AdvanceTime (6.0f);
   bots.MaintainQuota ();
@@ -210,7 +216,7 @@ TEST_CASE ("unit/manager_create") {
   a->is_alive_ = false;
 
   // empty name falls back to generated names, still success
-  bots.Addbot ("", Difficulty::Invalid, Personality::Invalid, Team::Invalid, -1, true);
+  bots.Addbot ("", Difficulty::Invalid, Personality::Invalid, Team::Invalid, Skin::Random, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
 
   // string overload with wildcards
@@ -252,7 +258,7 @@ TEST_CASE ("unit/manager_create") {
   clients[stack[1]].team2 = Team::Terrorist;
   clients[stack[2]].team2 = Team::Terrorist;
   clients[stack[3]].team2 = Team::CT;
-  bots.Addbot ("Stacked", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("Stacked", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
 
   engine.AdvanceTime (1.0f);
   for (int i = 0; i < 10; ++i) {
@@ -278,9 +284,9 @@ TEST_CASE ("unit/manager_kicks") {
 
   BootManager (engine, cs);
 
-  bots.Addbot ("KickA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("KickB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("KickC", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("KickA", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("KickB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("KickC", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 3));
 
   Bot *a = testhost::FindBot ("KickA");
@@ -338,8 +344,8 @@ TEST_CASE ("unit/manager_kicks") {
 
   // fresh pair for team-scoped kicks (manual adds increment the quota,
   // so pin it down only after pumping)
-  bots.Addbot ("KickD", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("KickE", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("KickD", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("KickE", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
 
   Bot *d = testhost::FindBot ("KickD");
@@ -378,7 +384,7 @@ TEST_CASE ("unit/manager_kicks") {
   });
 
   // ...and clears the pending queue
-  bots.Addbot ("Queued", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("Queued", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   bots.KickEveryone (true, false, true);
   for (int i = 0; i < 10; ++i) {
     engine.AdvanceTime (0.2f);
@@ -399,7 +405,7 @@ TEST_CASE ("unit/manager_kicks") {
   CHECK (cv_quota.As<int> () == 0);
 
   // initQuota drops queued requests
-  bots.Addbot ("Dropped", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("Dropped", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   bots.InitQuota ();
   cv_quota.Set (10);
   engine.AdvanceTime (6.0f);
@@ -420,11 +426,11 @@ TEST_CASE ("unit/manager_teams") {
 
   BootManager (engine, cs);
 
-  bots.Addbot ("TeamA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("TeamB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
-  bots.Addbot ("TeamK", Difficulty::Hard, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("TeamV", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
-  bots.Addbot ("TeamW", Difficulty::Hard, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("TeamA", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("TeamB", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
+  bots.Addbot ("TeamK", Difficulty::Hard, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("TeamV", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
+  bots.Addbot ("TeamW", Difficulty::Hard, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 5));
 
   edict_t *h1 = CreateHuman ("Human1");
@@ -679,8 +685,8 @@ TEST_CASE ("unit/manager_maintain") {
   BootManager (engine, cs);
   bots.InitQuota ();
 
-  bots.Addbot ("KeepA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("KeepB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("KeepA", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("KeepB", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
 
   Bot *a = nullptr;
@@ -768,8 +774,8 @@ TEST_CASE ("unit/manager_leaders_as") {
   BootManagerMap (engine, cs, "info_vip_safetyzone");
   HOST_REQUIRE (game.MapIs (MapFlags::Assassination));
 
-  bots.Addbot ("AsT", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("AsV", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("AsT", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("AsV", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
 
   Bot *t = testhost::FindBot ("AsT");
@@ -805,8 +811,8 @@ TEST_CASE ("unit/manager_leaders_de") {
   BootManagerMap (engine, cs, "func_bomb_target");
   HOST_REQUIRE (game.MapIs (MapFlags::Demolition));
 
-  bots.Addbot ("DeT", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("DeC", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("DeT", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("DeC", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
 
   Bot *t = testhost::FindBot ("DeT");
@@ -837,8 +843,8 @@ TEST_CASE ("unit/manager_autokill") {
 
   BootManager (engine, cs);
 
-  bots.Addbot ("NoclipA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("NoclipB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("NoclipA", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("NoclipB", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
 
   edict_t *human = CreateHuman ("Noclipper");
@@ -899,7 +905,7 @@ TEST_CASE ("unit/manager_quota") {
   BootManager (engine, cs);
   ystl::rg.seed (1234);
 
-  bots.Addbot ("QuotaA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("QuotaA", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
   Bot *a = testhost::FindBot ("QuotaA");
   HOST_REQUIRE (a != nullptr);
@@ -1030,9 +1036,9 @@ TEST_CASE ("unit/manager_balance") {
   BootManager (engine, cs);
   ystl::rg.seed (1234);
 
-  bots.Addbot ("BalA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("BalB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
-  bots.Addbot ("BalC", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("BalA", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("BalB", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
+  bots.Addbot ("BalC", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 3));
   Bot *a = testhost::FindBot ("BalA");
   Bot *b = testhost::FindBot ("BalB");
@@ -1075,8 +1081,8 @@ TEST_CASE ("unit/manager_balance") {
   CHECK (!bots.BalancedKickRandom (false));
 
   // remove-all from a team decrements quota by that team size
-  bots.Addbot ("BalD", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("BalE", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("BalD", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("BalE", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
   Bot *d = testhost::FindBot ("BalD");
   Bot *e = testhost::FindBot ("BalE");
@@ -1129,8 +1135,8 @@ TEST_CASE ("unit/manager_round") {
   BootManager (engine, cs);
   ystl::rg.seed (1234);
 
-  bots.Addbot ("RndA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("RndB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("RndA", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("RndB", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
   Bot *a = testhost::FindBot ("RndA");
   Bot *b = testhost::FindBot ("RndB");
@@ -1205,7 +1211,7 @@ TEST_CASE ("unit/manager_endgame") {
   HOST_REQUIRE (game.MapIs (MapFlags::Demolition));
   ystl::rg.seed (1234);
 
-  bots.Addbot ("RndT", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("RndT", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
   Bot *t = testhost::FindBot ("RndT");
   HOST_REQUIRE (t != nullptr);
@@ -1223,7 +1229,7 @@ TEST_CASE ("unit/manager_endgame") {
   game_state.SetBombPlanted (false);
 
   // winner notify with radio mode 2 pings the winning alive bot
-  bots.Addbot ("RndW", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("RndW", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
   Bot *w = testhost::FindBot ("RndW");
   HOST_REQUIRE (w != nullptr);
@@ -1252,8 +1258,8 @@ TEST_CASE ("unit/manager_radio") {
   BootManager (engine, cs);
   ystl::rg.seed (1234);
 
-  bots.Addbot ("RadA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("RadB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("RadA", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("RadB", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
   Bot *a = testhost::FindBot ("RadA");
   Bot *b = testhost::FindBot ("RadB");
@@ -1342,7 +1348,7 @@ TEST_CASE ("unit/manager_tick") {
   BootManager (engine, cs);
   ystl::rg.seed (1234);
 
-  bots.Addbot ("TickA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("TickA", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
   Bot *a = testhost::FindBot ("TickA");
   HOST_REQUIRE (a != nullptr);
@@ -1387,7 +1393,7 @@ TEST_CASE ("unit/manager_tick") {
   a->wanted_team_ = CSTeam::Terrorist;
   ManagerHook::TeamJoin (*a);
   a->start_action_ = Msg::ClassSelect;
-  a->wanted_skin_ = 1;
+  a->wanted_skin_ = Skin::Terror;
   ManagerHook::TeamJoin (*a);
 
   // path type and difficulty setters cover personality and clamp branches
@@ -1417,8 +1423,8 @@ TEST_CASE ("unit/manager_difficulty") {
   // this case drives raw difficulty mechanics, so manual bots here must not pin
   cv_difficulty_lock.Set (0);
 
-  bots.Addbot ("DiffA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("DiffB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("DiffA", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("DiffB", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
   Bot *a = testhost::FindBot ("DiffA");
   Bot *b = testhost::FindBot ("DiffB");
@@ -1503,9 +1509,9 @@ TEST_CASE ("unit/manager_listing") {
   BootManager (engine, cs);
   ystl::rg.seed (1234);
 
-  bots.Addbot ("ListR", Difficulty::Normal, Personality::Rusher, Team::Terrorist, 1, true);
-  bots.Addbot ("ListN", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
-  bots.Addbot ("ListC", Difficulty::Normal, Personality::Careful, Team::Unassigned, 1, true);
+  bots.Addbot ("ListR", Difficulty::Normal, Personality::Rusher, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("ListN", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
+  bots.Addbot ("ListC", Difficulty::Normal, Personality::Careful, Team::Unassigned, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 3));
   Bot *r = testhost::FindBot ("ListR");
   Bot *n = testhost::FindBot ("ListN");
@@ -1555,28 +1561,28 @@ TEST_CASE ("unit/manager_origin") {
 
   // invalid difficulty with invalid cvar falls back to random and rewrites the cvar
   cv_difficulty.Set (99);
-  bots.Addbot ("OrgA", Difficulty::Invalid, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("OrgA", Difficulty::Invalid, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
   CHECK (cv_difficulty.As<int> () >= 0);
   cv_difficulty.Revert ();
 
   // preferred personality pins invalid requests, empty preferred rolls random
   cv_preferred_personality.Set ("rusher");
-  bots.Addbot ("OrgB", Difficulty::Normal, Personality::Invalid, Team::CT, 1, true);
+  bots.Addbot ("OrgB", Difficulty::Normal, Personality::Invalid, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
   Bot *pinned = testhost::FindBot ("OrgB");
   HOST_REQUIRE (pinned != nullptr);
   CHECK (pinned->personality_ == Personality::Rusher);
   cv_preferred_personality.Set ("none");
   ystl::rg.force_int (1);
-  bots.Addbot ("OrgC", Difficulty::Normal, Personality::Invalid, Team::CT, 1, true);
+  bots.Addbot ("OrgC", Difficulty::Normal, Personality::Invalid, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 3));
   ystl::rg.clear_forced ();
 
   // name prefix disables save-bots and prefixes the next bot
   cv_save_bots.Set (1);
   cv_name_prefix.Set ("YB");
-  bots.Addbot ("OrgD", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("OrgD", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 4));
   CHECK (cv_save_bots.As<int> () == 0);
   cv_name_prefix.Revert ();
@@ -1584,7 +1590,7 @@ TEST_CASE ("unit/manager_origin") {
 
   // manual add at capacity is refused before creation
   cv_quota.Set (10);
-  bots.Addbot ("OrgQ", Difficulty::Normal, Personality::Normal, Team::CT, 1, false);
+  bots.Addbot ("OrgQ", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, false);
   engine.AdvanceTime (0.3f);
   bots.MaintainQuota ();
   CHECK (testhost::FindBot ("OrgQ") != nullptr || testhost::FindBot ("OrgQ") == nullptr);
@@ -1600,7 +1606,7 @@ TEST_CASE ("unit/manager_origin") {
   clients[stack[0]].team2 = Team::Terrorist;
   clients[stack[1]].team2 = Team::Terrorist;
   clients[stack[2]].team2 = Team::Terrorist;
-  bots.Addbot ("OrgS", Difficulty::Normal, Personality::Normal, Team::CT, 1, false);
+  bots.Addbot ("OrgS", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, false);
   engine.AdvanceTime (0.3f);
   bots.MaintainQuota ();
   CHECK (testhost::FindBot ("OrgS") == nullptr);
@@ -1612,7 +1618,7 @@ TEST_CASE ("unit/manager_origin") {
   HOST_REQUIRE (saved != nullptr);
   const ystl::String saved_name = saved->pev->netname.str ();
   bots.DisconnectBot (saved);
-  bots.Addbot ("", Difficulty::Invalid, Personality::Invalid, Team::Invalid, -1, true);
+  bots.Addbot ("", Difficulty::Invalid, Personality::Invalid, Team::Invalid, Skin::Random, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 4));
   cv_save_bots.Revert ();
 
@@ -1665,7 +1671,7 @@ TEST_CASE ("unit/manager_worker") {
 
   // show latency and avatar paths run inside bot creation
   cv_show_latency.Set (1);
-  bots.Addbot ("WorkA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("WorkA", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
   CHECK (testhost::FindBot ("WorkA") != nullptr);
   cv_show_latency.Revert ();
@@ -1688,8 +1694,8 @@ TEST_CASE ("unit/manager_lock") {
   cv_difficulty_lock.Set (1);
 
   // an explicit manual difficulty pins, a random one does not
-  bots.Addbot ("LockHard", Difficulty::Hard, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("LockRand", Difficulty::Invalid, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("LockHard", Difficulty::Hard, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("LockRand", Difficulty::Invalid, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
 
   Bot *pinned = testhost::FindBot ("LockHard");
@@ -1731,8 +1737,8 @@ TEST_CASE ("unit/manager_lock") {
   // the creation-time random range is bypassed for pinned bots
   cv_difficulty_min.Set (ystl::to_underlying (Difficulty::Noob));
   cv_difficulty_max.Set (ystl::to_underlying (Difficulty::Noob));
-  bots.Addbot ("LockRange", Difficulty::Expert, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("RangeAuto", Difficulty::Invalid, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("LockRange", Difficulty::Expert, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("RangeAuto", Difficulty::Invalid, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 4));
 
   Bot *ranged = testhost::FindBot ("LockRange");

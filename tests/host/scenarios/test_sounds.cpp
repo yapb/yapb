@@ -72,7 +72,7 @@ TEST_CASE ("unit/sounds_classify") {
 
   BootSounds (engine, cs);
 
-  bots.Addbot ("SndB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("SndB", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("SndB");
@@ -229,7 +229,7 @@ TEST_CASE ("unit/sounds_sim") {
 
   BootSounds (engine, cs);
 
-  bots.Addbot ("SndS", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("SndS", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("SndS");

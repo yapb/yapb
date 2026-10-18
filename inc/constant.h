@@ -49,6 +49,24 @@ enum class Difficulty : int32_t {
 };
 YSTL_ENABLE_ENUM_ARITHMETIC (Difficulty);
 
+// class-select menu slot, team dependent: T 1=terror 2=leet 3=arctic 4=guerilla 5=militia(cz), CT 1=urban 2=gsg9 3=sas 4=gign 5=spetsnaz(cz)
+enum class Skin : int32_t {
+  Random = 0, // let the game pick a class
+
+  Terror = 1,
+  Leet = 2,
+  Arctic = 3,
+  Guerilla = 4,
+  Militia = 5,
+
+  Urban = 1,
+  Gsg9 = 2,
+  Sas = 3,
+  Gign = 4,
+  Spetsnaz = 5,
+};
+YSTL_ENABLE_ENUM_ARITHMETIC (Skin);
+
 constexpr auto kInfiniteDistance = 9999999.0f;
 constexpr auto kInvalidLightLevel = kInfiniteDistance;
 constexpr float kPlayerJumpTakeoff = 268.0f; // engine jump takeoff speed, ~45u height at 800 gravity
@@ -80,4 +98,3 @@ constexpr auto kBombPanicHearDistance = 2048.0f;
 constexpr auto kBombSiteGoalRadius = 1024.0f; // goals this close to a checked one belong to the same site
 
 } // namespace bot
-

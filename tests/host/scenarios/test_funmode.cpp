@@ -105,7 +105,7 @@ TEST_CASE ("unit/funmode_modes") {
   fun_mode.SetMode (FunModeId::Off);
 
   // tron/stoned work off the client table, ghosts need real bots
-  bots.Addbot ("FunT", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("FunT", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = nullptr;

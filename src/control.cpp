@@ -1929,7 +1929,7 @@ CommandResult Control::MenuTeamSelect (int item) {
       inter_menu_data_[2] = item;
 
       bots.Addbot ("", static_cast<Difficulty> (inter_menu_data_[0]), static_cast<Personality> (inter_menu_data_[3]),
-        util.ConvertFromCsTeam (static_cast<CSTeam> (inter_menu_data_[1])), inter_menu_data_[2], true);
+        util.ConvertFromCsTeam (static_cast<CSTeam> (inter_menu_data_[1])), static_cast<Skin> (inter_menu_data_[2]), true);
     }
     else if (game.Is (GameFlags::ConditionZero)) {
       ShowMenu (item == 1 ? MenuId::TerroristSelectCZ : MenuId::CTSelectCZ);
@@ -1958,7 +1958,7 @@ CommandResult Control::MenuClassSelect (int item) {
   case 6:
     inter_menu_data_[2] = item;
     bots.Addbot ("", static_cast<Difficulty> (inter_menu_data_[0]), static_cast<Personality> (inter_menu_data_[3]),
-      util.ConvertFromCsTeam (static_cast<CSTeam> (inter_menu_data_[1])), inter_menu_data_[2], true);
+      util.ConvertFromCsTeam (static_cast<CSTeam> (inter_menu_data_[1])), static_cast<Skin> (inter_menu_data_[2]), true);
     break;
 
   case 10:

@@ -108,7 +108,7 @@ void Manager::ForEach (ForEachBot handler) {
   }
 }
 
-CreateResult Manager::Create (ystl::StringRef name, Difficulty difficulty, Personality personality, Team team, int skin, bool diff_locked) {
+CreateResult Manager::Create (ystl::StringRef name, Difficulty difficulty, Personality personality, Team team, Skin skin, bool diff_locked) {
   // prepare bot entity for creation with team, difficulty and name
 
   edict_t *bot = nullptr;
@@ -358,7 +358,7 @@ uint8_t TickManager::ComputeMsec (const Bot *bot) const {
   return static_cast<uint8_t> (ystl::clamp (msec, 1, 255));
 }
 
-void Manager::Addbot (ystl::StringRef name, Difficulty difficulty, Personality personality, Team team, int skin, bool manual) {
+void Manager::Addbot (ystl::StringRef name, Difficulty difficulty, Personality personality, Team team, Skin skin, bool manual) {
   // this function putting bot creation process to queue to prevent engine crashes
 
   const bool explicit_difficulty = difficulty >= Difficulty::Noob && difficulty <= Difficulty::Expert;
@@ -409,7 +409,7 @@ void Manager::Addbot (
 
   Request request { .manual = manual,
     .diff_locked = manual && explicit_difficulty,
-    .skin = handle_param (skin),
+    .skin = static_cast<Skin> (handle_param (skin)),
     .team = util.ConvertFromCsTeam (static_cast<CSTeam> (handle_param (team))),
     .personality = static_cast<Personality> (handle_param (personality)),
     .difficulty = difficulty_value,
@@ -448,8 +448,7 @@ void Manager::MaintainQuota () {
 
       return;
     }
-    const auto create_result =
-      Create (request.name, request.difficulty, request.personality, request.team, request.skin, request.diff_locked);
+    const auto create_result = Create (request.name, request.difficulty, request.personality, request.team, request.skin, request.diff_locked);
 
     // only increment quota for manual add on successful creation
     if (request.manual && create_result == CreateResult::Success) {
@@ -696,7 +695,7 @@ void Manager::ServerFill (CSTeam team, Personality personality, Difficulty diffi
   }
 
   for (int i = 0; i < to_add; ++i) {
-    Addbot ("", difficulty, personality, util.ConvertFromCsTeam (team), -1, true);
+    Addbot ("", difficulty, personality, util.ConvertFromCsTeam (team), Skin::Random, true);
   }
   ctrl.Msg ("Fill server with %s bots...", &kTeams[ystl::to_underlying (team)][0]);
 }
@@ -1249,7 +1248,7 @@ void Manager::Destroy () {
   ystl::memzero (bots_by_index_, sizeof (bots_by_index_));
 }
 
-Bot::Bot (edict_t *bot, Difficulty difficulty, Personality personality, Team team, int skin, bool diff_locked) {
+Bot::Bot (edict_t *bot, Difficulty difficulty, Personality personality, Team team, Skin skin, bool diff_locked) {
   // this function does core operation of creating bot, it's called by addbot, when bot setup completed,
 
   const int client_index = game.IndexOfEntity (bot);
@@ -2108,17 +2107,17 @@ void Bot::UpdateTeamJoin () {
     enforced_skin = ystl::clamp (enforced_skin, 0, max_choice);
 
     // try to choice manually
-    if (wanted_skin_ < 1 || wanted_skin_ > max_choice) {
-      wanted_skin_ = rg (1, max_choice); // use random if invalid
+    if (ystl::to_underlying (wanted_skin_) < 1 || ystl::to_underlying (wanted_skin_) > max_choice) {
+      wanted_skin_ = static_cast<Skin> (rg (1, max_choice)); // use random if invalid
     }
 
     // and set enforced if any
     if (enforced_skin > 0) {
-      wanted_skin_ = enforced_skin;
+      wanted_skin_ = static_cast<Skin> (enforced_skin);
     }
 
     // select the class the bot wishes to use
-    IssueCommand ("menuselect %d", wanted_skin_);
+    IssueCommand ("menuselect %d", ystl::to_underlying (wanted_skin_));
 
     // bot has now joined the game (doesn't need to be started)
     not_started_ = false;

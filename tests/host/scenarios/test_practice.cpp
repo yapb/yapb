@@ -212,8 +212,8 @@ TEST_CASE ("unit/practice_update") {
   BootPractice (engine, cs);
   practice.Load ();
 
-  bots.Addbot ("PracVictim", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("PracAttacker", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("PracVictim", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("PracAttacker", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
 
   Bot *victim = testhost::FindBot ("PracVictim");

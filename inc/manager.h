@@ -46,7 +46,7 @@ struct DifficultyData {
 struct Request {
   bool manual {};
   bool diff_locked {}; // keep difficulty fixed, ignore global/auto changes
-  int skin {};
+  Skin skin {};
   Team team {};
   Personality personality {};
   Difficulty difficulty {};
@@ -94,7 +94,7 @@ private:
   ystl::CountdownTimer hold_quota_management_timer_ {}; // prevent from running quota management for some time
 
 protected:
-  CreateResult Create (ystl::StringRef name, Difficulty difficulty, Personality personality, Team team, int skin, bool diff_locked);
+  CreateResult Create (ystl::StringRef name, Difficulty difficulty, Personality personality, Team team, Skin skin, bool diff_locked);
 
 public:
   Manager ();
@@ -121,7 +121,7 @@ public:
   void DestroyKillerEntity ();
   void TouchKillerEntity (Bot *bot);
   void Destroy ();
-  void Addbot (ystl::StringRef name, Difficulty difficulty, Personality personality, Team team, int skin, bool manual);
+  void Addbot (ystl::StringRef name, Difficulty difficulty, Personality personality, Team team, Skin skin, bool manual);
   void Addbot (
     ystl::StringRef name, ystl::StringRef difficulty, ystl::StringRef personality, ystl::StringRef team, ystl::StringRef skin, bool manual);
   void ServerFill (CSTeam team, Personality personality = Personality::Normal, Difficulty difficulty = Difficulty::Invalid, int num_to_add = -1);
@@ -173,7 +173,7 @@ public:
   }
 
   void CreateRandom (bool manual = false) {
-    Addbot ("", Difficulty::Invalid, Personality::Invalid, Team::Invalid, -1, manual);
+    Addbot ("", Difficulty::Invalid, Personality::Invalid, Team::Invalid, Skin::Random, manual);
   }
 
   bool EnemySpotted () const {

@@ -129,7 +129,7 @@ TEST_CASE ("unit/module_api") {
   CHECK (api->GetNodeOrigin (99) == nullptr);
 
   // ...a live bot answers identity, node and goal queries...
-  bots.Addbot ("ModA", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("ModA", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = nullptr;

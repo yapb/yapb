@@ -184,7 +184,7 @@ TEST_CASE ("unit/buying_select") {
 
   BootBuy (engine, cs);
 
-  bots.Addbot ("BuyS", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("BuyS", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("BuyS");
@@ -308,8 +308,8 @@ TEST_CASE ("unit/buying_flow") {
 
   BootBuy (engine, cs);
 
-  bots.Addbot ("BuyF", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("BuyF2", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("BuyF", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("BuyF2", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
 
   Bot *bot = testhost::FindBot ("BuyF");

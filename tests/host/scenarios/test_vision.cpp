@@ -169,7 +169,7 @@ TEST_CASE ("unit/vision_angles") {
 
   BootVision (engine, cs);
 
-  bots.Addbot ("VisA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("VisA", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("VisA");
@@ -261,7 +261,7 @@ TEST_CASE ("unit/vision_sees") {
 
   BootVision (engine, cs);
 
-  bots.Addbot ("VisS", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("VisS", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("VisS");
@@ -358,7 +358,7 @@ TEST_CASE ("unit/vision_aim") {
 
   BootVision (engine, cs);
 
-  bots.Addbot ("VisM", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("VisM", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("VisM");
@@ -503,7 +503,7 @@ TEST_CASE ("unit/vision_nav") {
   planner.Init ();
   practice.Load ();
 
-  bots.Addbot ("VisN", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("VisN", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("VisN");

@@ -465,8 +465,8 @@ TEST_CASE ("unit/behavior_queue") {
 
   BootBehavior (engine, cs);
 
-  bots.Addbot ("MsgA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("MsgB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("MsgA", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("MsgB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
 
   Bot *a = testhost::FindBot ("MsgA");
@@ -525,7 +525,7 @@ TEST_CASE ("unit/behavior_senses") {
 
   BootBehavior (engine, cs);
 
-  bots.Addbot ("SenseB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("SenseB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("SenseB");
@@ -684,7 +684,7 @@ TEST_CASE ("unit/behavior_senses") {
   // conditions aggregate a frame: kill credit, dead-enemy forget, census
   // (a dedicated fresh bot keeps stale orders, timers and enemies out;
   // the leftover live edict counts as a teammate so lookup stays blind)
-  bots.Addbot ("CondB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("CondB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
 
   Bot *cond = testhost::FindBot ("CondB");
@@ -808,7 +808,7 @@ TEST_CASE ("unit/behavior_map") {
   cv_quota.Set (10);
   practice.Load ();
 
-  bots.Addbot ("MapB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("MapB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("MapB");
@@ -873,7 +873,7 @@ TEST_CASE ("unit/behavior_frame") {
 
   BootBehavior (engine, cs);
 
-  bots.Addbot ("FrameB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("FrameB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("FrameB");
@@ -901,7 +901,7 @@ TEST_CASE ("unit/behavior_damage") {
 
   BootBehavior (engine, cs);
 
-  bots.Addbot ("DmgB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("DmgB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("DmgB");
@@ -990,8 +990,8 @@ TEST_CASE ("unit/behavior_logic") {
 
   BootBehavior (engine, cs);
 
-  bots.Addbot ("LogB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("LogD", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("LogB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("LogD", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
 
   Bot *bot = testhost::FindBot ("LogB");
@@ -1137,8 +1137,8 @@ TEST_CASE ("unit/behavior_radio_dispatch") {
 
   BootBehavior (engine, cs);
 
-  bots.Addbot ("RadA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("RadB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("RadA", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("RadB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
 
   Bot *a = testhost::FindBot ("RadA");
@@ -1210,7 +1210,7 @@ TEST_CASE ("unit/behavior_flash_avoid") {
 
   BootBehavior (engine, cs);
 
-  bots.Addbot ("FlashB", Difficulty::Expert, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("FlashB", Difficulty::Expert, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("FlashB");
@@ -1317,7 +1317,7 @@ TEST_CASE ("unit/behavior_c4_approach") {
   cv_quota.Set (10);
   practice.Load ();
 
-  bots.Addbot ("C4B", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("C4B", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
   cv_quota.Set (1);
 
@@ -1381,7 +1381,7 @@ TEST_CASE ("unit/behavior_predict") {
 
   BootBehavior (engine, cs);
 
-  bots.Addbot ("PredB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("PredB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("PredB");
@@ -1561,8 +1561,8 @@ TEST_CASE ("unit/behavior_siege") {
   cv_quota.Set (10);
   practice.Load ();
 
-  bots.Addbot ("SiegeT", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("SiegeC", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("SiegeT", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("SiegeC", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
 
   Bot *ter = testhost::FindBot ("SiegeT");
@@ -1779,7 +1779,7 @@ TEST_CASE ("unit/behavior_ordnance") {
 
   BootBehavior (engine, cs);
 
-  bots.Addbot ("OrdB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("OrdB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("OrdB");
@@ -1862,7 +1862,7 @@ TEST_CASE ("unit/behavior_ordnance") {
 
   // ...friendly fire never triggers a dodge...
   Bot *mate = nullptr;
-  bots.Addbot ("OrdM", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("OrdM", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
   mate = testhost::FindBot ("OrdM");
   HOST_REQUIRE (mate != nullptr);
@@ -1955,12 +1955,12 @@ TEST_CASE ("unit/behavior_dispatch") {
 
   BootBehavior (engine, cs);
 
-  bots.Addbot ("DisA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("DisB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("DisJ", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("DisV", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("DisD", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("DisN", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("DisA", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("DisB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("DisJ", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("DisV", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("DisD", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("DisN", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 6));
 
   Bot *a = testhost::FindBot ("DisA");
@@ -2072,7 +2072,7 @@ TEST_CASE ("unit/behavior_trauma") {
 
   BootBehavior (engine, cs);
 
-  bots.Addbot ("TrmB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("TrmB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("TrmB");
@@ -2234,8 +2234,8 @@ TEST_CASE ("unit/behavior_donate2") {
 
   BootBehavior (engine, cs);
 
-  bots.Addbot ("Don2", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("DonM", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("Don2", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("DonM", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
 
   Bot *bot = testhost::FindBot ("Don2");
@@ -2296,7 +2296,7 @@ TEST_CASE ("unit/behavior_lifecycle") {
 
   BootBehavior (engine, cs);
 
-  bots.Addbot ("LifeB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("LifeB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("LifeB");
@@ -2578,7 +2578,7 @@ TEST_CASE ("unit/behavior_override") {
 
   BootBehavior (engine, cs);
 
-  bots.Addbot ("OvrB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("OvrB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("OvrB");
@@ -2725,7 +2725,7 @@ TEST_CASE ("unit/behavior_breakables") {
   cv_quota.Set (10);
   practice.Load ();
 
-  bots.Addbot ("BrkB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("BrkB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("BrkB");
@@ -2941,7 +2941,7 @@ TEST_CASE ("unit/behavior_teleport") {
   cv_quota.Set (10);
   practice.Load ();
 
-  bots.Addbot ("TelB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("TelB", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("TelB");
@@ -3071,8 +3071,8 @@ TEST_CASE ("unit/behavior_comms") {
 
   BootBehavior (engine, cs);
 
-  bots.Addbot ("ComA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("ComB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("ComA", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("ComB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
 
   Bot *a = testhost::FindBot ("ComA");
@@ -3126,7 +3126,7 @@ TEST_CASE ("unit/behavior_hearing2") {
 
   BootBehavior (engine, cs);
 
-  bots.Addbot ("HearB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("HearB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("HearB");

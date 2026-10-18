@@ -198,9 +198,9 @@ TEST_CASE ("unit/chatlib_bot") {
   BootChat (engine, cs);
   InjectKeyword ("XYZZYQ", "Hi there");
 
-  bots.Addbot ("ChatB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("ChatC", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("ChatD", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("ChatB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("ChatC", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("ChatD", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 3));
 
   Bot *b = testhost::FindBot ("ChatB");
@@ -436,7 +436,7 @@ TEST_CASE ("unit/chatlib_banks") {
   // every exact buffer assert below (dice legs are covered above)
   cv_language.Set ("xx");
 
-  bots.Addbot ("BankB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("BankB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("BankB");

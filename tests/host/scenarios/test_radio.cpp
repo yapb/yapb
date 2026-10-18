@@ -186,9 +186,9 @@ TEST_CASE ("unit/radio_orders") {
 
   BootRadio (engine, cs);
 
-  bots.Addbot ("RadB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("RadF1", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("RadF2", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("RadB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("RadF1", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("RadF2", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 3));
 
   Bot *bot = testhost::FindBot ("RadB");
@@ -434,7 +434,7 @@ TEST_CASE ("unit/radio_chatter") {
 
   BootRadio (engine, cs);
 
-  bots.Addbot ("RadC", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("RadC", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("RadC");
@@ -676,7 +676,7 @@ TEST_CASE ("unit/radio_chance") {
 
   BootRadio (engine, cs);
 
-  bots.Addbot ("RadChance", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("RadChance", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("RadChance");
@@ -743,8 +743,8 @@ TEST_CASE ("unit/radio_odds") {
 
   BootRadio (engine, cs);
 
-  bots.Addbot ("OddB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("OddF", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("OddB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("OddF", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
 
   Bot *bot = testhost::FindBot ("OddB");
@@ -926,7 +926,7 @@ TEST_CASE ("unit/radio_report") {
 
   BootRadio (engine, cs);
 
-  bots.Addbot ("RepB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("RepB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("RepB");
@@ -1165,7 +1165,7 @@ TEST_CASE ("unit/radio_kill") {
   cv_quota.Set (10);
   cv_radio_mode.Set (2);
 
-  bots.Addbot ("KilB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("KilB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("KilB");
@@ -1434,7 +1434,7 @@ TEST_CASE ("unit/radio_kill") {
   CHECK (bot->GetTaskId () == TaskId::Normal);
   bot->has_c4_ = false;
 
-  bots.Addbot ("KilM", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("KilM", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
 
   Bot *mate = testhost::FindBot ("KilM");
@@ -1481,7 +1481,7 @@ TEST_CASE ("unit/radio_voice") {
 
   BootRadio (engine, cs);
 
-  bots.Addbot ("VoxB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("VoxB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("VoxB");

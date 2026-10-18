@@ -77,7 +77,7 @@ TEST_CASE ("unit/debug_panel") {
   botdebug.SetString (DebugChannel::Legs, 1, "legs");
 
   // ...a live bot fills every channel from default state...
-  bots.Addbot ("Dbg", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("Dbg", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = nullptr;

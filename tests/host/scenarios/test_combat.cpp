@@ -403,7 +403,7 @@ TEST_CASE ("unit/combat_senses") {
 
   BootCombat (engine, cs);
 
-  bots.Addbot ("CbtB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("CbtB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("CbtB");
@@ -578,7 +578,7 @@ TEST_CASE ("unit/combat_fire") {
 
   BootCombat (engine, cs);
 
-  bots.Addbot ("CbtF", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("CbtF", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("CbtF");
@@ -725,7 +725,7 @@ TEST_CASE ("unit/combat_watch") {
 
   BootCombat (engine, cs);
 
-  bots.Addbot ("CbtW", Difficulty::Expert, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("CbtW", Difficulty::Expert, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("CbtW");
@@ -820,7 +820,7 @@ TEST_CASE ("scenario/combat_engagement") {
 
   BootCombat (engine, cs);
 
-  bots.Addbot ("EngB", Difficulty::Expert, Personality::Rusher, Team::Terrorist, 1, true);
+  bots.Addbot ("EngB", Difficulty::Expert, Personality::Rusher, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("EngB");
@@ -891,7 +891,7 @@ TEST_CASE ("unit/combat_predicates_extra") {
 
   BootCombat (engine, cs);
 
-  bots.Addbot ("CbtX", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("CbtX", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("CbtX");
@@ -968,7 +968,7 @@ TEST_CASE ("unit/combat_attack_move") {
 
   BootCombat (engine, cs);
 
-  bots.Addbot ("CbtM", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("CbtM", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("CbtM");
@@ -1024,7 +1024,7 @@ TEST_CASE ("unit/combat_bulwark") {
   BootCombat (engine, cs);
   cv_use_hitbox_enemy_targeting.Set (1);
 
-  bots.Addbot ("BlkB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("BlkB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("BlkB");
@@ -1247,7 +1247,7 @@ TEST_CASE ("unit/combat_lurk") {
 
   BootCombat (engine, cs);
 
-  bots.Addbot ("LrkB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("LrkB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("LrkB");
@@ -1378,7 +1378,7 @@ TEST_CASE ("unit/combat_barrage") {
 
   BootCombat (engine, cs);
 
-  bots.Addbot ("BrgB", Difficulty::Expert, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("BrgB", Difficulty::Expert, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("BrgB");
@@ -1511,7 +1511,7 @@ TEST_CASE ("unit/combat_vantage") {
 
   BootCombat (engine, cs);
 
-  bots.Addbot ("VntB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("VntB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("VntB");
@@ -1655,7 +1655,7 @@ TEST_CASE ("unit/combat_siege") {
 
   BootCombat (engine, cs);
 
-  bots.Addbot ("SgeB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("SgeB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("SgeB");
@@ -1773,7 +1773,7 @@ TEST_CASE ("unit/combat_ambush") {
 
   BootCombat (engine, cs);
 
-  bots.Addbot ("AmbB", Difficulty::Expert, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("AmbB", Difficulty::Expert, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("AmbB");
@@ -1858,7 +1858,7 @@ TEST_CASE ("unit/combat_obscure") {
   BootCombat (engine, cs);
   cv_use_hitbox_enemy_targeting.Set (1);
 
-  bots.Addbot ("ObsB", Difficulty::Expert, Personality::Rusher, Team::Terrorist, 1, true);
+  bots.Addbot ("ObsB", Difficulty::Expert, Personality::Rusher, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("ObsB");
@@ -2024,7 +2024,7 @@ TEST_CASE ("unit/combat_obscure") {
   CombatHook::InvalidateEnemyUpdate (*bot);
   CHECK (CombatHook::Lookup (*bot) || !CombatHook::Lookup (*bot));
   CombatHook::SetOldButtons (*bot, IN_ATTACK);
-  bots.Addbot ("ObsC", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  bots.Addbot ("ObsC", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
   CombatHook::InvalidateEnemyUpdate (*bot);
   CHECK (CombatHook::Lookup (*bot) || !CombatHook::Lookup (*bot));

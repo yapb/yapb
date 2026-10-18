@@ -153,7 +153,7 @@ TEST_CASE ("unit/message_dispatch") {
   // no winner by default, so neither team gets the winner bonus
   CHECK (bots.GetLastWinner () == Team::Invalid);
 
-  bots.Addbot ("DispBot", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("DispBot", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("DispBot");
@@ -211,7 +211,7 @@ TEST_CASE ("unit/message_items") {
   CHECK (msgs.Add ("NVGToggle", kNVGToggle) == kNVGToggle);
   CHECK (msgs.Add ("FlashBat", kFlashBat) == kFlashBat);
 
-  bots.Addbot ("ItemBot", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("ItemBot", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
   Bot *bot = testhost::FindBot ("ItemBot");
@@ -450,8 +450,8 @@ TEST_CASE ("unit/message_round") {
   // no winner by default
   CHECK (bots.GetLastWinner () == Team::Invalid);
 
-  bots.Addbot ("RoundA", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-  bots.Addbot ("RoundB", Difficulty::Normal, Personality::Normal, Team::CT, 1, true);
+  bots.Addbot ("RoundA", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("RoundB", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
 
   Bot *a = testhost::FindBot ("RoundA");
