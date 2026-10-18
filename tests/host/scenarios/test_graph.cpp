@@ -750,8 +750,8 @@ TEST_CASE ("unit/graph_serial") {
   CHECK ((graph.paths_[1].start - ystl::Vector (10.0f, 20.0f, 0.0f)).length () < 0.02f);
   CHECK ((graph.paths_[1].end - ystl::Vector (40.0f, 50.0f, 0.0f)).length () < 0.02f);
 
-   ResetEdit ();
-   testhost::CloseFakeCs (cs);
+  ResetEdit ();
+  testhost::CloseFakeCs (cs);
 }
 
 TEST_CASE ("unit/graph_gaps") {
@@ -900,8 +900,7 @@ TEST_CASE ("unit/graph_gaps") {
   CHECK (all.size () >= 10 && !ContainsNode (all, far));
 
   // bsp size reads a real file from the mod directory
-  const ystl::String bsp_path =
-    ystl::strings.join_path (game.GetRunningModName (), "maps", game.GetMapName ()) + ".bsp";
+  const ystl::String bsp_path = ystl::strings.join_path (game.GetRunningModName (), "maps", game.GetMapName ()) + ".bsp";
   const ystl::String maps_dir = ystl::strings.join_path (game.GetRunningModName (), "maps");
   ystl::File::make_path (maps_dir.chars ());
   {
@@ -1663,10 +1662,9 @@ TEST_CASE ("unit/graph_build") {
   ladder->v.absmin = ystl::Vector (0.0f, 0.0f, 0.0f);
   ladder->v.absmax = ystl::Vector (64.0f, 64.0f, 256.0f);
 
-  const char *kinds[] = {
-    "info_player_deathmatch", "info_player_start", "info_vip_start", "armoury_entity", "func_hostage_rescue", "info_hostage_rescue",
-    "func_bomb_target", "info_bomb_target", "hostage_entity", "monster_scientist", "func_vip_safetyzone", "func_escapezone"
-  };
+  const char *kinds[] = { "info_player_deathmatch", "info_player_start", "info_vip_start", "armoury_entity", "func_hostage_rescue",
+    "info_hostage_rescue", "func_bomb_target", "info_bomb_target", "hostage_entity", "monster_scientist", "func_vip_safetyzone",
+    "func_escapezone" };
 
   for (size_t i = 0; i < 12; ++i) {
     const float base = static_cast<float> (5000 + i * 1000);
@@ -1764,23 +1762,21 @@ TEST_CASE ("unit/graph_import") {
   CHECK (!import_doc ("testdata-graph/no-nodes.graph.txt", "Meta {\n nodes = 1\n}\n"));
   CHECK (!import_doc ("testdata-graph/no-meta.graph.txt", "Nodes {\n 0 {\n origin = 0.00 0.00 0.00\n }\n}\n"));
   CHECK (!import_doc ("testdata-graph/bad-count.graph.txt", "Meta {\n nodes = 0\n}\nNodes {\n}\n"));
-  CHECK (!import_doc ("testdata-graph/count-mismatch.graph.txt",
-    "Meta {\n nodes = 2\n}\nNodes {\n 0 {\n origin = 0.00 0.00 0.00\n radius = 0.0\n }\n}\n"));
-  CHECK (!import_doc ("testdata-graph/bad-label.graph.txt",
-    "Meta {\n nodes = 1\n}\nNodes {\n x {\n origin = 0.00 0.00 0.00\n radius = 0.0\n }\n}\n"));
-  CHECK (!import_doc ("testdata-graph/bad-order.graph.txt",
-    "Meta {\n nodes = 2\n}\nNodes {\n 1 {\n origin = 100.00 0.00 0.00\n radius = 0.0\n }\n"
-    " 0 {\n origin = 0.00 0.00 0.00\n radius = 0.0\n }\n}\n"));
-  CHECK (!import_doc ("testdata-graph/no-origin.graph.txt",
-    "Meta {\n nodes = 1\n}\nNodes {\n 0 {\n radius = 0.0\n }\n}\n"));
-  CHECK (!import_doc ("testdata-graph/bad-origin.graph.txt",
-    "Meta {\n nodes = 1\n}\nNodes {\n 0 {\n origin = 1 2\n radius = 0.0\n }\n}\n"));
+  CHECK (!import_doc (
+    "testdata-graph/count-mismatch.graph.txt", "Meta {\n nodes = 2\n}\nNodes {\n 0 {\n origin = 0.00 0.00 0.00\n radius = 0.0\n }\n}\n"));
+  CHECK (!import_doc (
+    "testdata-graph/bad-label.graph.txt", "Meta {\n nodes = 1\n}\nNodes {\n x {\n origin = 0.00 0.00 0.00\n radius = 0.0\n }\n}\n"));
+  CHECK (
+    !import_doc ("testdata-graph/bad-order.graph.txt", "Meta {\n nodes = 2\n}\nNodes {\n 1 {\n origin = 100.00 0.00 0.00\n radius = 0.0\n }\n"
+                                                       " 0 {\n origin = 0.00 0.00 0.00\n radius = 0.0\n }\n}\n"));
+  CHECK (!import_doc ("testdata-graph/no-origin.graph.txt", "Meta {\n nodes = 1\n}\nNodes {\n 0 {\n radius = 0.0\n }\n}\n"));
+  CHECK (!import_doc ("testdata-graph/bad-origin.graph.txt", "Meta {\n nodes = 1\n}\nNodes {\n 0 {\n origin = 1 2\n radius = 0.0\n }\n}\n"));
   CHECK (!import_doc ("testdata-graph/bad-flag.graph.txt",
     "Meta {\n nodes = 1\n}\nNodes {\n 0 {\n origin = 0.00 0.00 0.00\n radius = 0.0\n flags = Frobnicate\n }\n}\n"));
   CHECK (!import_doc ("testdata-graph/bad-camp.graph.txt",
     "Meta {\n nodes = 1\n}\nNodes {\n 0 {\n origin = 0.00 0.00 0.00\n radius = 0.0\n camp = 1 2 3\n }\n}\n"));
-  CHECK (!import_doc ("testdata-graph/bad-link.graph.txt",
-    "Meta {\n nodes = 1\n}\nNodes {\n 0 {\n origin = 0.00 0.00 0.00\n radius = 0.0\n links = 99\n }\n}\n"));
+  CHECK (!import_doc (
+    "testdata-graph/bad-link.graph.txt", "Meta {\n nodes = 1\n}\nNodes {\n 0 {\n origin = 0.00 0.00 0.00\n radius = 0.0\n links = 99\n }\n}\n"));
   CHECK (!import_doc ("testdata-graph/many-links.graph.txt",
     "Meta {\n nodes = 2\n}\nNodes {\n 0 {\n origin = 0.00 0.00 0.00\n radius = 0.0\n links = 1, 1, 1, 1, 1, 1, 1, 1, 1\n }\n"
     " 1 {\n origin = 100.00 0.00 0.00\n radius = 0.0\n }\n}\n"));
@@ -1793,10 +1789,9 @@ TEST_CASE ("unit/graph_import") {
   CHECK (!import_doc ("testdata-graph/bad-linkflag.graph.txt",
     "Meta {\n nodes = 2\n}\nNodes {\n 0 {\n origin = 0.00 0.00 0.00\n radius = 0.0\n link {\n to = 1\n flags = Fly\n }\n }\n"
     " 1 {\n origin = 100.00 0.00 0.00\n radius = 0.0\n }\n}\n"));
-  CHECK (!import_doc ("testdata-graph/bad-velocity.graph.txt",
-    "Meta {\n nodes = 2\n}\nNodes {\n 0 {\n origin = 0.00 0.00 0.00\n radius = 0.0\n"
-    " link {\n to = 1\n velocity = 1.00 2.00\n }\n }\n"
-    " 1 {\n origin = 100.00 0.00 0.00\n radius = 0.0\n }\n}\n"));
+  CHECK (!import_doc ("testdata-graph/bad-velocity.graph.txt", "Meta {\n nodes = 2\n}\nNodes {\n 0 {\n origin = 0.00 0.00 0.00\n radius = 0.0\n"
+                                                               " link {\n to = 1\n velocity = 1.00 2.00\n }\n }\n"
+                                                               " 1 {\n origin = 100.00 0.00 0.00\n radius = 0.0\n }\n}\n"));
   CHECK (graph.Length () == 0);
 
   // rich document roundtrips flags, camp data, light and special links
@@ -1819,8 +1814,8 @@ TEST_CASE ("unit/graph_import") {
 
   // minimal document falls back to product naming and skips optionals
   graph.Reset ();
-  const bool minimal = import_doc ("testdata-graph/minimal.graph.txt",
-    "Meta {\n nodes = 1\n}\nNodes {\n 0 {\n origin = 0.00 0.00 0.00\n radius = 0.0\n }\n}\n");
+  const bool minimal =
+    import_doc ("testdata-graph/minimal.graph.txt", "Meta {\n nodes = 1\n}\nNodes {\n 0 {\n origin = 0.00 0.00 0.00\n radius = 0.0\n }\n}\n");
   CHECK (minimal);
   HOST_REQUIRE (graph.Length () == 1);
   CHECK (graph.info_.author == product.name);
@@ -1831,11 +1826,10 @@ TEST_CASE ("unit/graph_import") {
 
   const int x0 = AddTestNode (ystl::Vector (0.0f, 0.0f, 0.0f),
     ystl::to_underlying (NodeFlag::Button | NodeFlag::Lift | NodeFlag::Crouch | NodeFlag::Crossing | NodeFlag::DoubleJump));
-  const int x1 = AddTestNode (ystl::Vector (100.0f, 0.0f, 0.0f),
-    ystl::to_underlying (NodeFlag::Camp | NodeFlag::Sniper));
-  const int x2 = AddTestNode (ystl::Vector (200.0f, 0.0f, 0.0f),
-    ystl::to_underlying (NodeFlag::Goal | NodeFlag::Rescue | NodeFlag::NoHostage | NodeFlag::TerroristOnly |
-      NodeFlag::CTOnly | NodeFlag::Ladder | NodeFlag::Sniper));
+  const int x1 = AddTestNode (ystl::Vector (100.0f, 0.0f, 0.0f), ystl::to_underlying (NodeFlag::Camp | NodeFlag::Sniper));
+  const int x2 = AddTestNode (
+    ystl::Vector (200.0f, 0.0f, 0.0f), ystl::to_underlying (NodeFlag::Goal | NodeFlag::Rescue | NodeFlag::NoHostage | NodeFlag::TerroristOnly |
+                                                            NodeFlag::CTOnly | NodeFlag::Ladder | NodeFlag::Sniper));
   graph.paths_[0].light = 200.0f;
   graph.paths_[1].radius = 32.5f;
   graph.paths_[1].start = ystl::Vector (10.0f, 20.0f, 0.0f);
@@ -1850,8 +1844,8 @@ TEST_CASE ("unit/graph_import") {
   graph.info_.header.options = 0;
   graph.info_.exten.map_size = 0;
   ystl::String export_dir = ystl::strings.join_path (bstor.GetRunningPath (), folders.data, folders.graph);
-  const ystl::String export_file = ystl::strings.join_path (export_dir,
-    ystl::strings.format ("%s.graph.txt", ystl::String (game.GetMapName ()).lowercase ().chars ()));
+  const ystl::String export_file =
+    ystl::strings.join_path (export_dir, ystl::strings.format ("%s.graph.txt", ystl::String (game.GetMapName ()).lowercase ().chars ()));
   ::remove (export_file.chars ()); // drop leftovers from other runs
   ystl::File::make_path (export_file.chars ()); // a directory blocks the write
   CHECK (!graph.ExportGraphText ());
@@ -1862,8 +1856,7 @@ TEST_CASE ("unit/graph_import") {
   graph.info_.author.assign ("Tester");
   graph.info_.modified.assign ("Bob");
   graph.info_.exten.map_size = 123;
-  graph.info_.header.options =
-    ystl::to_underlying (StorageOption::Analyzed) | ystl::to_underlying (StorageOption::Official);
+  graph.info_.header.options = ystl::to_underlying (StorageOption::Analyzed) | ystl::to_underlying (StorageOption::Official);
   CHECK (graph.ExportGraphText ());
   ::remove (export_file.chars ());
 
@@ -1916,8 +1909,8 @@ TEST_CASE ("unit/graph_frame") {
 
   // every node color and flag combination lives near the editor viewport
   const int f0 = AddTestNode (ystl::Vector (100.0f, 0.0f, 0.0f),
-    ystl::to_underlying (NodeFlag::Lift | NodeFlag::Crouch | NodeFlag::Camp | NodeFlag::TerroristOnly | NodeFlag::CTOnly |
-      NodeFlag::Sniper | NodeFlag::Goal | NodeFlag::Ladder | NodeFlag::Rescue | NodeFlag::DoubleJump | NodeFlag::NoHostage));
+    ystl::to_underlying (NodeFlag::Lift | NodeFlag::Crouch | NodeFlag::Camp | NodeFlag::TerroristOnly | NodeFlag::CTOnly | NodeFlag::Sniper |
+                         NodeFlag::Goal | NodeFlag::Ladder | NodeFlag::Rescue | NodeFlag::DoubleJump | NodeFlag::NoHostage));
   graph.paths_[0].radius = 40.0f;
   graph.paths_[0].light = 200.0f;
   const int f1 = AddTestNode (ystl::Vector (140.0f, 0.0f, 0.0f));
@@ -1931,8 +1924,7 @@ TEST_CASE ("unit/graph_frame") {
   LinkTestNodes (f2, f0, 100);
   LinkTestNodes (f0, f3, 200);
   LinkTestNodes (f4, f0, 300); // one-way incoming into the hud node
-  const int f5 = AddTestNode (ystl::Vector (320.0f, 0.0f, 0.0f),
-    ystl::to_underlying (NodeFlag::Camp | NodeFlag::Crouch));
+  const int f5 = AddTestNode (ystl::Vector (320.0f, 0.0f, 0.0f), ystl::to_underlying (NodeFlag::Camp | NodeFlag::Crouch));
   graph.paths_[5].start = ystl::Vector (10.0f, 20.0f, 0.0f);
   graph.paths_[5].end = ystl::Vector (30.0f, 40.0f, 0.0f);
   const int f6 = AddTestNode (ystl::Vector (330.0f, 0.0f, 0.0f)); // zero wayzone: cross marker
@@ -2088,8 +2080,7 @@ TEST_CASE ("unit/graph_reach") {
   edict_t *door = engine.SpawnEntity ("func_door");
   HOST_REQUIRE (door != nullptr);
   int line_calls = 0;
-  engine.SetTraceLineHook ([door, &line_calls] (const float *v1, const float *v2, int no_monsters, edict_t *skip,
-    TraceResult *out) {
+  engine.SetTraceLineHook ([door, &line_calls] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
     testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
 
     if (line_calls++ == 0) {
@@ -2102,8 +2093,7 @@ TEST_CASE ("unit/graph_reach") {
   });
   CHECK (graph.IsNodeReacheable (ystl::Vector (2000.0f, 0.0f, 0.0f), ystl::Vector (2100.0f, 0.0f, 0.0f)));
   line_calls = 0;
-  engine.SetTraceLineHook ([door, &line_calls] (const float *v1, const float *v2, int no_monsters, edict_t *skip,
-    TraceResult *out) {
+  engine.SetTraceLineHook ([door, &line_calls] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
     testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
 
     if (line_calls++ == 0) {
@@ -2165,8 +2155,7 @@ TEST_CASE ("unit/graph_reach") {
   // wayzone sizing: ladders, ladder neighbours, doors and drops
   graph.Reset ();
   graph.SetEditFlag (GraphEdit::On);
-  const int r0 = AddTestNode (ystl::Vector (7000.0f, 0.0f, 0.0f),
-    ystl::to_underlying (NodeFlag::Ladder));
+  const int r0 = AddTestNode (ystl::Vector (7000.0f, 0.0f, 0.0f), ystl::to_underlying (NodeFlag::Ladder));
   graph.CalculatePathRadius (r0);
   CHECK (graph.paths_[r0].radius == 0.0f);
 

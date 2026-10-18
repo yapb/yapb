@@ -34,12 +34,12 @@ struct ChatHook {
   static bool CheckKeywords (Bot &bot, ystl::StringRef text, ystl::String &reply) {
     return bot.CheckChatKeywords (text, reply);
   }
-   static bool Replying (Bot &bot) {
-      return bot.IsReplyingToChat ();
-   }
-   static ystl::RWrand &Rng (Bot &bot) {
-      return bot.rg;
-   }
+  static bool Replying (Bot &bot) {
+    return bot.IsReplyingToChat ();
+  }
+  static ystl::RWrand &Rng (Bot &bot) {
+    return bot.rg;
+  }
 };
 
 namespace {
@@ -94,13 +94,13 @@ void BootChat (testhost::FakeEngine &engine, testhost::FakeCSApi &cs) {
   cv_language.Set ("xx");
 }
 
-   // single-reply factory: matching outcome is exact, rolls can't matter
+// single-reply factory: matching outcome is exact, rolls can't matter
 void InjectKeyword (const char *keyword, const char *reply) {
-   ChatKeywords factory {};
-   factory.keywords.push (keyword);
-   factory.replies.push (reply);
+  ChatKeywords factory {};
+  factory.keywords.push (keyword);
+  factory.replies.push (reply);
 
-   conf.GetReplies ().push (ystl::move (factory));
+  conf.GetReplies ().push (ystl::move (factory));
 }
 
 } // namespace
@@ -344,203 +344,203 @@ TEST_CASE ("unit/chatlib_bot") {
   b->SendToChat ("hello team", true);
   CHECK (c->say_text_buffer_.entity_index == b->index_);
   CHECK (ystl::StringRef (c->say_text_buffer_.say_text.chars ()) == "hello team");
-   CHECK (d->say_text_buffer_.entity_index == -1);
-   CHECK (ystl::StringRef (chatlib.ChatScratch ().chars ()).find ("hello team") != ystl::String::InvalidIndex);
+  CHECK (d->say_text_buffer_.entity_index == -1);
+  CHECK (ystl::StringRef (chatlib.ChatScratch ().chars ()).find ("hello team") != ystl::String::InvalidIndex);
 
-   bots.Destroy ();
+  bots.Destroy ();
 }
 
 TEST_CASE ("unit/chatlib_banks") {
-   testhost::FakeEngine engine;
-   testhost::FakeCSApi cs {};
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
 
-   BootChat (engine, cs);
+  BootChat (engine, cs);
 
-   // english unlocks the typo dice and the chs/cht branches stay out
-   cv_language.Set ("en");
+  // english unlocks the typo dice and the chs/cht branches stay out
+  cv_language.Set ("en");
 
-   // pinned global rolls drive every percent leg deterministically
-   ystl::rg.force_chance (true);
+  // pinned global rolls drive every percent leg deterministically
+  ystl::rg.force_chance (true);
 
-   ystl::String tagged = "[TAG]Bob";
-   chatlib.HumanizePlayerName (tagged);
-   CHECK (!tagged.empty ());
+  ystl::String tagged = "[TAG]Bob";
+  chatlib.HumanizePlayerName (tagged);
+  CHECK (!tagged.empty ());
 
-   ystl::String en_err = "0123456789ABCDEF";
-   chatlib.AddChatErrors (en_err);
+  ystl::String en_err = "0123456789ABCDEF";
+  chatlib.AddChatErrors (en_err);
 
-   ystl::rg.force_chance (false);
+  ystl::rg.force_chance (false);
 
-   ystl::String plain = "[TAG]Bob";
-   chatlib.HumanizePlayerName (plain);
-   CHECK (plain == "[TAG]Bob"); // trimming only, tags stay without the roll
+  ystl::String plain = "[TAG]Bob";
+  chatlib.HumanizePlayerName (plain);
+  CHECK (plain == "[TAG]Bob"); // trimming only, tags stay without the roll
 
-   ystl::rg.clear_forced ();
+  ystl::rg.clear_forced ();
 
-   // chinese error legs drop and swap through the same dice
-   cv_language.Set ("chs");
+  // chinese error legs drop and swap through the same dice
+  cv_language.Set ("chs");
 
-   ystl::String chs_err = "0123456789ABCDEF";
-   ystl::rg.force_chance (true);
-   chatlib.AddChatErrors (chs_err);
-   ystl::rg.clear_forced ();
+  ystl::String chs_err = "0123456789ABCDEF";
+  ystl::rg.force_chance (true);
+  chatlib.AddChatErrors (chs_err);
+  ystl::rg.clear_forced ();
 
-   // the loader reads the current language file, so switch back to english
-   cv_language.Set ("en");
+  // the loader reads the current language file, so switch back to english
+  cv_language.Set ("en");
 
-   // chat banks plus the keyword index come from one language file
-   const ystl::String chat_file = ystl::strings.join_path (
-      bstor.GetRunningPathVfs (), folders.config, folders.lang, ystl::String ("en_chat.cfg"));
-   ystl::File::make_path (ystl::String (chat_file.substr (0, chat_file.find_last_of (kPathSeparator))).chars ());
+  // chat banks plus the keyword index come from one language file
+  const ystl::String chat_file =
+    ystl::strings.join_path (bstor.GetRunningPathVfs (), folders.config, folders.lang, ystl::String ("en_chat.cfg"));
+  ystl::File::make_path (ystl::String (chat_file.substr (0, chat_file.find_last_of (kPathSeparator))).chars ());
 
-   ystl::String chat_text = "raw Killed {\n  kill one\n}\nraw DeadChat {\n  dead one\n}\nraw Unknown {\n  unknown one\n}\n";
-   chat_text += "Replies {\n  HelloGroup {\n    key = hello\n    raw {\n      hi there\n    }\n  }\n}\n";
-   chat_text += "GameNames {\n  CS = cs_one\n}\n";
+  ystl::String chat_text = "raw Killed {\n  kill one\n}\nraw DeadChat {\n  dead one\n}\nraw Unknown {\n  unknown one\n}\n";
+  chat_text += "Replies {\n  HelloGroup {\n    key = hello\n    raw {\n      hi there\n    }\n  }\n}\n";
+  chat_text += "GameNames {\n  CS = cs_one\n}\n";
 
-   {
-      ystl::File file (chat_file, "wb");
-      HOST_REQUIRE (!!file);
-      file.write (chat_text.chars (), chat_text.size (), 1);
-      file.close ();
-   }
-   conf.LoadChatConfig ();
-   cv_chat.Set (1); // loads never enable chat, only disable it on failure
-   CHECK (!conf.GetReplies ().empty ());
-   CHECK (!conf.GetKeywordIndex ().empty ());
-   HOST_REQUIRE (conf.HasChatBank (Chat::Kill));
-   HOST_REQUIRE (conf.HasChatBank (Chat::Dead));
-   HOST_REQUIRE (conf.HasChatBank (Chat::NoKeyword));
+  {
+    ystl::File file (chat_file, "wb");
+    HOST_REQUIRE (!!file);
+    file.write (chat_text.chars (), chat_text.size (), 1);
+    file.close ();
+  }
+  conf.LoadChatConfig ();
+  cv_chat.Set (1); // loads never enable chat, only disable it on failure
+  CHECK (!conf.GetReplies ().empty ());
+  CHECK (!conf.GetKeywordIndex ().empty ());
+  HOST_REQUIRE (conf.HasChatBank (Chat::Kill));
+  HOST_REQUIRE (conf.HasChatBank (Chat::Dead));
+  HOST_REQUIRE (conf.HasChatBank (Chat::NoKeyword));
 
-   // indexed lookups resolve through the word loop, punctuation and all
-   // (index keys are upper-cased at parse, so query them upper-cased)
-   ystl::String reply {};
-   CHECK (chatlib.CheckKeywords ("say HELLO now", reply, false));
-   CHECK (reply == "hi there");
-   CHECK (chatlib.CheckKeywords ("...HELLO!!!", reply, false));
-   CHECK (reply == "hi there");
+  // indexed lookups resolve through the word loop, punctuation and all
+  // (index keys are upper-cased at parse, so query them upper-cased)
+  ystl::String reply {};
+  CHECK (chatlib.CheckKeywords ("say HELLO now", reply, false));
+  CHECK (reply == "hi there");
+  CHECK (chatlib.CheckKeywords ("...HELLO!!!", reply, false));
+  CHECK (reply == "hi there");
 
-   // dangling indices skip past the reply table
-   conf.GetKeywordIndex ()[ystl::detail::fnv1a32_n ("ZZZBAD", 6)].push (9999);
-   CHECK (!chatlib.CheckKeywords ("ZZZBAD talk", reply, false));
+  // dangling indices skip past the reply table
+  conf.GetKeywordIndex ()[ystl::detail::fnv1a32_n ("ZZZBAD", 6)].push (9999);
+  CHECK (!chatlib.CheckKeywords ("ZZZBAD talk", reply, false));
 
-    // strangers fall back to the universal bank on a pinned roll
-    ystl::rg.force_chance (true);
-    CHECK (ystl::rg.chance (70));
-    CHECK (chatlib.CheckKeywords ("qqqx wwwww", reply, true));
-    CHECK (reply == "unknown one");
-    ystl::rg.force_chance (false);
-    CHECK (!chatlib.CheckKeywords ("qqqx wwwww", reply, true));
-    ystl::rg.clear_forced ();
+  // strangers fall back to the universal bank on a pinned roll
+  ystl::rg.force_chance (true);
+  CHECK (ystl::rg.chance (70));
+  CHECK (chatlib.CheckKeywords ("qqqx wwwww", reply, true));
+  CHECK (reply == "unknown one");
+  ystl::rg.force_chance (false);
+  CHECK (!chatlib.CheckKeywords ("qqqx wwwww", reply, true));
+  ystl::rg.clear_forced ();
 
-    // back to a typo-free language: the 8% english dice would flake
-    // every exact buffer assert below (dice legs are covered above)
-    cv_language.Set ("xx");
+  // back to a typo-free language: the 8% english dice would flake
+  // every exact buffer assert below (dice legs are covered above)
+  cv_language.Set ("xx");
 
-   bots.Addbot ("BankB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
-   HOST_REQUIRE (testhost::PumpBots (engine, 1));
+  bots.Addbot ("BankB", Difficulty::Normal, Personality::Normal, Team::Terrorist, 1, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
 
-   Bot *bot = testhost::FindBot ("BankB");
-   HOST_REQUIRE (bot != nullptr);
-   bot->team_ = Team::Terrorist;
-   clients.Update ();
-   clients[bot->Ent ()].team = Team::Terrorist;
+  Bot *bot = testhost::FindBot ("BankB");
+  HOST_REQUIRE (bot != nullptr);
+  bot->team_ = Team::Terrorist;
+  clients.Update ();
+  clients[bot->Ent ()].team = Team::Terrorist;
 
-   edict_t *foe = game.CreateFakeClient ("BankFoe");
-   HOST_REQUIRE (!game.IsNullEntity (foe));
-   foe->v.flags &= ~FL_FAKECLIENT;
-   foe->v.health = 100.0f;
-   foe->v.deadflag = DEAD_NO;
-   foe->v.origin = ystl::Vector (300.0f, 0.0f, 0.0f);
-   clients.Update ();
-   clients[foe].team = Team::CT;
+  edict_t *foe = game.CreateFakeClient ("BankFoe");
+  HOST_REQUIRE (!game.IsNullEntity (foe));
+  foe->v.flags &= ~FL_FAKECLIENT;
+  foe->v.health = 100.0f;
+  foe->v.deadflag = DEAD_NO;
+  foe->v.origin = ystl::Vector (300.0f, 0.0f, 0.0f);
+  clients.Update ();
+  clients[foe].team = Team::CT;
 
-   edict_t *human = game.CreateFakeClient ("BankHuman");
-   HOST_REQUIRE (!game.IsNullEntity (human));
-   human->v.flags &= ~FL_FAKECLIENT;
-   human->v.health = 100.0f;
-   human->v.deadflag = DEAD_NO;
-   human->v.origin = ystl::Vector (200.0f, 0.0f, 0.0f);
-   clients.Update ();
-   clients[human].team = Team::Terrorist;
+  edict_t *human = game.CreateFakeClient ("BankHuman");
+  HOST_REQUIRE (!game.IsNullEntity (human));
+  human->v.flags &= ~FL_FAKECLIENT;
+  human->v.health = 100.0f;
+  human->v.deadflag = DEAD_NO;
+  human->v.origin = ystl::Vector (200.0f, 0.0f, 0.0f);
+  clients.Update ();
+  clients[human].team = Team::Terrorist;
 
-   // game names ride the %d marker (needs a modern-flagged game)
-   game.AddGameFlag (GameFlags::Modern);
-   bot->PrepareChatMessage ("%d");
-   CHECK (ChatHook::ChatBuffer (*bot) == "cs_one");
-   game.ClearGameFlag (GameFlags::Modern);
+  // game names ride the %d marker (needs a modern-flagged game)
+  game.AddGameFlag (GameFlags::Modern);
+  bot->PrepareChatMessage ("%d");
+  CHECK (ChatHook::ChatBuffer (*bot) == "cs_one");
+  game.ClearGameFlag (GameFlags::Modern);
 
-   // enemies resolve off the client table
-   bot->PrepareChatMessage ("%e");
-   CHECK (ChatHook::ChatBuffer (*bot) == "BankFoe");
+  // enemies resolve off the client table
+  bot->PrepareChatMessage ("%e");
+  CHECK (ChatHook::ChatBuffer (*bot) == "BankFoe");
 
-   // team damage routes through the inflictor
-   bot->pev->dmg_inflictor = human;
-   bot->PrepareChatMessage ("%t");
-   CHECK (ChatHook::ChatBuffer (*bot) == "BankHuman");
-   bot->pev->dmg_inflictor = nullptr;
+  // team damage routes through the inflictor
+  bot->pev->dmg_inflictor = human;
+  bot->PrepareChatMessage ("%t");
+  CHECK (ChatHook::ChatBuffer (*bot) == "BankHuman");
+  bot->pev->dmg_inflictor = nullptr;
 
-   // senders that are bots read straight from their buffers
-   bot->say_text_buffer_.entity_index = bot->index_;
-   bot->say_text_buffer_.chat_probability = 50;
-   ChatHook::ChatBuffer (*bot) = "talk hello now";
-   ystl::rg.force_chance (true);
-   CHECK (ChatHook::Replying (*bot));
-   CHECK (ChatHook::ChatBuffer (*bot) == "hi there");
-   CHECK (!ChatHook::MsgQueue (*bot).empty ());
-   ystl::rg.clear_forced ();
+  // senders that are bots read straight from their buffers
+  bot->say_text_buffer_.entity_index = bot->index_;
+  bot->say_text_buffer_.chat_probability = 50;
+  ChatHook::ChatBuffer (*bot) = "talk hello now";
+  ystl::rg.force_chance (true);
+  CHECK (ChatHook::Replying (*bot));
+  CHECK (ChatHook::ChatBuffer (*bot) == "hi there");
+  CHECK (!ChatHook::MsgQueue (*bot).empty ());
+  ystl::rg.clear_forced ();
 
-   // banked replies queue through the message pump
-   bot->say_text_buffer_.entity_index = game.IndexOfPlayer (human);
-   bot->say_text_buffer_.say_text = "talk hello now";
-   bot->say_text_buffer_.time_next_chat = 0.0f;
-   bot->say_text_buffer_.chat_probability = 50;
-   bot->say_text_buffer_.chat_delay = 5.0f;
-   ChatHook::DrainQueue (*bot);
-   CHECK (ChatHook::Replying (*bot));
+  // banked replies queue through the message pump
+  bot->say_text_buffer_.entity_index = game.IndexOfPlayer (human);
+  bot->say_text_buffer_.say_text = "talk hello now";
+  bot->say_text_buffer_.time_next_chat = 0.0f;
+  bot->say_text_buffer_.chat_probability = 50;
+  bot->say_text_buffer_.chat_delay = 5.0f;
+  ChatHook::DrainQueue (*bot);
+  CHECK (ChatHook::Replying (*bot));
 
-   // dry replies with nowhere to go still reset the sender
-   // (negative probability fails every roll without pinning)
-   bot->say_text_buffer_.entity_index = game.IndexOfPlayer (human);
-   bot->say_text_buffer_.say_text = "talk hello now";
-   bot->say_text_buffer_.time_next_chat = 0.0f;
-   bot->say_text_buffer_.chat_probability = -100;
-   ChatHook::Rng (*bot).force_chance (false);
-   ChatHook::DrainQueue (*bot);
-   CHECK (!ChatHook::Replying (*bot));
-   CHECK (bot->say_text_buffer_.entity_index == -1);
-   ChatHook::Rng (*bot).clear_forced ();
-   bot->say_text_buffer_.say_text.clear ();
+  // dry replies with nowhere to go still reset the sender
+  // (negative probability fails every roll without pinning)
+  bot->say_text_buffer_.entity_index = game.IndexOfPlayer (human);
+  bot->say_text_buffer_.say_text = "talk hello now";
+  bot->say_text_buffer_.time_next_chat = 0.0f;
+  bot->say_text_buffer_.chat_probability = -100;
+  ChatHook::Rng (*bot).force_chance (false);
+  ChatHook::DrainQueue (*bot);
+  CHECK (!ChatHook::Replying (*bot));
+  CHECK (bot->say_text_buffer_.entity_index == -1);
+  ChatHook::Rng (*bot).clear_forced ();
+  bot->say_text_buffer_.say_text.clear ();
 
-   // banked pushes land in the queue
-   ChatHook::DrainQueue (*bot);
-   bot->PushChatMessage (Chat::Kill, false);
-   CHECK (!ChatHook::MsgQueue (*bot).empty ());
+  // banked pushes land in the queue
+  ChatHook::DrainQueue (*bot);
+  bot->PushChatMessage (Chat::Kill, false);
+  CHECK (!ChatHook::MsgQueue (*bot).empty ());
 
-    // dead bots work the dead bank with ignore-list memory
-    // (NewRound starts the chat throttle, so age past its 6-10s gate)
-    bot->is_alive_ = false;
-    bot->pev->health = 0.0f;
-    ChatHook::DrainQueue (*bot);
-    engine.AdvanceTime (11.0f);
-    ChatHook::Rng (*bot).force_chance (true);
-    bot->CheckForChat ();
-    ChatHook::Rng (*bot).clear_forced ();
-    CHECK (!ChatHook::MsgQueue (*bot).empty ());
+  // dead bots work the dead bank with ignore-list memory
+  // (NewRound starts the chat throttle, so age past its 6-10s gate)
+  bot->is_alive_ = false;
+  bot->pev->health = 0.0f;
+  ChatHook::DrainQueue (*bot);
+  engine.AdvanceTime (11.0f);
+  ChatHook::Rng (*bot).force_chance (true);
+  bot->CheckForChat ();
+  ChatHook::Rng (*bot).clear_forced ();
+  CHECK (!ChatHook::MsgQueue (*bot).empty ());
 
-    for (int i = 0; i < 5; ++i) {
-       bot->say_text_buffer_.last_used_sentences.push ("dead one");
-    }
-    engine.AdvanceTime (11.0f);
-    ChatHook::Rng (*bot).force_chance (true);
-   ChatHook::Rng (*bot).force_int (4);
-   bot->CheckForChat ();
-   ChatHook::Rng (*bot).clear_forced ();
-   CHECK (bot->say_text_buffer_.last_used_sentences.empty ());
+  for (int i = 0; i < 5; ++i) {
+    bot->say_text_buffer_.last_used_sentences.push ("dead one");
+  }
+  engine.AdvanceTime (11.0f);
+  ChatHook::Rng (*bot).force_chance (true);
+  ChatHook::Rng (*bot).force_int (4);
+  bot->CheckForChat ();
+  ChatHook::Rng (*bot).clear_forced ();
+  CHECK (bot->say_text_buffer_.last_used_sentences.empty ());
 
-   cv_language.Set ("xx");
-   ystl::plat.remove_file (chat_file.chars ());
+  cv_language.Set ("xx");
+  ystl::plat.remove_file (chat_file.chars ());
 
-   bots.Destroy ();
+  bots.Destroy ();
 }
 
 } // namespace bot

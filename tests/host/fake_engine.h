@@ -59,7 +59,7 @@ public:
   using ContentsHook = ystl::Lambda<int (const float *v)>;
 
   // trace texture script invoked instead of the default null response
-  using TextureHook = ystl::Lambda<const char * (edict_t *ent, const float *v1, const float *v2)>;
+  using TextureHook = ystl::Lambda<const char *(edict_t *ent, const float *v1, const float *v2)>;
 
 public:
   FakeEngine ();
