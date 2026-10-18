@@ -3668,7 +3668,6 @@ TEST_CASE ("unit/navigate_strafe") {
   bot->team_ = Team::CT;
   NavigateHook::ChangeNode (*bot, 0);
 
-  const ystl::Vector forward (1.0f, 0.0f, 0.0f);
   Trace::Result strafe {};
 
   // ...door on the strafe lane never blocks...

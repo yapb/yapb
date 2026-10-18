@@ -1926,7 +1926,7 @@ TEST_CASE ("unit/tasks_frost") {
   for (int i = 0; i < kMaxWeapons; ++i) {
     bot->ammo_in_clip_[static_cast<size_t> (i)] = 30;
   }
-  engine.SetTraceLineHook ([brk] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+  engine.SetTraceLineHook ([] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
     (void)v1;
     (void)v2;
     (void)no_monsters;

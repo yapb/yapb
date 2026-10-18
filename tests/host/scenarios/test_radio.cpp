@@ -121,11 +121,6 @@ struct RadioHook {
 
 namespace {
 
-// pass-through rolls at 80+, the only wall-chance band that matters
-bool KillHook (int32_t percent) {
-  return percent >= 80;
-}
-
 // sniper warnings only, everything else stays quiet
 bool SniperHook (int32_t percent) {
   return percent == 40;
