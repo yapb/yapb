@@ -185,6 +185,7 @@ private:
   int strings_off_ = 1;
 
   ystl::String game_dir_ {};
+  ystl::Mutex calls_lock_ {}; // the http connectivity probe logs from its own thread
   ystl::Array<EngineCall> calls {};
   ystl::Array<ystl::String> server_commands_ {};
   ystl::Array<ystl::String> client_commands_ {};

@@ -323,6 +323,7 @@ void FakeEngine::Initialise (const char *game_dir, int max_clients) {
   }
 
   calls.clear ();
+  calls.reserve (65536); // pre-size so a background log never reallocates mid-read
   server_commands_.clear ();
   client_commands_.clear ();
   heard_sounds_.clear ();
@@ -468,6 +469,9 @@ void FakeEngine::Log (const char *name, const char *detail) {
   EngineCall call {};
   call.name.assign (name ? name : "");
   call.detail.assign (detail ? detail : "");
+
+  // the http connectivity probe logs from its own thread, serialize the append
+  ystl::MutexScopedLock guard (calls_lock_);
   calls.push (call);
 }
 
