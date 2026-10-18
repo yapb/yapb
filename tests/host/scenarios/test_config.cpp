@@ -117,7 +117,7 @@ ystl::String WavePath (ystl::StringRef name) {
 }
 
 void WriteWaveFile (const ystl::String &path) {
-  ystl::File::make_path (ystl::String (path.substr (0, path.find_last_of (kPathSeparator))).chars ());
+  testhost::MakeDirs (path.substr (0, path.find_last_of ("/\\")));
 
   // 8000 Hz 8-bit mono, 8000 frames: exactly one second of detectable audio...
   ystl::String wav {};

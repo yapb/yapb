@@ -130,6 +130,20 @@ inline void CloseFakeCs (FakeCSApi &api) {
   }
 }
 
+// create a directory tree, tolerating mixed separators: ystl::File::make_path
+// only walks kPathSeparator (backslash on windows), while config paths such as
+// cv_chatter_path are written with forward slashes
+inline void MakeDirs (ystl::StringRef path) {
+  ystl::String dir (path);
+
+  for (size_t i = 0; i < dir.size (); ++i) {
+    if (dir.at (i) == '/' || dir.at (i) == '\\') {
+      dir.at (i) = *kPathSeparator;
+    }
+  }
+  ystl::File::make_path (dir.chars ());
+}
+
 // lightest hermetic prefix: engine tables only, no postload/cs load/lifecycle.
 // enough for graph math, traces, messages, cvar reads and timers
 // (levelInitialize does the same time-source binding on live servers).

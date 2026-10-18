@@ -1518,7 +1518,7 @@ TEST_CASE ("unit/radio_voice") {
   game.AddGameFlag (GameFlags::HasBotVoice);
 
   const ystl::String chatter_file = ystl::strings.join_path (bstor.GetRunningPathVfs (), folders.config, ystl::String ("chatter.cfg"));
-  ystl::File::make_path (ystl::String (chatter_file.substr (0, chatter_file.find_last_of (kPathSeparator))).chars ());
+  testhost::MakeDirs (chatter_file.substr (0, chatter_file.find_last_of ("/\\")));
 
   auto wave_path = [&] (const char *name) {
     return ystl::strings.join_path (cv_chatter_path.As<ystl::StringRef> (), ystl::String (name) + ".wav");
@@ -1526,7 +1526,7 @@ TEST_CASE ("unit/radio_voice") {
 
   auto write_wave = [&] (const char *name) {
     const ystl::String path = wave_path (name);
-    ystl::File::make_path (ystl::String (path.substr (0, path.find_last_of (kPathSeparator))).chars ());
+    testhost::MakeDirs (path.substr (0, path.find_last_of ("/\\")));
 
     ystl::String wav {};
     wav += "RIFF";
