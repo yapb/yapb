@@ -475,6 +475,17 @@ private:
   // check if bomb is currently being defused
   bool IsBombDefusing (const ystl::Vector &bomb_origin) const;
 
+  // check if an enemy is currently defusing the bomb
+  bool IsEnemyDefusingBomb (const ystl::Vector &bomb_origin) const;
+
+  // update what this bot personally knows about the planted bomb
+  void UpdateBombKnowledge ();
+
+  // has this bot learned the bomb is planted
+  bool KnowsBombPlanted () const {
+    return bomb_known_;
+  }
+
   // check if node is occupied by other bot
   bool IsOccupiedNode (int index, bool need_zero_velocity = false);
 

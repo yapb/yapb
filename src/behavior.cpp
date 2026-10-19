@@ -2147,6 +2147,26 @@ ystl::Vector Bot::IsBombAudible () {
   return nullptr;
 }
 
+void Bot::UpdateBombKnowledge () {
+  // per-bot (not global) knowledge of the planted bomb
+  if (!game_state.IsBombPlanted ()) {
+    bomb_known_ = false;
+    return;
+  }
+
+  // terrorists always know about their own plant
+  if (team_ == Team::Terrorist) {
+    bomb_known_ = true;
+    return;
+  }
+
+  // ct learns by hearing the tick, or when a teammate already spread the word
+  if (bomb_known_ || bots.IsBombKnown (Team::CT) || !IsBombAudible ().empty ()) {
+    bomb_known_ = true;
+    bots.SetBombKnown (Team::CT);
+  }
+}
+
 bool Bot::CanRunHeavyWeight () {
   if (heavy_timer_.elapsed ()) {
     heavy_timer_.start (full_think_interval_);

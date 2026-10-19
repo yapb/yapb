@@ -15,6 +15,7 @@ Manager::Manager () {
   for (auto &td : team_data_) {
     td.leader_choosen = false;
     td.positive_eco = true;
+    td.bomb_known = false;
     td.last_radio_slot = RadioChat::Invalid;
     td.last_radio_timestamp = 0.0f;
   }

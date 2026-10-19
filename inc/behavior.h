@@ -103,6 +103,7 @@ protected:
 
   bool defended_bomb_ {}; // defend action issued
   bool escaped_from_bomb_ {}; // already ran away from the ticking bomb, don't re-enter
+  bool bomb_known_ {}; // bot has learned the bomb is planted (sight, beep, noise or teammate)
   bool defend_hostage_ {}; // defend action issued
   bool duck_defuse_ {}; // should or not bot duck to defuse bomb
   bool is_leader_ {}; // bot is leader of his team
