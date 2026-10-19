@@ -83,6 +83,9 @@ struct AnalyzeHook {
   static bool Repair () {
     return analyzer.RepairConnectivity ();
   }
+  static void Fix () {
+    analyzer.Repair ();
+  }
   static void Sanity () {
     analyzer.LogSanityBreakdown ();
   }
@@ -504,6 +507,38 @@ TEST_CASE ("unit/analyze_finish") {
   graph.Reset ();
   BuildAnaChain (3, 100.0f);
   CHECK (!AnalyzeHook::Repair ());
+
+  // ...the standalone fix merges duplicates, drops dead links and stays clean...
+  graph.Reset ();
+  BuildAnaChain (6, 100.0f);
+  const int fix_dup = AddAnaNode (ystl::Vector (120.0f, 0.0f, 0.0f));
+  graph.PopulateNodes ();
+  LinkAna (fix_dup, 1);
+  graph.paths_[fix_dup].links[1].index = 99; // dangling link
+  graph.paths_[fix_dup].links[1].distance = 10;
+
+  AnalyzeHook::ClearOptimized ();
+  AnalyzeHook::Fix ();
+
+  CHECK (graph.Length () <= 6); // duplicate with its dead link is gone
+
+  bool fix_clean = true;
+
+  for (int i = 0; i < graph.Length (); ++i) {
+    if (!graph.Exists (i)) {
+      continue;
+    }
+    for (const auto &link : graph.paths_[i].links) {
+      if (link.index != kInvalidNodeIndex && (link.index == i || !graph.Exists (link.index))) {
+        fix_clean = false;
+      }
+    }
+  }
+  CHECK (fix_clean);
+
+  // an empty graph repairs to a no-op without crashing
+  graph.Reset ();
+  AnalyzeHook::Fix ();
 
   // ...goals flag the bomb box, teams split defenders by spacing...
   graph.Reset ();

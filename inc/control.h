@@ -161,6 +161,7 @@ private:
   CommandResult CmdNodeEraseTraining ();
   CommandResult CmdNodeDelete ();
   CommandResult CmdNodeCheck ();
+  CommandResult CmdNodeFix ();
   CommandResult CmdNodeCache ();
   CommandResult CmdNodeClean ();
   CommandResult CmdNodeSetRadius ();

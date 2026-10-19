@@ -137,6 +137,9 @@ public:
   // suspend analysis
   void Suspend ();
 
+  // standalone self-repair: merge duplicates, clear dead links, relink islands, refresh radius
+  void Repair ();
+
 private:
   // real-time budget remaining in this frame
   bool SliceLeft () const;

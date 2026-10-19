@@ -1220,6 +1220,53 @@ bool GraphAnalyze::RepairConnectivity () {
   return true;
 }
 
+void GraphAnalyze::Repair () {
+  // standalone self-repair: run the analyzed-graph passes without a full re-analysis
+
+  if (graph.Length () < 1) {
+    ctrl.Msg ("Graph is empty, nothing to repair.");
+    return;
+  }
+
+  // silence per-link chatter, summary is logged once below
+  struct SilenceGuard {
+    SilenceGuard () {
+      graph.SetMessageSilence (true);
+    }
+    ~SilenceGuard () {
+      graph.SetMessageSilence (false);
+    }
+  };
+  SilenceGuard silence {};
+
+  const int nodes_before = graph.Length ();
+
+  LogGraphStats ("fix: before");
+
+  // optimizer passes to a fixed point, then the atomic tail of the analyze finish
+  ystl::fill (optimized_nodes_, false);
+  opt_pass_ = 0;
+
+  while (OptimizeSlice ()) {
+  }
+  Cleanup ();
+
+  // relink islands and erase leftovers
+  RepairConnectivity ();
+
+  // refresh wayzone radius so bots vary their origin again
+  for (int i = 0; i < graph.Length (); ++i) {
+    if (graph.Exists (i)) {
+      graph.CalculatePathRadius (i);
+    }
+  }
+
+  LogGraphStats ("fix: after");
+
+  ctrl.Msg ("Graph repair finished. Nodes: %d -> %d.", nodes_before, graph.Length ());
+  LogSanityBreakdown ();
+}
+
 void GraphAnalyze::DisplayOverlayMessage () const {
   auto listenserver_edict = game.GetLocalEntity ();
 

@@ -781,6 +781,31 @@ CommandResult Control::CmdNodeCheck () {
   return CommandResult::Handled;
 }
 
+CommandResult Control::CmdNodeFix () {
+  enum args {
+    graph_cmd = 1,
+    cmd
+  };
+
+  // turn graph on
+  graph.SetEditFlag (GraphEdit::On);
+
+  if (graph.Length () < 1) {
+    Msg ("Graph is empty, nothing to fix.");
+    return CommandResult::Handled;
+  }
+
+  // repair walks the whole graph, never do it behind a running analysis
+  if (analyzer.IsAnalyzing ()) {
+    Msg ("Graph analysis is in progress, wait for it to finish before fixing.");
+    return CommandResult::Handled;
+  }
+  analyzer.Repair ();
+  Msg ("Graph repair finished. Run \"graph check\" to verify and \"graph save\" to persist.");
+
+  return CommandResult::Handled;
+}
+
 CommandResult Control::CmdNodeCache () {
   enum args {
     graph_cmd = 1,
@@ -2958,6 +2983,9 @@ void Control::RegisterCommands () {
 
   graph_subcommands.emplace ("delete", "delete [nearest|index]", "Deletes single graph node from map.", &Control::CmdNodeDelete);
   graph_subcommands.emplace ("check", "check [noarguments]", "Check if graph working correctly.", &Control::CmdNodeCheck);
+
+  graph_subcommands.emplace (
+    "fix", "fix [noarguments]", "Self-repair: merge duplicates, clear dead links, relink islands, refresh radius.", &Control::CmdNodeFix);
   graph_subcommands.emplace ("cache", "cache [nearest|index]", "Caching node for future use.", &Control::CmdNodeCache);
 
   graph_subcommands.emplace (
