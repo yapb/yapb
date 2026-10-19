@@ -1327,6 +1327,7 @@ void Bot::Update () {
   else if (team_ == Team::CT && game.MapIs (MapFlags::HostageRescue)) {
     has_hostage_ = HasHostage ();
   }
+  UpdateHostageEscort ();
   is_creature_ = IsCreature ();
 
   // damage victim action

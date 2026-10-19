@@ -167,6 +167,9 @@ struct BehaviorHook {
   static void PushHostage (Bot &bot, edict_t *ent) {
     bot.hostages_.push (ent);
   }
+  static void HostageEscort (Bot &bot) {
+    bot.UpdateHostageEscort ();
+  }
   static void CheckBreakable (Bot &bot, edict_t *touch) {
     bot.CheckBreakable (touch);
   }
@@ -3049,6 +3052,32 @@ TEST_CASE ("unit/behavior_teleport") {
   BehaviorHook::PushHostage (*bot, telhos);
   BehaviorHook::Update (*bot);
   CHECK (bot->has_hostage_);
+
+  // ...a trailed hostage makes the rescuer halt so it can catch up...
+  telhos->v.health = 100.0f;
+  telhos->v.origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  bot->pev->origin = ystl::Vector (1100.0f, 0.0f, 0.0f); // inside straggler range, past follow range
+  bot->has_hostage_ = false;
+  bot->enemy_ = nullptr;
+  bot->agression_level_ = 0.0f; // keep the endgame-rush path out of the way
+  BehaviorHook::SetStates (*bot, Sense::Invalid);
+  bot->ClearTasks ();
+  BehaviorHook::HostageEscort (*bot);
+  CHECK (bot->GetTaskId () == TaskId::Pause);
+
+  // ...a hostage that truly fell behind is left alone...
+  bot->pev->origin = ystl::Vector (4200.0f, 0.0f, 0.0f);
+  bot->ClearTasks ();
+  BehaviorHook::HostageEscort (*bot);
+  CHECK (bot->GetTaskId () != TaskId::Pause);
+
+  // ...and halting while an enemy is in sight is never an option...
+  bot->pev->origin = ystl::Vector (1100.0f, 0.0f, 0.0f);
+  bot->enemy_ = game.CreateFakeClient ("EscortFoe");
+  bot->ClearTasks ();
+  BehaviorHook::HostageEscort (*bot);
+  CHECK (bot->GetTaskId () != TaskId::Pause);
+  bot->enemy_ = nullptr;
 
   // ...overstayed bots rotate out through the slow frame...
   cv_rotate_bots.Set (1);
