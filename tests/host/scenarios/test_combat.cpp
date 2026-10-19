@@ -100,6 +100,9 @@ struct CombatHook {
   static bool Lookup (Bot &bot) {
     return bot.LookupEnemies ();
   }
+  static bool ShouldSwitch (Bot &bot, edict_t *current, edict_t *candidate) {
+    return bot.ShouldSwitchFocus (current, candidate);
+  }
   static void Track (Bot &bot) {
     bot.TrackEnemies ();
   }
@@ -2068,6 +2071,49 @@ TEST_CASE ("unit/combat_obscure") {
   cv_use_engine_pvs_check.Revert ();
 
   cv_use_hitbox_enemy_targeting.Revert ();
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/combat_focus_fire") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootCombat (engine, cs);
+
+  bots.Addbot ("FocusA", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("FocusB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("FocusC", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 3));
+
+  Bot *a = testhost::FindBot ("FocusA");
+  Bot *b = testhost::FindBot ("FocusB");
+  Bot *c = testhost::FindBot ("FocusC");
+  HOST_REQUIRE (a != nullptr && b != nullptr && c != nullptr);
+
+  a->team_ = b->team_ = c->team_ = Team::Terrorist;
+  a->is_alive_ = b->is_alive_ = c->is_alive_ = true;
+  a->pev->origin = ystl::Vector (0.0f, 0.0f, 0.0f);
+
+  edict_t *near_foe = MakeFoe ("FocusNear", ystl::Vector (150.0f, 0.0f, 0.0f));
+  edict_t *far_foe = MakeFoe ("FocusFar", ystl::Vector (900.0f, 0.0f, 0.0f));
+  HOST_REQUIRE (near_foe != nullptr && far_foe != nullptr);
+
+  near_foe->v.health = 100.0f;
+  near_foe->v.button = 0;
+  far_foe->v.health = 20.0f;
+  far_foe->v.button = 0;
+
+  // a distant, wounded enemy never pulls us off a close, healthy threat
+  CHECK (!CombatHook::ShouldSwitch (*a, near_foe, far_foe));
+
+  // but a much closer threat does pull us off a distant one
+  CHECK (CombatHook::ShouldSwitch (*a, far_foe, near_foe));
+
+  // two mates already on the closer target saturate it
+  b->enemy_ = near_foe;
+  c->enemy_ = near_foe;
+  CHECK (!CombatHook::ShouldSwitch (*a, far_foe, near_foe));
+
   bots.Destroy ();
 }
 

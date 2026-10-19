@@ -385,6 +385,54 @@ float Bot::EnemyMemorySpan () const {
   return ystl::clamp (3.0f + 3.0f * skill + 1.5f * aggression + 2.0f * closeness, 3.0f, 8.0f);
 }
 
+float Bot::EngagementScore (edict_t *enemy) const {
+  if (game.IsNullEntity (enemy)) {
+    return 0.0f;
+  }
+
+  const float distance = pev->origin.distance (enemy->v.origin);
+  float score = 800.0f / (distance + 128.0f); // closer is more dangerous
+
+  if (enemy->v.button & IN_ATTACK) {
+    score += 2.0f; // actively shooting
+  }
+  if (has_flag (enemy->v.weapons, kSniperWeaponMask)) {
+    score += 1.0f;
+  }
+  if (enemy->v.health <= 35.0f) {
+    score += 1.0f; // easy to finish off
+  }
+  return score;
+}
+
+int Bot::TeammatesEngaging (edict_t *enemy) const {
+  int engaged = 0;
+
+  for (auto &mate : bots) {
+    if (&mate != this && mate.is_alive_ && mate.team_ == team_ && mate.enemy_ == enemy) {
+      ++engaged;
+    }
+  }
+  return engaged;
+}
+
+bool Bot::ShouldSwitchFocus (edict_t *current, edict_t *candidate) const {
+  if (game.IsNullEntity (current) || game.IsNullEntity (candidate) || current == candidate) {
+    return false;
+  }
+
+  // don't pile a third bot onto a target the team already saturates
+  if (TeammatesEngaging (candidate) >= 2) {
+    return false;
+  }
+
+  // concentration is good, but it must clearly beat the target we already have
+  const float current_value = EngagementScore (current) + 1.5f * static_cast<float> (TeammatesEngaging (current));
+  const float candidate_value = EngagementScore (candidate) + 1.5f * static_cast<float> (TeammatesEngaging (candidate)) + 0.5f;
+
+  return candidate_value > current_value * 1.2f;
+}
+
 bool Bot::LookupEnemies () {
   // this function tries to find the best suitable enemy for the bot
 
@@ -505,17 +553,34 @@ bool Bot::LookupEnemies () {
       }
     }
 
-    // focus fire: join the enemy a nearby mate is already engaging, when we can see it too
+    // focus fire: join a nearby mate's target only when it clearly beats our own
+    // (and is not already saturated); the cooldown stops target flip-flop
     if (!game.IsNullEntity (new_enemy)) {
+      edict_t *focus = nullptr;
+      float focus_score = 0.0f;
+
       for (auto &mate : bots) {
         if (&mate == this || !mate.is_alive_ || mate.team_ != team_ || game.IsNullEntity (mate.enemy_) || mate.enemy_ == new_enemy) {
           continue;
         }
 
-        if (mate.pev->origin.distance_sq (pev->origin) < ystl::sqrf (900.0f) && SeesEnemy (mate.enemy_)) {
-          new_enemy = mate.enemy_;
-          break;
+        if (mate.pev->origin.distance_sq (pev->origin) >= ystl::sqrf (900.0f) || !SeesEnemy (mate.enemy_) ||
+            !ShouldSwitchFocus (new_enemy, mate.enemy_)) {
+          continue;
         }
+
+        // several mates may offer a target, take the most threatening one
+        const float score = EngagementScore (mate.enemy_);
+
+        if (focus == nullptr || score > focus_score) {
+          focus = mate.enemy_;
+          focus_score = score;
+        }
+      }
+
+      if (focus != nullptr && target_switch_timer_.elapsed ()) {
+        new_enemy = focus;
+        target_switch_timer_.start (1.5f);
       }
     }
     enemy_update_timer_.start (UsesKnife () ? 1.25f : 0.85f);

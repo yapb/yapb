@@ -154,6 +154,7 @@ public:
   ystl::CountdownTimer team_contact_timer_ {}; // cooldown before reacting to a shared contact again
   ystl::CountdownTimer team_cohesion_timer_ {}; // cooldown before regrouping with teammates again
   ystl::CountdownTimer bomb_guard_timer_ {}; // cooldown before covering the bomb defuser again
+  ystl::CountdownTimer target_switch_timer_ {}; // cooldown before focusing a teammate's target again
   ystl::CountdownTimer hostage_wait_giveup_ {}; // stop waiting for a hostage that never catches up
 
   BuyState buy_state_ {}; // current count in buying

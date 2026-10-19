@@ -225,6 +225,15 @@ private:
   // lookup and track visible enemies
   bool LookupEnemies ();
 
+  // how threatening an enemy is (closer, shooting, sniper, wounded)
+  float EngagementScore (edict_t *enemy) const;
+
+  // how many living teammates are already engaging this enemy
+  int TeammatesEngaging (edict_t *enemy) const;
+
+  // true when joining a teammate's target beats keeping our own
+  bool ShouldSwitchFocus (edict_t *current, edict_t *candidate) const;
+
   // check if enemy is hiding behind cover
   bool IsEnemyHidden (edict_t *enemy);
 
