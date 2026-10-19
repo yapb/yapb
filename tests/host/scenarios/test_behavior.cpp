@@ -3327,4 +3327,108 @@ TEST_CASE ("unit/behavior_hearing2") {
   bots.Destroy ();
 }
 
+TEST_CASE ("unit/behavior_targeting") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootBehavior (engine, cs);
+
+  bots.Addbot ("TgtA", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("TgtB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 2));
+
+  Bot *a = testhost::FindBot ("TgtA");
+  Bot *b = testhost::FindBot ("TgtB");
+  HOST_REQUIRE (a != nullptr && b != nullptr);
+
+  a->team_ = b->team_ = Team::Terrorist;
+  a->is_alive_ = b->is_alive_ = true;
+  a->ClearTasks ();
+  b->ClearTasks ();
+  b->position_.clear ();
+
+  // nobody claims the node yet
+  CHECK (!BehaviorHook::Targeting (*a, 3));
+
+  // a teammate moving to the node claims it
+  b->StartTask (TaskId::MoveTo, TaskPri::kMoveTo, 3, 0.0f, true);
+  CHECK (BehaviorHook::Targeting (*a, 3));
+
+  // self-targeting never counts
+  a->StartTask (TaskId::MoveTo, TaskPri::kMoveTo, 4, 0.0f, true);
+  CHECK (!BehaviorHook::Targeting (*a, 4));
+
+  // a camp task keeps holding the node after the move completed
+  b->ClearTasks ();
+  b->StartTask (TaskId::Camp, TaskPri::kCamp, 3, game.Time () + 10.0f, true);
+  CHECK (BehaviorHook::Targeting (*a, 3));
+
+  // position-only moves claim by proximity, and only while moving
+  b->ClearTasks ();
+  b->position_ = graph[3].origin;
+  b->StartTask (TaskId::MoveTo, TaskPri::kMoveTo, kInvalidNodeIndex, 0.0f, true);
+  CHECK (BehaviorHook::Targeting (*a, 3));
+
+  b->ClearTasks ();
+  b->position_.clear ();
+  CHECK (!BehaviorHook::Targeting (*a, 3));
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/behavior_team_awareness") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootBehavior (engine, cs);
+
+  bots.Addbot ("AwA", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *a = testhost::FindBot ("AwA");
+  HOST_REQUIRE (a != nullptr);
+
+  edict_t *foe = game.CreateFakeClient ("AwFoe");
+  HOST_REQUIRE (!game.IsNullEntity (foe));
+
+  a->team_ = Team::Terrorist;
+  a->is_alive_ = true;
+  a->teamwork_level_ = 1.0f; // always react when the contact is valid
+  a->pev->origin = ystl::Vector (0.0f, 0.0f, 0.0f);
+  a->enemy_ = nullptr;
+  a->last_enemy_ = nullptr;
+  a->has_c4_ = false;
+  a->has_hostage_ = false;
+
+  foe->v.origin = ystl::Vector (300.0f, 0.0f, 0.0f);
+  foe->v.health = 100.0f;
+  foe->v.deadflag = DEAD_NO;
+  foe->v.movetype = MOVETYPE_WALK;
+
+  a->ClearTasks ();
+  a->StartTask (TaskId::Normal, TaskPri::kNormal, kInvalidNodeIndex, 0.0f, true);
+  a->team_contact_timer_.invalidate ();
+
+  // a live contact is investigated
+  bots.ReportTeamContact (Team::Terrorist, foe, foe->v.origin, 1);
+  BehaviorHook::TeamAwareness (*a);
+  CHECK (a->last_enemy_ == foe);
+
+  // a corpse is not worth converging on
+  foe->v.health = 0.0f;
+  foe->v.deadflag = DEAD_DEAD;
+
+  a->last_enemy_ = nullptr;
+  a->ClearTasks ();
+  a->StartTask (TaskId::Normal, TaskPri::kNormal, kInvalidNodeIndex, 0.0f, true);
+  a->team_contact_timer_.invalidate ();
+
+  bots.ReportTeamContact (Team::Terrorist, foe, foe->v.origin, 1);
+  BehaviorHook::TeamAwareness (*a);
+  CHECK (a->last_enemy_ == nullptr);
+  CHECK (a->GetTaskId () != TaskId::MoveTo);
+
+  bots.Destroy ();
+}
+
 } // namespace bot

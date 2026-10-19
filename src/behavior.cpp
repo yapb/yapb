@@ -617,7 +617,7 @@ void Bot::UpdateTeamAwareness () {
 
   // ignore stale contacts and ones on the far side of the map
   if (!bots.GetNearestTeamContact (team_, pev->origin, contact_entity, contact_origin, 6.0f) || game.IsNullEntity (contact_entity) ||
-      pev->origin.distance_sq (contact_origin) > ystl::sqrf (2048.0f)) {
+      !game.IsAliveEntity (contact_entity) || pev->origin.distance_sq (contact_origin) > ystl::sqrf (2048.0f)) {
     return;
   }
 

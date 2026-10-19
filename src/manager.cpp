@@ -687,7 +687,8 @@ bool Manager::GetTeamContact (Team team, edict_t *&enemy, ystl::Vector &origin, 
   const TeamContact *best = nullptr;
 
   for (const auto &contact : contacts) {
-    if (contact.time <= 0.0f || game.IsNullEntity (contact.entity) || now - contact.time > max_age) {
+    if (contact.time <= 0.0f || game.IsNullEntity (contact.entity) ||
+        (!game.IsPlayerEntity (contact.entity) && !game.IsMonsterEntity (contact.entity)) || now - contact.time > max_age) {
       continue;
     }
 
@@ -743,7 +744,8 @@ bool Manager::GetNearestTeamContact (Team team, const ystl::Vector &from, edict_
   float best_distance_sq = kInfiniteDistance;
 
   for (const auto &contact : contacts) {
-    if (contact.time <= 0.0f || game.IsNullEntity (contact.entity) || now - contact.time > max_age) {
+    if (contact.time <= 0.0f || game.IsNullEntity (contact.entity) ||
+        (!game.IsPlayerEntity (contact.entity) && !game.IsMonsterEntity (contact.entity)) || now - contact.time > max_age) {
       continue;
     }
     const float distance_sq = from.distance_sq (contact.origin);
