@@ -756,7 +756,8 @@ void Bot::UpdateBombGuard () {
   }
 
   // hold a nearby spot and watch the approach instead of stacking on the bomb
-  StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, game.Time () + rg (8.0f, 16.0f), true);
+  // (carry the node in the camp task too, so the claim survives after the move completes)
+  StartTask (TaskId::Camp, TaskPri::kCamp, index, game.Time () + rg (8.0f, 16.0f), true);
   StartTask (TaskId::MoveTo, TaskPri::kMoveTo, index, 0.0f, true);
   SelectCampButtons (index);
 
@@ -795,9 +796,10 @@ void Bot::UpdateHostageEscort () {
 }
 
 bool Bot::IsTeammateTargetingNode (int node) {
-  if (node == kInvalidNodeIndex) {
+  if (node == kInvalidNodeIndex || !graph.Exists (node)) {
     return false;
   }
+  const auto &origin = graph[node].origin;
 
   for (auto &mate : bots) {
     if (&mate == this || !mate.is_alive_ || mate.team_ != team_) {
@@ -805,7 +807,23 @@ bool Bot::IsTeammateTargetingNode (int node) {
     }
     const auto tid = mate.GetTaskId ();
 
+    // the current task may claim the node directly
     if ((tid == TaskId::MoveTo || tid == TaskId::Camp) && mate.Task ()->data == node) {
+      return true;
+    }
+
+    // a parked Camp keeps the underlying MoveTo in the stack, so check both
+    for (const auto kind : { TaskId::MoveTo, TaskId::Camp }) {
+      auto *task = mate.tasks_.Find (kind);
+
+      if (task != nullptr && task->data == node) {
+        return true;
+      }
+    }
+
+    // position-based targets (cohesion, radio, contact) carry no node
+    if ((tid == TaskId::MoveTo || tid == TaskId::Camp) && !mate.position_.empty () &&
+        mate.position_.distance_sq (origin) < ystl::sqrf (100.0f)) {
       return true;
     }
   }

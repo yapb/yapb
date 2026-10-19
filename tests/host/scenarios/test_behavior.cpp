@@ -173,6 +173,12 @@ struct BehaviorHook {
   static void GiveUpHostageWait (Bot &bot) {
     bot.hostage_wait_giveup_.start (-1.0f);
   }
+  static bool Targeting (Bot &bot, int node) {
+    return bot.IsTeammateTargetingNode (node);
+  }
+  static void TeamAwareness (Bot &bot) {
+    bot.UpdateTeamAwareness ();
+  }
   static void CheckBreakable (Bot &bot, edict_t *touch) {
     bot.CheckBreakable (touch);
   }
