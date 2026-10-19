@@ -1220,12 +1220,12 @@ bool GraphAnalyze::RepairConnectivity () {
   return true;
 }
 
-void GraphAnalyze::Repair () {
+bool GraphAnalyze::Repair () {
   // standalone self-repair: run the analyzed-graph passes without a full re-analysis
 
   if (graph.Length () < 1) {
     ctrl.Msg ("Graph is empty, nothing to repair.");
-    return;
+    return false;
   }
 
   // silence per-link chatter, summary is logged once below
@@ -1263,8 +1263,41 @@ void GraphAnalyze::Repair () {
 
   LogGraphStats ("fix: after");
 
-  ctrl.Msg ("Graph repair finished. Nodes: %d -> %d.", nodes_before, graph.Length ());
+  // structural sanity: numbering, dangling/self links and forward reachability
+  const int nodes_after = graph.Length ();
+  bool sane = true;
+
+  for (int i = 0; sane && i < nodes_after; ++i) {
+    if (!graph.Exists (i)) {
+      continue;
+    }
+    if (graph[i].number != i) {
+      sane = false;
+      break;
+    }
+    for (const auto &link : graph[i].links) {
+      if (link.index != kInvalidNodeIndex && (link.index == i || !graph.Exists (link.index))) {
+        sane = false;
+        break;
+      }
+    }
+  }
+
+  if (sane) {
+    ystl::Array<bool> forward {};
+    graph.ComputeForwardReachability (forward);
+
+    for (int i = 0; sane && i < nodes_after && i < static_cast<int> (forward.size ()); ++i) {
+      if (graph.Exists (i) && !forward[i]) {
+        sane = false;
+      }
+    }
+  }
+
+  ctrl.Msg ("Graph repair finished. Nodes: %d -> %d, sanity %s.", nodes_before, nodes_after, sane ? "OK" : "FAILED");
   LogSanityBreakdown ();
+
+  return sane;
 }
 
 void GraphAnalyze::DisplayOverlayMessage () const {

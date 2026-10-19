@@ -616,7 +616,7 @@ void Bot::UpdateTeamAwareness () {
   ystl::Vector contact_origin {};
 
   // ignore stale contacts and ones on the far side of the map
-  if (!bots.GetNearestTeamContact (team_, pev->origin, contact_entity, contact_origin, 6.0f) ||
+  if (!bots.GetNearestTeamContact (team_, pev->origin, contact_entity, contact_origin, 6.0f) || game.IsNullEntity (contact_entity) ||
       pev->origin.distance_sq (contact_origin) > ystl::sqrf (2048.0f)) {
     return;
   }
@@ -764,9 +764,15 @@ void Bot::UpdateBombGuard () {
 }
 
 void Bot::UpdateHostageEscort () {
+  // a rescued hostage is with us again, allow waiting the next time it trails off
+  if (has_hostage_ || hostages_.empty ()) {
+    hostage_wait_giveup_.invalidate ();
+  }
+
   // hold position for a moment so a rescued hostage that trailed off can catch up
   if (team_ != Team::CT || !game.MapIs (MapFlags::HostageRescue) || has_hostage_ || hostages_.empty () || ShouldRushEndgameTime () ||
-      !game.IsNullEntity (enemy_) || has_flag (states_, Sense::SeeingEnemy) || GetTaskId () == TaskId::Pause) {
+      (hostage_wait_giveup_.started () && hostage_wait_giveup_.elapsed ()) || !game.IsNullEntity (enemy_) ||
+      has_flag (states_, Sense::SeeingEnemy) || GetTaskId () == TaskId::Pause) {
     return;
   }
 
@@ -778,6 +784,11 @@ void Bot::UpdateHostageEscort () {
     // close enough that stopping now lets it catch back up
     if (pev->origin.distance_sq (hostage->v.origin) < ystl::sqrf (kHostageStragglerDistance)) {
       StartTask (TaskId::Pause, TaskPri::kPause, kInvalidNodeIndex, game.Time () + rg (0.5f, 1.0f), false);
+
+      // stall for a while, but never forever: give up if the hostage does not catch up
+      if (!hostage_wait_giveup_.started ()) {
+        hostage_wait_giveup_.start (6.0f);
+      }
       return;
     }
   }

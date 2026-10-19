@@ -83,8 +83,8 @@ struct AnalyzeHook {
   static bool Repair () {
     return analyzer.RepairConnectivity ();
   }
-  static void Fix () {
-    analyzer.Repair ();
+  static bool Fix () {
+    return analyzer.Repair ();
   }
   static void Sanity () {
     analyzer.LogSanityBreakdown ();
@@ -518,7 +518,7 @@ TEST_CASE ("unit/analyze_finish") {
   graph.paths_[fix_dup].links[1].distance = 10;
 
   AnalyzeHook::ClearOptimized ();
-  AnalyzeHook::Fix ();
+  CHECK (AnalyzeHook::Fix ());
 
   CHECK (graph.Length () <= 6); // duplicate with its dead link is gone
 
@@ -538,7 +538,7 @@ TEST_CASE ("unit/analyze_finish") {
 
   // an empty graph repairs to a no-op without crashing
   graph.Reset ();
-  AnalyzeHook::Fix ();
+  CHECK (!AnalyzeHook::Fix ());
 
   // ...goals flag the bomb box, teams split defenders by spacing...
   graph.Reset ();

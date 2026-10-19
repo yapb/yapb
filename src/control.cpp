@@ -800,8 +800,12 @@ CommandResult Control::CmdNodeFix () {
     Msg ("Graph analysis is in progress, wait for it to finish before fixing.");
     return CommandResult::Handled;
   }
-  analyzer.Repair ();
-  Msg ("Graph repair finished. Run \"graph check\" to verify and \"graph save\" to persist.");
+  if (analyzer.Repair ()) {
+    Msg ("Graph repair finished (sanity OK). Run \"graph check\" to verify and \"graph save\" to persist.");
+  }
+  else {
+    Msg ("Graph repair finished, but sanity check FAILED. Do not save; inspect with \"graph check\".");
+  }
 
   return CommandResult::Handled;
 }

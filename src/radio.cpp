@@ -779,6 +779,7 @@ void Bot::HandleChatterEnemyDown () {
 
   // a teammate already reported this exact pack, don't echo the meme
   if (bots.IsTeamCalloutRecent (team_, message, 3.0f)) {
+    radio_select_ = RadioChat::Invalid; // drop any stale selection from an earlier shot
     return;
   }
   PushRadioChat (message);

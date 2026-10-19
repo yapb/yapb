@@ -646,7 +646,7 @@ void Manager::Reset () {
 
 void Manager::ReportTeamContact (Team team, edict_t *enemy, const ystl::Vector &origin, int count) {
   // keep a rolling set of enemy contacts per team, so bots can spread over the map
-  if (team != Team::CT && team != Team::Terrorist) {
+  if ((team != Team::CT && team != Team::Terrorist) || game.IsNullEntity (enemy)) {
     return;
   }
   auto &contacts = team_data_[team].contacts;
@@ -687,7 +687,7 @@ bool Manager::GetTeamContact (Team team, edict_t *&enemy, ystl::Vector &origin, 
   const TeamContact *best = nullptr;
 
   for (const auto &contact : contacts) {
-    if (contact.time <= 0.0f || now - contact.time > max_age) {
+    if (contact.time <= 0.0f || game.IsNullEntity (contact.entity) || now - contact.time > max_age) {
       continue;
     }
 
@@ -743,7 +743,7 @@ bool Manager::GetNearestTeamContact (Team team, const ystl::Vector &from, edict_
   float best_distance_sq = kInfiniteDistance;
 
   for (const auto &contact : contacts) {
-    if (contact.time <= 0.0f || now - contact.time > max_age) {
+    if (contact.time <= 0.0f || game.IsNullEntity (contact.entity) || now - contact.time > max_age) {
       continue;
     }
     const float distance_sq = from.distance_sq (contact.origin);
@@ -1717,7 +1717,7 @@ void Manager::HandleDeath (edict_t *killer, edict_t *victim) {
   }
 
   // publish the killer's spot to the victim's team, so surviving mates converge on it (avenge)
-  if (killer_team != victim_team) {
+  if (killer_team != victim_team && game.IsPlayerEntity (killer)) {
     ReportTeamContact (victim_team, killer, killer->v.origin, 1);
   }
 

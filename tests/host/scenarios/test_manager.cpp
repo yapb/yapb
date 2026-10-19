@@ -1794,6 +1794,10 @@ TEST_CASE ("unit/manager_teamwork") {
   bots.ClearTeamContact (Team::CT);
   CHECK (!bots.GetTeamContact (Team::CT, out_ent, out_origin, 5.0f));
 
+  // a null enemy is ignored instead of poisoning a slot
+  bots.ReportTeamContact (Team::CT, nullptr, ystl::Vector (1.0f, 1.0f, 1.0f), 1);
+  CHECK (!bots.GetTeamContact (Team::CT, out_ent, out_origin, 10.0f));
+
   // several contacts coexist and nearest-selection spreads bots over them
   edict_t *far_foe = game.CreateFakeClient ("TwFoeFar");
   HOST_REQUIRE (!game.IsNullEntity (far_foe));

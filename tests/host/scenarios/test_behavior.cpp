@@ -170,6 +170,9 @@ struct BehaviorHook {
   static void HostageEscort (Bot &bot) {
     bot.UpdateHostageEscort ();
   }
+  static void GiveUpHostageWait (Bot &bot) {
+    bot.hostage_wait_giveup_.start (-1.0f);
+  }
   static void CheckBreakable (Bot &bot, edict_t *touch) {
     bot.CheckBreakable (touch);
   }
@@ -3078,6 +3081,12 @@ TEST_CASE ("unit/behavior_teleport") {
   BehaviorHook::HostageEscort (*bot);
   CHECK (bot->GetTaskId () != TaskId::Pause);
   bot->enemy_ = nullptr;
+
+  // ...a hostage that never catches up is eventually abandoned...
+  bot->ClearTasks ();
+  BehaviorHook::GiveUpHostageWait (*bot);
+  BehaviorHook::HostageEscort (*bot);
+  CHECK (bot->GetTaskId () != TaskId::Pause);
 
   // ...overstayed bots rotate out through the slow frame...
   cv_rotate_bots.Set (1);

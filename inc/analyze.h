@@ -138,7 +138,7 @@ public:
   void Suspend ();
 
   // standalone self-repair: merge duplicates, clear dead links, relink islands, refresh radius
-  void Repair ();
+  bool Repair ();
 
 private:
   // real-time budget remaining in this frame
