@@ -88,6 +88,12 @@ struct RadioHook {
   static void SetMoveToC4 (Bot &bot, bool value) {
     bot.move_to_c4_ = value;
   }
+  static void SetBombKnown (Bot &bot, bool value) {
+    bot.bomb_known_ = value;
+  }
+  static bool BombKnown (Bot &bot) {
+    return bot.bomb_known_;
+  }
   static void SetChatterTime (Bot &bot, RadioChat message, float value) {
     bot.chatter_times_[message] = value;
   }
@@ -120,11 +126,6 @@ struct RadioHook {
 };
 
 namespace {
-
-// sniper warnings only, everything else stays quiet
-bool SniperHook (int32_t percent) {
-  return percent == 40;
-}
 
 // four-node chain, dense numbering matches indices
 void BuildRadioGraph () {
@@ -545,9 +546,19 @@ TEST_CASE ("unit/radio_chatter") {
 
   game_state.SetBombPlanted (true);
   bot->team_ = Team::CT;
+
+  // an unaware ct stays quiet even though the team wants a planted bomb callout
+  RadioHook::SetBombKnown (*bot, false);
+  RadioHook::FrameEvents (*bot);
+  CHECK (RadioHook::RadioSelect (*bot) != RadioChat::GottaFindC4);
+  CHECK (bots.HasBombSay (BombPlantedSay::Chatter));
+
+  // but a ct that learned about the plant warns the team and shares the knowledge
+  RadioHook::SetBombKnown (*bot, true);
   RadioHook::FrameEvents (*bot);
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::GottaFindC4);
   CHECK (!bots.HasBombSay (BombPlantedSay::Chatter));
+  CHECK (bots.IsBombKnown (Team::CT));
   game_state.SetBombPlanted (false);
   bot->team_ = Team::Terrorist;
 
@@ -590,6 +601,7 @@ TEST_CASE ("unit/radio_chatter") {
 
   bot->team_ = Team::CT;
   bot->in_escape_zone_ = true;
+  engine.AdvanceTime (2.0f); // let the team-speech floor clear between callouts
   rng.force_chance (true);
   RadioHook::TaskChange (*bot, TaskId::Camp);
   rng.clear_forced ();
@@ -598,6 +610,7 @@ TEST_CASE ("unit/radio_chatter") {
 
   bot->team_ = Team::Terrorist;
   bot->in_rescue_zone_ = true;
+  engine.AdvanceTime (2.0f);
   rng.force_chance (true);
   RadioHook::TaskChange (*bot, TaskId::Camp);
   rng.clear_forced ();
@@ -605,6 +618,7 @@ TEST_CASE ("unit/radio_chatter") {
   bot->in_rescue_zone_ = false;
 
   bot->in_vip_zone_ = true;
+  engine.AdvanceTime (2.0f);
   rng.force_chance (true);
   RadioHook::TaskChange (*bot, TaskId::Camp);
   rng.clear_forced ();
@@ -612,6 +626,8 @@ TEST_CASE ("unit/radio_chatter") {
   bot->in_vip_zone_ = false;
 
   // steer player-kill rolls: kill/enemy-down fail, the headcount passes
+  // (headcount chance is teamwork-scaled now, pin max teamwork so it clears the hook)
+  bot->teamwork_level_ = 1.0f;
   rng.set_chance_hook ([] (int32_t percent) {
     return percent >= 80;
   });
@@ -1247,6 +1263,7 @@ TEST_CASE ("unit/radio_kill") {
 
   bot->in_escape_zone_ = true;
   bot->team_ = Team::CT;
+  engine.AdvanceTime (2.0f); // let the team-speech floor clear between callouts
   RadioHook::Rng (*bot).force_chance (true);
   RadioHook::TaskChange (*bot, TaskId::Camp);
   RadioHook::Rng (*bot).clear_forced ();
@@ -1255,6 +1272,7 @@ TEST_CASE ("unit/radio_kill") {
   bot->team_ = Team::Terrorist;
 
   bot->in_rescue_zone_ = true;
+  engine.AdvanceTime (2.0f);
   RadioHook::Rng (*bot).force_chance (true);
   RadioHook::TaskChange (*bot, TaskId::Camp);
   RadioHook::Rng (*bot).clear_forced ();
@@ -1262,6 +1280,7 @@ TEST_CASE ("unit/radio_kill") {
   bot->in_rescue_zone_ = false;
 
   bot->in_vip_zone_ = true;
+  engine.AdvanceTime (2.0f);
   RadioHook::Rng (*bot).force_chance (true);
   RadioHook::TaskChange (*bot, TaskId::Camp);
   RadioHook::Rng (*bot).clear_forced ();
@@ -1284,6 +1303,8 @@ TEST_CASE ("unit/radio_kill") {
   RadioHook::Rng (*bot).clear_forced ();
 
   // ...sniped victims call out the sniper...
+  // headcount chance is teamwork-scaled now, pin max teamwork so it clears the hook
+  bot->teamwork_level_ = 1.0f;
   bot->last_victim_ = f1;
   f1->v.weapons = ystl::to_underlying (kSniperWeaponMask);
   CHECK (bot->last_victim_ == f1);
@@ -1389,18 +1410,24 @@ TEST_CASE ("unit/radio_kill") {
   f1->v.deadflag = DEAD_NO;
   clients.Update ();
   f1->v.weapons |= ystl::bit (Weapon::C4);
+  engine.AdvanceTime (2.0f); // clear the speech floor left by earlier callouts
   RadioHook::Rng (*bot).force_chance (true);
   RadioHook::FrameEvents (*bot);
   RadioHook::Rng (*bot).clear_forced ();
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::SpotTheBomber);
   f1->v.weapons &= ~ystl::bit (Weapon::C4);
 
+  // team-wide shouts are serialized now, let the floor go before the next callout
+  engine.AdvanceTime (2.0f);
   RadioHook::Rng (*bot).force_chance (true);
   RadioHook::FrameEvents (*bot);
   RadioHook::Rng (*bot).clear_forced ();
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::ScaredEmotion);
 
-  RadioHook::Rng (*bot).set_chance_hook (SniperHook);
+  // a lone sniper (not a group) to isolate the sniper callout
+  kill_foes (1);
+  engine.AdvanceTime (2.0f);
+  RadioHook::Rng (*bot).force_chance (true);
   f1->v.weapons |= ystl::bit (Weapon::AWP);
   RadioHook::FrameEvents (*bot);
   RadioHook::Rng (*bot).clear_forced ();
@@ -1411,6 +1438,7 @@ TEST_CASE ("unit/radio_kill") {
 
   game_state.SetBombPlanted (true);
   bot->team_ = Team::CT;
+  RadioHook::SetBombKnown (*bot, true);
   RadioHook::FrameEvents (*bot);
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::GottaFindC4);
   CHECK (!bots.HasBombSay (BombPlantedSay::Chatter));

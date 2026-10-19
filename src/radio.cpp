@@ -638,7 +638,10 @@ void Bot::CheckRadioQueue () {
 }
 
 void Bot::HandleChatterTaskChange (TaskId tid) {
-  if (rg.chance (90)) {
+  // announce intent more as teamwork rises (team players keep mates informed)
+  const int announce = 55 + static_cast<int> (teamwork_level_ * 35.0f);
+
+  if (rg.chance (announce)) {
     if (tid == TaskId::Blind) {
       PushRadioChat (RadioChat::Blind);
     }
@@ -647,25 +650,33 @@ void Bot::HandleChatterTaskChange (TaskId tid) {
     }
   }
 
-  if (rg.chance (25) && tid == TaskId::Camp) {
+  if (tid != TaskId::Camp) {
+    return;
+  }
+
+  // holding a zone is the more specific intel: one mate calls it, more often with higher teamwork
+  const bool holds_zone = (team_ == Team::CT && in_escape_zone_) || (team_ == Team::Terrorist && (in_rescue_zone_ || in_vip_zone_));
+
+  if (holds_zone && rg.chance (announce) && bots.TryTeamSpeech (team_, 1.5f)) {
+    if (team_ == Team::CT) {
+      PushRadioChat (RadioChat::GoingToGuardEscapeZone);
+    }
+    else if (in_rescue_zone_) {
+      PushRadioChat (RadioChat::GoingToGuardRescueZone);
+    }
+    else {
+      PushRadioChat (RadioChat::GoingToGuardVIPSafety);
+    }
+    return;
+  }
+
+  if (rg.chance (25)) {
     if (game.MapIs (MapFlags::Demolition) && game_state.IsBombPlanted ()) {
       PushRadioChat (RadioChat::GuardingPlantedC4);
     }
-    else if (rg.chance (radio_percent_)) {
+    else if (rg.chance (radio_percent_) && bots.TryTeamSpeech (team_, 1.5f)) {
       PushRadioChat (RadioChat::GoingToCamp);
     }
-  }
-
-  if (rg.chance (75) && tid == TaskId::Camp && team_ == Team::CT && in_escape_zone_) {
-    PushRadioChat (RadioChat::GoingToGuardEscapeZone);
-  }
-
-  if (rg.chance (75) && tid == TaskId::Camp && team_ == Team::Terrorist && in_rescue_zone_) {
-    PushRadioChat (RadioChat::GoingToGuardRescueZone);
-  }
-
-  if (rg.chance (75) && tid == TaskId::Camp && team_ == Team::Terrorist && in_vip_zone_) {
-    PushRadioChat (RadioChat::GoingToGuardVIPSafety);
   }
 }
 
@@ -682,10 +693,13 @@ void Bot::HandleChatterOnPlayerKill (bool is_team_kill) {
     PushChatMessage (Chat::Kill);
   }
 
+  // sharing the enemy count is team play: better teamwork calls out more
+  const int share_chance = 20 + static_cast<int> (teamwork_level_ * 70.0f);
+
   if (rg.chance (10)) {
     PushRadioChat (RadioChat::EnemyDown);
   }
-  else if (rg.chance (80)) {
+  else if (rg.chance (share_chance)) {
     if (!game.IsNullEntity (last_victim_) && has_flag (last_victim_->v.weapons, kSniperWeaponMask)) {
       PushRadioChat (RadioChat::SniperKilled);
     }
@@ -744,23 +758,30 @@ void Bot::HandleChatterOnPlayerKill (bool is_team_kill) {
 }
 
 void Bot::HandleChatterEnemyDown () {
+  RadioChat message = RadioChat::TooManyEnemies;
+
   switch (NumEnemiesNear (pev->origin, 1024.0f)) {
   case 1:
-    PushRadioChat (RadioChat::SpottedOneEnemy);
+    message = RadioChat::SpottedOneEnemy;
     break;
 
   case 2:
-    PushRadioChat (RadioChat::SpottedTwoEnemies);
+    message = RadioChat::SpottedTwoEnemies;
     break;
 
   case 3:
-    PushRadioChat (RadioChat::SpottedThreeEnemies);
+    message = RadioChat::SpottedThreeEnemies;
     break;
 
   default:
-    PushRadioChat (RadioChat::TooManyEnemies);
     break;
   }
+
+  // a teammate already reported this exact pack, don't echo the meme
+  if (bots.IsTeamCalloutRecent (team_, message, 3.0f)) {
+    return;
+  }
+  PushRadioChat (message);
 }
 
 void Bot::ExecuteChatterFrameEvents () {
@@ -772,17 +793,28 @@ void Bot::ExecuteChatterFrameEvents () {
   if (has_flag (states_, Sense::SeeingEnemy) && !game.IsNullEntity (enemy_)) {
     int has_friend_nearby = NumFriendsNear (pev->origin, 512.0f);
 
-    if (!has_friend_nearby && rg.chance (45) && has_flag (enemy_->v.weapons, ystl::bit (Weapon::C4))) {
-      PushRadioChat (RadioChat::SpotTheBomber);
-    }
-    else if (!has_friend_nearby && rg.chance (45) && team_ == Team::Terrorist && game.IsPlayerVip (enemy_)) {
-      PushRadioChat (RadioChat::VIPSpotted);
-    }
-    else if (!has_friend_nearby && rg.chance (50) && game.GetPlayerTeam (enemy_) != team_ && IsGroupOfEnemies (enemy_->v.origin)) {
-      PushRadioChat (RadioChat::ScaredEmotion);
-    }
-    else if (!has_friend_nearby && rg.chance (40) && has_flag (enemy_->v.weapons, kSniperWeaponMask)) {
-      PushRadioChat (RadioChat::SniperWarning);
+    if (!has_friend_nearby) {
+      // pick the most important callout, then let teamwork (not pure dice) decide to shout it,
+      // and only one teammate holds the floor at a time
+      RadioChat callout = RadioChat::Invalid;
+
+      if (has_flag (enemy_->v.weapons, ystl::bit (Weapon::C4))) {
+        callout = RadioChat::SpotTheBomber;
+      }
+      else if (team_ == Team::Terrorist && game.IsPlayerVip (enemy_)) {
+        callout = RadioChat::VIPSpotted;
+      }
+      else if (game.GetPlayerTeam (enemy_) != team_ && IsGroupOfEnemies (enemy_->v.origin)) {
+        callout = RadioChat::ScaredEmotion;
+      }
+      else if (has_flag (enemy_->v.weapons, kSniperWeaponMask)) {
+        callout = RadioChat::SniperWarning;
+      }
+
+      if (callout != RadioChat::Invalid && !bots.IsTeamCalloutRecent (team_, callout, 4.0f) &&
+          rg.chance (30 + static_cast<int> (teamwork_level_ * 60.0f)) && bots.TryTeamSpeech (team_, 1.2f)) {
+        PushRadioChat (callout);
+      }
     }
 
     // if bot is trapped under shield yell for help !
@@ -791,9 +823,10 @@ void Bot::ExecuteChatterFrameEvents () {
     }
   }
 
-  // if bomb planted warn players !
-  if (bots.HasBombSay (BombPlantedSay::Chatter) && game_state.IsBombPlanted () && team_ == Team::CT) {
+  // if bomb planted warn players, but only a ct that actually knows about it
+  if (bots.HasBombSay (BombPlantedSay::Chatter) && game_state.IsBombPlanted () && team_ == Team::CT && bomb_known_) {
     PushRadioChat (RadioChat::GottaFindC4);
+    bots.SetBombKnown (Team::CT); // whatever a ct learns is shared with the team
     bots.ClearBombSay (BombPlantedSay::Chatter);
   }
 }
