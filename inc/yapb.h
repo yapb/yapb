@@ -851,6 +851,18 @@ private:
   // update emotional state machine
   void UpdateEmotions ();
 
+  // react to enemy contacts shared by teammates
+  void UpdateTeamAwareness ();
+
+  // regroup with nearby teammates when idling alone
+  void UpdateTeamCohesion ();
+
+  // cover the teammate who is defusing the planted bomb
+  void UpdateBombGuard ();
+
+  // brief halt so a trailed hostage can catch up to its rescuer
+  void UpdateHostageEscort ();
+
   // update team join state machine
   void UpdateTeamJoin ();
 
@@ -1174,6 +1186,9 @@ public:
 
     return tid == TaskId::PlantBomb || tid == TaskId::DefuseBomb;
   }
+
+  // is a living teammate already heading to or holding this node (avoid stacking on the same spot)
+  bool IsTeammateTargetingNode (int node);
 
   // breakables the bot gave up on (unbreakable, blocked or timed out)
   bool IsIgnoredBreakable (edict_t *ent) {

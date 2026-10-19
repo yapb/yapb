@@ -504,6 +504,20 @@ bool Bot::LookupEnemies () {
         }
       }
     }
+
+    // focus fire: join the enemy a nearby mate is already engaging, when we can see it too
+    if (!game.IsNullEntity (new_enemy)) {
+      for (auto &mate : bots) {
+        if (&mate == this || !mate.is_alive_ || mate.team_ != team_ || game.IsNullEntity (mate.enemy_) || mate.enemy_ == new_enemy) {
+          continue;
+        }
+
+        if (mate.pev->origin.distance_sq (pev->origin) < ystl::sqrf (900.0f) && SeesEnemy (mate.enemy_)) {
+          new_enemy = mate.enemy_;
+          break;
+        }
+      }
+    }
     enemy_update_timer_.start (UsesKnife () ? 1.25f : 0.85f);
 
     if (game.IsNullEntity (new_enemy) && !game.IsNullEntity (shield_enemy)) {
@@ -526,10 +540,15 @@ bool Bot::LookupEnemies () {
       last_enemy_ = new_enemy;
       last_enemy_origin_ = new_enemy->v.origin;
 
+      // keep the shared team contact fresh while the enemy stays in sight
+      bots.ReportTeamContact (team_, new_enemy, new_enemy->v.origin, 1);
+
       return true;
     }
     else {
-      if (see_enemy_timer_.greater_than (3.0f) && (has_c4_ || has_hostage_ || !game.IsNullEntity (target_entity_))) {
+      const bool objective_callout = see_enemy_timer_.greater_than (3.0f) && (has_c4_ || has_hostage_ || !game.IsNullEntity (target_entity_));
+
+      if (objective_callout && bots.TryTeamSpeech (team_, 1.5f)) {
         if (cv_radio_mode.As<int> () == 2) {
           HandleChatterEnemyDown ();
         }
@@ -548,6 +567,19 @@ bool Bot::LookupEnemies () {
       enemy_body_part_set_ = nullptr;
       last_enemy_origin_ = new_enemy->v.origin;
       enemy_reachable_timer_.invalidate ();
+
+      // broadcast the fresh contact to the rest of the team
+      bots.ReportTeamContact (team_, new_enemy, new_enemy->v.origin, NumEnemiesNear (new_enemy->v.origin, 1024.0f));
+
+      // and call it out (coordinated: the objective callout above may already hold the floor)
+      if (!objective_callout && bots.TryTeamSpeech (team_, 1.5f)) {
+        if (cv_radio_mode.As<int> () == 2) {
+          HandleChatterEnemyDown ();
+        }
+        else if (cv_radio_mode.As<int> () == 1) {
+          PushRadioChat (RadioChat::EnemySpotted);
+        }
+      }
 
       // keep track of when we last saw an enemy
       see_enemy_timer_.start ();

@@ -1754,4 +1754,93 @@ TEST_CASE ("unit/manager_lock") {
   bots.Destroy ();
 }
 
+TEST_CASE ("unit/manager_teamwork") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootManager (engine, cs);
+
+  edict_t *foe = game.CreateFakeClient ("TwFoe");
+  HOST_REQUIRE (!game.IsNullEntity (foe));
+
+  edict_t *out_ent = nullptr;
+  ystl::Vector out_origin {};
+
+  // nothing shared yet, and an invalid team is never accepted
+  CHECK (!bots.GetTeamContact (Team::Terrorist, out_ent, out_origin, 5.0f));
+  CHECK (!bots.GetTeamContact (Team::Invalid, out_ent, out_origin, 5.0f));
+
+  bots.ReportTeamContact (Team::Terrorist, foe, ystl::Vector (100.0f, 20.0f, 0.0f), 2);
+  HOST_REQUIRE (bots.GetTeamContact (Team::Terrorist, out_ent, out_origin, 5.0f));
+  CHECK (out_ent == foe);
+  CHECK (out_origin.x == 100.0f && out_origin.y == 20.0f);
+
+  // an invalid team on report is a no-op
+  bots.ReportTeamContact (Team::Invalid, foe, ystl::Vector (1.0f, 2.0f, 3.0f), 1);
+  CHECK (!bots.GetTeamContact (Team::Invalid, out_ent, out_origin, 5.0f));
+
+  // a fresh report resets the freshness window
+  engine.AdvanceTime (4.0f);
+  bots.ReportTeamContact (Team::Terrorist, foe, ystl::Vector (200.0f, 20.0f, 0.0f), 1);
+  HOST_REQUIRE (bots.GetTeamContact (Team::Terrorist, out_ent, out_origin, 5.0f));
+  CHECK (out_origin.x == 200.0f);
+
+  // contacts go stale after the age limit
+  engine.AdvanceTime (6.0f);
+  CHECK (!bots.GetTeamContact (Team::Terrorist, out_ent, out_origin, 5.0f));
+
+  // clearing drops the contact
+  bots.ReportTeamContact (Team::CT, foe, ystl::Vector (5.0f, 5.0f, 0.0f), 1);
+  bots.ClearTeamContact (Team::CT);
+  CHECK (!bots.GetTeamContact (Team::CT, out_ent, out_origin, 5.0f));
+
+  // several contacts coexist and nearest-selection spreads bots over them
+  edict_t *far_foe = game.CreateFakeClient ("TwFoeFar");
+  HOST_REQUIRE (!game.IsNullEntity (far_foe));
+
+  bots.ReportTeamContact (Team::CT, foe, ystl::Vector (100.0f, 0.0f, 0.0f), 1);
+  bots.ReportTeamContact (Team::CT, far_foe, ystl::Vector (3000.0f, 0.0f, 0.0f), 1);
+
+  edict_t *picked = nullptr;
+  ystl::Vector picked_origin {};
+
+  HOST_REQUIRE (bots.GetNearestTeamContact (Team::CT, ystl::Vector (150.0f, 0.0f, 0.0f), picked, picked_origin, 10.0f));
+  CHECK (picked == foe);
+  HOST_REQUIRE (bots.GetNearestTeamContact (Team::CT, ystl::Vector (2900.0f, 0.0f, 0.0f), picked, picked_origin, 10.0f));
+  CHECK (picked == far_foe);
+
+  // refreshing the same enemy updates its slot in place, not a new one
+  bots.ReportTeamContact (Team::CT, foe, ystl::Vector (120.0f, 0.0f, 0.0f), 2);
+  HOST_REQUIRE (bots.GetNearestTeamContact (Team::CT, ystl::Vector (130.0f, 0.0f, 0.0f), picked, picked_origin, 10.0f));
+  CHECK (picked == foe && picked_origin.x == 120.0f);
+
+  // team speech arbiter: only one mate holds the floor within the gap, per team
+  CHECK (bots.TryTeamSpeech (Team::CT, 2.0f));
+  CHECK (!bots.TryTeamSpeech (Team::CT, 2.0f));
+  CHECK (bots.TryTeamSpeech (Team::Terrorist, 2.0f));
+  engine.AdvanceTime (2.5f);
+  CHECK (bots.TryTeamSpeech (Team::CT, 2.0f));
+  CHECK (!bots.TryTeamSpeech (Team::Invalid, 2.0f));
+
+  // redundant meme: the same callout echoed by a teammate is muted within the gap
+  CHECK (!bots.IsTeamCalloutRecent (Team::CT, RadioChat::SniperWarning, 4.0f));
+  bots.SetLastRadio (Team::CT, RadioChat::SniperWarning);
+  bots.SetLastRadioTimestamp (Team::CT, game.Time ());
+  CHECK (bots.IsTeamCalloutRecent (Team::CT, RadioChat::SniperWarning, 4.0f));
+  CHECK (!bots.IsTeamCalloutRecent (Team::CT, RadioChat::EnemySpotted, 4.0f));
+  CHECK (!bots.IsTeamCalloutRecent (Team::Invalid, RadioChat::SniperWarning, 4.0f));
+  engine.AdvanceTime (5.0f);
+  CHECK (!bots.IsTeamCalloutRecent (Team::CT, RadioChat::SniperWarning, 4.0f));
+
+  // per-team bomb knowledge, wiped when the round restarts
+  CHECK (!bots.IsBombKnown (Team::CT));
+  bots.SetBombKnown (Team::CT);
+  CHECK (bots.IsBombKnown (Team::CT));
+  CHECK (!bots.IsBombKnown (Team::Terrorist));
+  bots.InitRound ();
+  CHECK (!bots.IsBombKnown (Team::CT));
+
+  bots.Destroy ();
+}
+
 } // namespace bot

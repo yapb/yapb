@@ -596,6 +596,211 @@ void Bot::UpdateEmotions () {
   emotion_update_timer_.start (0.5f);
 }
 
+void Bot::UpdateTeamAwareness () {
+  // lone, un-engaged bots head for the last enemy contact a teammate shared, so the team converges
+
+  if (!is_alive_ || is_creature_ || game.Is (GameFlags::FreeForAll) || game_state.IsRoundOver () || !team_contact_timer_.elapsed () || has_c4_ ||
+      has_hostage_ || !game.IsNullEntity (enemy_) || !game.IsNullEntity (last_enemy_)) {
+
+    return;
+  }
+
+  // only react while wandering, not during an objective task
+  const auto tid = GetTaskId ();
+
+  if (tid != TaskId::Normal && tid != TaskId::Pause && tid != TaskId::Camp && tid != TaskId::MoveTo) {
+    return;
+  }
+
+  edict_t *contact_entity = nullptr;
+  ystl::Vector contact_origin {};
+
+  // ignore stale contacts and ones on the far side of the map
+  if (!bots.GetNearestTeamContact (team_, pev->origin, contact_entity, contact_origin, 6.0f) ||
+      pev->origin.distance_sq (contact_origin) > ystl::sqrf (2048.0f)) {
+    return;
+  }
+
+  // team players react almost always, lone wolves rarely
+  if (!rg.chance (static_cast<int> (teamwork_level_ * 100.0f))) {
+    team_contact_timer_.start (rg (2.0f, 4.0f));
+
+    return;
+  }
+
+  last_enemy_ = contact_entity;
+  last_enemy_origin_ = contact_origin;
+  states_ |= (Sense::SuspectEnemy | Sense::HearingEnemy);
+  aim_flags_ |= AimFlags::LastEnemy;
+
+  if (tid == TaskId::Pause || tid == TaskId::Camp) {
+    Task ()->time = game.Time ();
+  }
+
+  // spread the goal a little, so several responders do not stack on one point
+  position_ = contact_origin + ystl::Vector (rg (-64.0f, 64.0f), rg (-64.0f, 64.0f), 0.0f);
+  ClearSearchNodes ();
+
+  if (tid != TaskId::MoveTo) {
+    StartTask (TaskId::MoveTo, TaskPri::kMoveTo, kInvalidNodeIndex, 0.0f, true);
+  }
+
+  team_contact_timer_.start (rg (3.0f, 6.0f));
+
+  if (cv_radio_mode.As<int> () != 2) {
+    PushRadioChat (RadioChat::OnMyWay);
+  }
+}
+
+void Bot::UpdateTeamCohesion () {
+  // team players regroup with the nearest living teammate instead of wandering off alone
+
+  if (!is_alive_ || is_creature_ || game.Is (GameFlags::FreeForAll) || game_state.IsRoundOver () || !team_cohesion_timer_.elapsed () ||
+      has_c4_ || has_hostage_ || !game.IsNullEntity (enemy_) || !game.IsNullEntity (last_enemy_) || GetTaskId () != TaskId::Normal) {
+
+    return;
+  }
+
+  // regroup on the objective carrier, else the leader, else the nearest mate
+  Bot *leader = nullptr;
+  Bot *escort = nullptr;
+  Bot *nearest = nullptr;
+  float nearest_distance_sq = kInfiniteDistance;
+
+  for (auto &mate : bots) {
+    if (&mate == this || !mate.is_alive_ || mate.team_ != team_) {
+      continue;
+    }
+    const float distance_sq = pev->origin.distance_sq (mate.pev->origin);
+
+    if (mate.is_leader_ && leader == nullptr) {
+      leader = &mate;
+    }
+
+    // escort whoever carries the objective (c4 / vip)
+    if (escort == nullptr && (mate.has_c4_ || mate.is_vip_)) {
+      escort = &mate;
+    }
+    if (distance_sq < nearest_distance_sq) {
+      nearest_distance_sq = distance_sq;
+      nearest = &mate;
+    }
+  }
+
+  Bot *anchor = escort != nullptr ? escort : (leader != nullptr ? leader : nearest);
+
+  // already together with the team, nothing to do
+  if (anchor == nullptr || pev->origin.distance_sq (anchor->pev->origin) < ystl::sqrf (1200.0f)) {
+    return;
+  }
+
+  // lone wolves rarely bother to regroup
+  if (!rg.chance (static_cast<int> (teamwork_level_ * 100.0f))) {
+    team_cohesion_timer_.start (rg (3.0f, 6.0f));
+
+    return;
+  }
+
+  position_ = anchor->pev->origin;
+  ClearSearchNodes ();
+  StartTask (TaskId::MoveTo, TaskPri::kMoveTo, kInvalidNodeIndex, 0.0f, true);
+
+  team_cohesion_timer_.start (rg (4.0f, 8.0f));
+}
+
+void Bot::UpdateBombGuard () {
+  // idle bots respond to the planted bomb: CTs cover the defuser, Ts hold it or rush a defuser
+
+  if ((team_ != Team::CT && team_ != Team::Terrorist) || !is_alive_ || is_creature_ || !game_state.IsBombPlanted () ||
+      (team_ == Team::CT && !bomb_known_) || !bomb_guard_timer_.elapsed () || !game.IsNullEntity (enemy_) ||
+      has_flag (states_, Sense::SeeingEnemy)) {
+
+    return;
+  }
+
+  const auto bomb_origin = game_state.GetBombOrigin ();
+
+  // stopping a defuse is critical: converge on the bomb even from a roam goal
+  if (team_ == Team::Terrorist && IsEnemyDefusingBomb (bomb_origin)) {
+    if (GetTaskId () != TaskId::MoveTo) {
+      position_ = bomb_origin;
+      ClearSearchNodes ();
+      StartTask (TaskId::MoveTo, TaskPri::kMoveTo, kInvalidNodeIndex, 0.0f, true);
+    }
+    bomb_guard_timer_.start (rg (2.0f, 4.0f));
+
+    return;
+  }
+
+  const auto tid = GetTaskId ();
+
+  if (tid != TaskId::Normal && tid != TaskId::Pause) {
+    return;
+  }
+
+  // stay within reach of the bomb, otherwise keep doing what we were doing
+  if (bomb_origin.distance_sq (pev->origin) > ystl::sqrf (1024.0f)) {
+    return;
+  }
+
+  // for CTs it only matters once a teammate is actually working on the bomb
+  if (team_ == Team::CT && !IsBombDefusing (bomb_origin)) {
+    return;
+  }
+
+  const int index = FindDefendNode (bomb_origin);
+
+  // a teammate already covers that spot, don't double up
+  if (index == kInvalidNodeIndex || IsTeammateTargetingNode (index)) {
+    return;
+  }
+
+  // hold a nearby spot and watch the approach instead of stacking on the bomb
+  StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, game.Time () + rg (8.0f, 16.0f), true);
+  StartTask (TaskId::MoveTo, TaskPri::kMoveTo, index, 0.0f, true);
+  SelectCampButtons (index);
+
+  bomb_guard_timer_.start (rg (5.0f, 10.0f));
+}
+
+void Bot::UpdateHostageEscort () {
+  // hold position for a moment so a rescued hostage that trailed off can catch up
+  if (team_ != Team::CT || !game.MapIs (MapFlags::HostageRescue) || has_hostage_ || hostages_.empty () || ShouldRushEndgameTime () ||
+      !game.IsNullEntity (enemy_) || has_flag (states_, Sense::SeeingEnemy) || GetTaskId () == TaskId::Pause) {
+    return;
+  }
+
+  for (auto &hostage : hostages_) {
+    if (game.IsNullEntity (hostage) || hostage->v.health <= 0.0f) {
+      continue;
+    }
+
+    // close enough that stopping now lets it catch back up
+    if (pev->origin.distance_sq (hostage->v.origin) < ystl::sqrf (kHostageStragglerDistance)) {
+      StartTask (TaskId::Pause, TaskPri::kPause, kInvalidNodeIndex, game.Time () + rg (0.5f, 1.0f), false);
+      return;
+    }
+  }
+}
+
+bool Bot::IsTeammateTargetingNode (int node) {
+  if (node == kInvalidNodeIndex) {
+    return false;
+  }
+
+  for (auto &mate : bots) {
+    if (&mate == this || !mate.is_alive_ || mate.team_ != team_) {
+      continue;
+    }
+    const auto tid = mate.GetTaskId ();
+
+    if ((tid == TaskId::MoveTo || tid == TaskId::Camp) && mate.Task ()->data == node) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void Bot::OverrideConditions () {
   const auto tid = GetTaskId ();
 
@@ -1076,6 +1281,8 @@ void Bot::SlowFrame () {
       }
     }
   }
+  UpdateBombGuard ();
+  UpdateBombKnowledge ();
 
   CheckSpawnConditions ();
   CheckForChat ();
@@ -1384,6 +1591,8 @@ void Bot::Logic () {
     TrackEnemies ();
   }
   ExecuteChatterFrameEvents ();
+  UpdateTeamAwareness ();
+  UpdateTeamCohesion ();
 
   check_terrain_ = true;
   move_to_goal_ = true;
@@ -1737,6 +1946,9 @@ void Bot::TakeDamage (edict_t *inflictor, int damage, int armor, int bits) {
       if (game.IsNullEntity (enemy_) && team_ != inflictor_team) {
         last_enemy_ = inflictor;
         last_enemy_origin_ = inflictor->v.origin;
+
+        // shout out where the shots come from, so mates converge on the shooter
+        bots.ReportTeamContact (team_, inflictor, inflictor->v.origin, 1);
 
         // fixme - bot doesn't necessary sees this enemy
         see_enemy_timer_.start ();
@@ -2236,6 +2448,38 @@ bool Bot::IsBombDefusing (const ystl::Vector &bomb_origin) const {
       if (bomb_distance_sq < kDistanceToBomb && ((client.ent->v.button | client.ent->v.oldbuttons) & IN_USE)) {
         return true;
       }
+    }
+  }
+  return false;
+}
+
+bool Bot::IsEnemyDefusingBomb (const ystl::Vector &bomb_origin) const {
+  // this function finds if an enemy is currently defusing the planted bomb
+
+  constexpr auto kDistanceToBomb = ystl::sqrf (165.0f);
+
+  for (const auto &client : clients) {
+    if (!client.IsUsedAndAlive () || client.IsSameTeam (team_)) {
+      continue;
+    }
+
+    if (client.origin.distance_sq (bomb_origin) > kDistanceToBomb) {
+      continue;
+    }
+
+    // enemy bot working on the bomb
+    auto enemy_bot = bots[client.ent];
+
+    if (enemy_bot != nullptr) {
+      if (enemy_bot->is_alive_ && (enemy_bot->GetTaskId () == TaskId::DefuseBomb || enemy_bot->has_progress_bar_)) {
+        return true;
+      }
+      continue;
+    }
+
+    // human enemy holding use at the bomb
+    if ((client.ent->v.button | client.ent->v.oldbuttons) & IN_USE) {
+      return true;
     }
   }
   return false;

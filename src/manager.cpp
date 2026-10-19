@@ -643,6 +643,125 @@ void Manager::Reset () {
   bomb_say_status_ = BombPlantedSay::ChatSay | BombPlantedSay::Chatter;
 }
 
+void Manager::ReportTeamContact (Team team, edict_t *enemy, const ystl::Vector &origin, int count) {
+  // keep a rolling set of enemy contacts per team, so bots can spread over the map
+  if (team != Team::CT && team != Team::Terrorist) {
+    return;
+  }
+  auto &contacts = team_data_[team].contacts;
+
+  TeamContact *slot = nullptr;
+  TeamContact *oldest = nullptr;
+
+  for (auto &contact : contacts) {
+    // refresh the entry for this enemy if we already track it
+    if (contact.entity == enemy) {
+      slot = &contact;
+      break;
+    }
+
+    // otherwise remember the least recent slot (empty slots have time 0)
+    if (oldest == nullptr || contact.time < oldest->time) {
+      oldest = &contact;
+    }
+  }
+
+  if (slot == nullptr) {
+    slot = oldest;
+  }
+
+  slot->entity = enemy;
+  slot->origin = origin;
+  slot->time = game.Time ();
+  slot->count = count;
+}
+
+bool Manager::GetTeamContact (Team team, edict_t *&enemy, ystl::Vector &origin, float max_age) const {
+  if (team != Team::CT && team != Team::Terrorist) {
+    return false;
+  }
+  const auto &contacts = team_data_[team].contacts;
+  const float now = game.Time ();
+
+  const TeamContact *best = nullptr;
+
+  for (const auto &contact : contacts) {
+    if (contact.time <= 0.0f || now - contact.time > max_age) {
+      continue;
+    }
+
+    // hand out the freshest contact
+    if (best == nullptr || contact.time > best->time) {
+      best = &contact;
+    }
+  }
+
+  if (best == nullptr) {
+    return false;
+  }
+  enemy = best->entity;
+  origin = best->origin;
+
+  return true;
+}
+
+bool Manager::TryTeamSpeech (Team team, float gap) {
+  // serialize team-wide shouts: a mate that just spoke keeps the floor
+  if (team != Team::CT && team != Team::Terrorist) {
+    return false;
+  }
+  auto &last_speech = team_data_[team].last_speech_time;
+  const float now = game.Time ();
+
+  if (last_speech > 0.0f && now - last_speech < gap) {
+    return false;
+  }
+  last_speech = now;
+
+  return true;
+}
+
+bool Manager::IsTeamCalloutRecent (Team team, RadioChat message, float gap) const {
+  // suppresses the same meme echoed by another teammate within the gap
+  if (team != Team::CT && team != Team::Terrorist) {
+    return false;
+  }
+  const auto &td = team_data_[team];
+
+  return td.last_radio_slot == message && td.last_radio_slot != RadioChat::Invalid && td.last_radio_timestamp + gap > game.Time ();
+}
+
+bool Manager::GetNearestTeamContact (Team team, const ystl::Vector &from, edict_t *&enemy, ystl::Vector &origin, float max_age) const {
+  if (team != Team::CT && team != Team::Terrorist) {
+    return false;
+  }
+  const auto &contacts = team_data_[team].contacts;
+  const float now = game.Time ();
+
+  const TeamContact *best = nullptr;
+  float best_distance_sq = kInfiniteDistance;
+
+  for (const auto &contact : contacts) {
+    if (contact.time <= 0.0f || now - contact.time > max_age) {
+      continue;
+    }
+    const float distance_sq = from.distance_sq (contact.origin);
+
+    if (distance_sq < best_distance_sq) {
+      best_distance_sq = distance_sq;
+      best = &contact;
+    }
+  }
+
+  if (best == nullptr) {
+    return false;
+  }
+  enemy = best->entity;
+  origin = best->origin;
+
+  return true;
+}
+
 void Manager::DecrementQuota (int by) {
   if (by != 0) {
     cv_quota.Set (ystl::clamp<int> (cv_quota.As<int> () - by, 0, cv_quota.As<int> ()));
@@ -1377,6 +1496,13 @@ Bot::Bot (edict_t *bot, Difficulty difficulty, Personality personality, Team tea
   agression_level_ = base_agression_level_;
   fear_level_ = base_fear_level_;
   emotion_update_timer_.start (0.5f);
+
+  // teamwork: smarter bots cooperate more, rushers lean lone-wolf while careful ones stick together
+  const float skill_fraction = static_cast<float> (ystl::to_underlying (difficulty)) * 0.18f;
+
+  teamwork_level_ = ystl::clamp (
+    0.25f + skill_fraction + (personality_ == Personality::Rusher ? -0.2f : 0.0f) + (personality_ == Personality::Careful ? 0.15f : 0.0f), 0.0f,
+    1.0f);
   health_value_ = bot->v.health;
 
   // just to be sure
@@ -1587,6 +1713,11 @@ void Manager::HandleDeath (edict_t *killer, edict_t *victim) {
     else if (notify.Ent () == victim) {
       victim_bot = &notify;
     }
+  }
+
+  // publish the killer's spot to the victim's team, so surviving mates converge on it (avenge)
+  if (killer_team != victim_team) {
+    ReportTeamContact (victim_team, killer, killer->v.origin, 1);
   }
 
   // is this message about a bot who killed somebody?
@@ -1853,6 +1984,9 @@ void Bot::NewRound () {
     radio_percent_ = bad_morale ? rg (70, 90) : rg (50, 70);
     break;
   }
+
+  // tie radio usage to teamwork instead of pure dice: team players communicate more
+  radio_percent_ = ystl::clamp (radio_percent_ + static_cast<int> ((teamwork_level_ - 0.5f) * 40.0f), 0, 95);
 
   // if bot died, clear all weapon stuff and force buying again
   if (!is_alive_) {
@@ -2309,6 +2443,9 @@ void Manager::InitRound () {
     SelectLeaders (team, true);
 
     team_data_[team].last_radio_timestamp = 0.0f;
+    team_data_[team].last_speech_time = 0.0f;
+    team_data_[team].bomb_known = false; // bomb knowledge does not survive a round
+    team_data_[team].contacts = {}; // contacts do not survive a round
   }
   Reset ();
 

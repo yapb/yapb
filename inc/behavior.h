@@ -148,7 +148,11 @@ public:
   float base_fear_level_ {}; // base fear level (on initializing)
   float agression_level_ {}; // dynamic aggression level (in game)
   float fear_level_ {}; // dynamic fear level (in game)
+  float teamwork_level_ {}; // how much the bot plays as a team (0 lone wolf .. 1 team player)
   ystl::CountdownTimer emotion_update_timer_ {}; // next time to sanitize emotions
+  ystl::CountdownTimer team_contact_timer_ {}; // cooldown before reacting to a shared contact again
+  ystl::CountdownTimer team_cohesion_timer_ {}; // cooldown before regrouping with teammates again
+  ystl::CountdownTimer bomb_guard_timer_ {}; // cooldown before covering the bomb defuser again
 
   BuyState buy_state_ {}; // current count in buying
   BuyContext buy_context_ {}; // context during buying

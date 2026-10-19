@@ -24,12 +24,26 @@ enum class CreateResult : int32_t {
   TeamStacked
 };
 
+// how many simultaneous enemy contacts a team keeps (so bots can spread over them)
+constexpr int kMaxTeamContacts = 4;
+
+// enemy contact shared across the team (a teammate spotted an enemy here)
+struct TeamContact {
+  edict_t *entity {}; // reported enemy, may go stale, validate before use
+  ystl::Vector origin {}; // last reported position
+  float time {}; // game time the contact was refreshed
+  int count {}; // number of enemies reported around the contact
+};
+
 // shared team data for bot
 struct TeamData {
   bool leader_choosen {}; // is team leader choose thees round
   bool positive_eco {}; // is team able to buy anything
+  bool bomb_known {}; // has the team learned the bomb is planted
   float last_radio_timestamp {}; // global radio time
+  float last_speech_time {}; // last time any teammate used a team-wide shout
   RadioChat last_radio_slot = { RadioChat::Invalid }; // last radio message for team
+  ystl::FixedArray<TeamContact, kMaxTeamContacts> contacts {}; // recent enemy contacts shared by teammates
 };
 
 // bot difficulty data
@@ -219,6 +233,37 @@ public:
 
   RadioChat GetLastRadio (const Team team) const {
     return team_data_[team].last_radio_slot;
+  }
+
+  // true when the team already shouted this exact callout within the gap (suppresses redundant meme)
+  bool IsTeamCalloutRecent (Team team, RadioChat message, float gap) const;
+
+  void SetBombKnown (const Team team) {
+    if (team == Team::CT || team == Team::Terrorist) {
+      team_data_[team].bomb_known = true;
+    }
+  }
+
+  bool IsBombKnown (const Team team) const {
+    return team_data_[team].bomb_known;
+  }
+
+  // reports an enemy contact seen by a bot, so idle teammates can converge on it
+  void ReportTeamContact (Team team, edict_t *enemy, const ystl::Vector &origin, int count);
+
+  // fetches the freshest team contact (returns false when there is none or it is stale)
+  bool GetTeamContact (Team team, edict_t *&enemy, ystl::Vector &origin, float max_age) const;
+
+  // fetches the freshest team contact closest to 'from', so bots spread over multiple contacts
+  bool GetNearestTeamContact (Team team, const ystl::Vector &from, edict_t *&enemy, ystl::Vector &origin, float max_age) const;
+
+  // team-wide shout arbiter: only one teammate may broadcast within the given gap
+  bool TryTeamSpeech (Team team, float gap);
+
+  void ClearTeamContact (Team team) {
+    if (team == Team::CT || team == Team::Terrorist) {
+      team_data_[team].contacts = {};
+    }
   }
 
   void MarkLastChatTime () {

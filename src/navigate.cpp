@@ -539,6 +539,13 @@ int Bot::FindGoalPost (GoalTactic tactic, ystl::SmallArray<int32_t> *defensive, 
   if (goal_choices[0] == kInvalidNodeIndex) {
     return chosen_goal_index_ = FindRandomNode ();
   }
+
+  // prefer a goal no teammate is already heading to, so the team spreads instead of stacking
+  for (int i = 0; i < valid_count; ++i) {
+    if (goal_choices[i] != kInvalidNodeIndex && !IsTeammateTargetingNode (goal_choices[i])) {
+      return chosen_goal_index_ = goal_choices[i];
+    }
+  }
   return chosen_goal_index_ = goal_choices[0]; // return and store goal
 }
 
