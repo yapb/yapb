@@ -49,6 +49,72 @@ enum class AimFlags : uint32_t {
 };
 YSTL_ENABLE_ENUM_FLAGS (AimFlags);
 
+// aim bias inputs
+enum class AimStance : int32_t {
+  Standing,
+  Crouching,
+  Moving
+};
+
+enum class AimExposure : int32_t {
+  Hidden,
+  Peek,
+  Open
+};
+
+struct AimProfile {
+  WeaponType weapon { WeaponType::None };
+  AimStance stance { AimStance::Standing };
+  AimExposure exposure { AimExposure::Open };
+  float distance {};
+};
+
+// per-weapon head/chest blend and sway, smooth over distance
+class AimLayer final {
+public:
+  ystl::Vector Compute (const AimProfile &profile) const {
+    struct Params {
+      float drop;
+      float sway;
+    };
+    static constexpr Params kParams[9] = {
+      { 0.0f, 0.0f }, // none
+      { 0.0f, 0.0f }, // melee
+      { 2.0f, 1.4f }, // pistol
+      { 1.0f, 3.2f }, // shotgun
+      { 4.0f, 0.9f }, // zoomrifle
+      { 5.0f, 1.8f }, // rifle
+      { 3.0f, 2.2f }, // smg
+      { 1.5f, 0.5f }, // sniper
+      { 6.0f, 2.6f }  // heavy
+    };
+    const auto &params = kParams[ystl::clamp<int> (ystl::to_underlying (profile.weapon), 0, 8)];
+
+    // 0 close, 1 far; continuous and clamped instead of fixed bands
+    const float t = ystl::clamp ((profile.distance - 256.0f) / 1280.0f, 0.0f, 1.0f);
+    float drop = params.drop * t;
+    float sway = params.sway * (0.25f + 0.75f * t);
+
+    if (profile.stance == AimStance::Crouching) {
+      drop *= 0.5f;
+      sway *= 0.4f;
+    }
+    else if (profile.stance == AimStance::Moving) {
+      sway *= 2.0f;
+    }
+
+    if (profile.exposure == AimExposure::Hidden) {
+      sway *= 0.5f;
+    }
+    else if (profile.exposure == AimExposure::Peek) {
+      sway *= 1.25f;
+    }
+
+    const float phase = game.Time () * 1.7f + static_cast<float> (ystl::to_underlying (profile.weapon));
+    return ystl::Vector { sway * ystl::sinf (phase), 0.0f, -drop };
+  }
+};
+
 // bot core behavior data mixin
 class BehaviorData {
   friend class DebugPanel;
@@ -129,6 +195,7 @@ protected:
   ystl::Array<edict_t *> hostages_ {}; // pointer to used hostage entities
 
   DifficultyData *difficulty_data_ {};
+  AimLayer aim_layer_ {}; // per-weapon aim bias
   ystl::Deque<Msg> msg_queue_ {};
 
   ystl::CountdownTimer think_timer_ {}; // next think time

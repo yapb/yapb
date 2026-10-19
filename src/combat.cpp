@@ -814,7 +814,7 @@ ystl::Vector Bot::GetEnemyBodyOffset () {
 
   // get the correct head origin
   const auto head_origin = [&] (edict_t *e) -> ystl::Vector {
-    return ystl::Vector { e->v.origin.x, e->v.origin.y, e->v.absmin.z + e->v.size.z * 0.81f } + GetCustomHeight (distance);
+    return ystl::Vector { e->v.origin.x, e->v.origin.y, e->v.absmin.z + e->v.size.z * 0.81f };
   };
 
   if (game.IsPlayerEntity (enemy_)) {
@@ -875,6 +875,11 @@ ystl::Vector Bot::GetEnemyBodyOffset () {
     spot = enemy_origin_;
   }
 
+  // weapon/stance bias applies to the whole enemy, not just the head
+  if (game.IsPlayerEntity (enemy_)) {
+    spot += GetAimBias (distance);
+  }
+
   // add recoil compensation for non-sniper weapons before setting m_lastenemyorigin
   if (!UsesSniper () && !UsesKnife () && distance > kSprayDistance) {
     // pull aim down to counter recoil using smoothed punch angle
@@ -896,41 +901,15 @@ ystl::Vector Bot::GetEnemyBodyOffset () {
   return spot;
 }
 
-ystl::Vector Bot::GetCustomHeight (float distance) const {
-  enum DistanceIndex {
-    Long,
-    Middle,
-    Short
-  };
+ystl::Vector Bot::GetAimBias (float distance) const {
+  AimProfile profile {};
+  profile.weapon = weapon_type_;
+  profile.distance = distance;
+  profile.stance = IsDucking () ? AimStance::Crouching : (pev->velocity.length2d () > 50.0f ? AimStance::Moving : AimStance::Standing);
+  profile.exposure = IsDucking () ? AimExposure::Hidden : (has_flag (aim_flags_, AimFlags::Camp) ? AimExposure::Peek : AimExposure::Open);
 
-  constexpr float kOffsetRanges[9][3] = {
-    { 0.0f, 0.0f,  0.0f  }, // none
-    { 0.0f, 0.0f,  0.0f  }, // melee
-    { 0.5f, -0.1f, -1.5f }, // pistol
-    { 6.5f, 6.0f,  -2.0f }, // shotgun
-    { 0.5f, -7.5f, -9.5f }, // zoomrifle
-    { 0.5f, -7.5f, -9.5f }, // rifle
-    { 0.5f, -7.5f, -9.5f }, // smg
-    { 0.0f, -2.5f, -6.0f }, // sniper
-    { 1.5f, -4.0f, -9.0f }  // heavy
-  };
-
-  // only high-skilled bots do that
-  if (difficulty_ != Difficulty::Expert || (enemy_->v.flags & FL_DUCKING)) {
-    return 0.0f;
-  }
-
-  // default distance index is short
-  auto distance_index = DistanceIndex::Short;
-
-  // set distance index appropriate to distance
-  if (distance < 2048.0f && distance > kSprayDistanceX2) {
-    distance_index = DistanceIndex::Long;
-  }
-  else if (distance > kSprayDistance && distance <= kSprayDistanceX2) {
-    distance_index = DistanceIndex::Middle;
-  }
-  return { 0.0f, 0.0f, kOffsetRanges[ystl::to_underlying (weapon_type_)][distance_index] };
+  const float skill = static_cast<float> (Skill ()) / 100.0f;
+  return aim_layer_.Compute (profile) * (1.0f - 0.5f * skill);
 }
 
 bool Bot::IsFriendInLineOfFire (float distance) const {

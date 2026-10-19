@@ -115,8 +115,8 @@ struct CombatHook {
   static edict_t *GrenadeVelocity (Bot &bot, ystl::StringRef model) {
     return bot.SetCorrectGrenadeVelocity (model);
   }
-  static ystl::Vector CustomHeight (Bot &bot, float distance) {
-    return bot.GetCustomHeight (distance);
+  static ystl::Vector AimBias (Bot &bot, float distance) {
+    return bot.GetAimBias (distance);
   }
   static void Focus (Bot &bot) {
     bot.FocusEnemy ();
@@ -794,19 +794,23 @@ TEST_CASE ("unit/combat_watch") {
   // no grenades in the world resolves to nothing
   CHECK (CombatHook::GrenadeVelocity (*bot, "models/w_hegrenade.mdl") == nullptr);
 
-  // custom heights follow the weapon table by distance band
+  // aim bias blends head/chest smoothly by distance, per weapon
   bot->enemy_ = foe;
   bot->weapon_type_ = WeaponType::Rifle;
-  CHECK (CombatHook::CustomHeight (*bot, 400.0f) == ystl::Vector (0.0f, 0.0f, -7.5f));
-  CHECK (CombatHook::CustomHeight (*bot, 100.0f) == ystl::Vector (0.0f, 0.0f, -9.5f));
+  bot->pev->flags &= ~FL_DUCKING;
+  bot->pev->velocity.clear ();
+
+  CHECK (CombatHook::AimBias (*bot, 1400.0f).z < -0.5f);
+  CHECK (CombatHook::AimBias (*bot, 100.0f).z == 0.0f);
 
   bot->weapon_type_ = WeaponType::Melee;
-  CHECK (CombatHook::CustomHeight (*bot, 400.0f) == ystl::Vector (0.0f, 0.0f, 0.0f));
+  CHECK (CombatHook::AimBias (*bot, 1400.0f).empty ());
 
-  foe->v.flags |= FL_DUCKING;
   bot->weapon_type_ = WeaponType::Rifle;
-  CHECK (CombatHook::CustomHeight (*bot, 400.0f) == ystl::Vector (0.0f, 0.0f, 0.0f));
-  foe->v.flags &= ~FL_DUCKING;
+  const float standing_drop = CombatHook::AimBias (*bot, 1400.0f).z;
+  bot->pev->flags |= FL_DUCKING;
+  CHECK (CombatHook::AimBias (*bot, 1400.0f).z > standing_drop);
+  bot->pev->flags &= ~FL_DUCKING;
 
   // focused close enemies draw fire when faced (aim point first)
   HOST_REQUIRE (CombatHook::BodyParts (*bot, foe));
@@ -1449,11 +1453,18 @@ TEST_CASE ("unit/combat_barrage") {
   CombatHook::Rng (*bot).clear_forced ();
   bot->pev->punchangle.x = 0.0f;
 
-  // non-experts ignore custom heights
-  bot->SetNewDifficulty (Difficulty::Noob);
+  // experts hold the head better than noobs at the same range
   bot->enemy_ = foe;
   bot->weapon_type_ = WeaponType::Rifle;
-  CHECK (CombatHook::CustomHeight (*bot, 400.0f) == ystl::Vector (0.0f, 0.0f, 0.0f));
+  bot->pev->flags &= ~FL_DUCKING;
+
+  bot->SetNewDifficulty (Difficulty::Expert);
+  const float expert_drop = CombatHook::AimBias (*bot, 1400.0f).z;
+
+  bot->SetNewDifficulty (Difficulty::Noob);
+  const float noob_drop = CombatHook::AimBias (*bot, 1400.0f).z;
+
+  CHECK (noob_drop < expert_drop);
   bot->SetNewDifficulty (Difficulty::Expert);
 
   // friendlies off the cone miss, null enemies need no focus

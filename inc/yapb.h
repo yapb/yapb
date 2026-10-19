@@ -393,7 +393,7 @@ private:
   ystl::Vector GetBodyOffsetError (edict_t *target, float distance);
 
   // get custom height adjustment for aiming
-  ystl::Vector GetCustomHeight (float distance) const;
+  ystl::Vector GetAimBias (float distance) const;
 
   // navigation and pathfinding
 private:
