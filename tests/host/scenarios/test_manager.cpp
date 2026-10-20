@@ -1816,15 +1816,24 @@ TEST_CASE ("unit/manager_teamwork") {
   // refreshing the same enemy updates its slot in place, not a new one
   bots.ReportTeamContact (Team::CT, foe, ystl::Vector (120.0f, 0.0f, 0.0f), 2);
   HOST_REQUIRE (bots.GetNearestTeamContact (Team::CT, ystl::Vector (130.0f, 0.0f, 0.0f), picked, picked_origin, 10.0f));
-  CHECK (picked == foe && picked_origin.x == 120.0f);
 
-  // team speech arbiter: only one mate holds the floor within the gap, per team
-  CHECK (bots.TryTeamSpeech (Team::CT, 2.0f));
-  CHECK (!bots.TryTeamSpeech (Team::CT, 2.0f));
-  CHECK (bots.TryTeamSpeech (Team::Terrorist, 2.0f));
+  int contact_count = 0;
+  HOST_REQUIRE (bots.GetNearestTeamContact (Team::CT, ystl::Vector (130.0f, 0.0f, 0.0f), picked, picked_origin, 10.0f, &contact_count));
+  CHECK (picked == foe && picked_origin.x == 120.0f);
+  CHECK (contact_count == 2);
+
+  // team speech arbiter: one mate holds the floor within the gap, per team and topic
+  CHECK (bots.TryTeamSpeech (Team::CT, 2.0f, SpeechTopic::Enemy));
+  CHECK (!bots.TryTeamSpeech (Team::CT, 2.0f, SpeechTopic::Enemy));
+  CHECK (bots.TryTeamSpeech (Team::Terrorist, 2.0f, SpeechTopic::Enemy));
   engine.AdvanceTime (2.5f);
-  CHECK (bots.TryTeamSpeech (Team::CT, 2.0f));
-  CHECK (!bots.TryTeamSpeech (Team::Invalid, 2.0f));
+  CHECK (bots.TryTeamSpeech (Team::CT, 2.0f, SpeechTopic::Enemy));
+  CHECK (!bots.TryTeamSpeech (Team::Invalid, 2.0f, SpeechTopic::Enemy));
+
+  // a different topic is throttled on its own, and critical shouts bypass both
+  CHECK (bots.TryTeamSpeech (Team::CT, 0.0f, SpeechTopic::Bomb));
+  CHECK (!bots.TryTeamSpeech (Team::CT, 0.0f, SpeechTopic::Bomb));
+  CHECK (bots.TryTeamSpeech (Team::CT, 10.0f, SpeechTopic::Bomb, SpeechPriority::Critical));
 
   // redundant meme: the same callout echoed by a teammate is muted within the gap
   CHECK (!bots.IsTeamCalloutRecent (Team::CT, RadioChat::SniperWarning, 4.0f));

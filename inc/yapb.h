@@ -225,6 +225,9 @@ private:
   // lookup and track visible enemies
   bool LookupEnemies ();
 
+  // is the bot currently fighting (sees an enemy, firing or recently hurt)
+  bool IsInCombat () const;
+
   // how threatening an enemy is (closer, shooting, sniper, wounded)
   float EngagementScore (edict_t *enemy) const;
 

@@ -385,6 +385,13 @@ float Bot::EnemyMemorySpan () const {
   return ystl::clamp (3.0f + 3.0f * skill + 1.5f * aggression + 2.0f * closeness, 3.0f, 8.0f);
 }
 
+bool Bot::IsInCombat () const {
+  if (has_flag (states_, Sense::SeeingEnemy) || wants_to_fire_) {
+    return true;
+  }
+  return !ystl::fzero (last_damage_timestamp_) && game.Time () - last_damage_timestamp_ < 1.5f;
+}
+
 float Bot::EngagementScore (edict_t *enemy) const {
   if (game.IsNullEntity (enemy)) {
     return 0.0f;
@@ -613,7 +620,7 @@ bool Bot::LookupEnemies () {
     else {
       const bool objective_callout = see_enemy_timer_.greater_than (3.0f) && (has_c4_ || has_hostage_ || !game.IsNullEntity (target_entity_));
 
-      if (objective_callout && bots.TryTeamSpeech (team_, 1.5f)) {
+      if (objective_callout && bots.TryTeamSpeech (team_, 1.5f, SpeechTopic::Enemy, SpeechPriority::Normal)) {
         if (cv_radio_mode.As<int> () == 2) {
           HandleChatterEnemyDown ();
         }
@@ -637,7 +644,7 @@ bool Bot::LookupEnemies () {
       bots.ReportTeamContact (team_, new_enemy, new_enemy->v.origin, NumEnemiesNear (new_enemy->v.origin, 1024.0f));
 
       // and call it out (coordinated: the objective callout above may already hold the floor)
-      if (!objective_callout && bots.TryTeamSpeech (team_, 1.5f)) {
+      if (!objective_callout && bots.TryTeamSpeech (team_, 1.5f, SpeechTopic::Enemy, SpeechPriority::Normal)) {
         if (cv_radio_mode.As<int> () == 2) {
           HandleChatterEnemyDown ();
         }

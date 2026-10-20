@@ -42,6 +42,7 @@ struct TeamData {
   bool bomb_known {}; // has the team learned the bomb is planted
   float last_radio_timestamp {}; // global radio time
   float last_speech_time {}; // last time any teammate used a team-wide shout
+  float last_topic_time[ystl::to_underlying (SpeechTopic::Count)] {}; // per-topic shout stamps
   RadioChat last_radio_slot = { RadioChat::Invalid }; // last radio message for team
   ystl::FixedArray<TeamContact, kMaxTeamContacts> contacts {}; // recent enemy contacts shared by teammates
 };
@@ -255,10 +256,11 @@ public:
   bool GetTeamContact (Team team, edict_t *&enemy, ystl::Vector &origin, float max_age) const;
 
   // fetches the freshest team contact closest to 'from', so bots spread over multiple contacts
-  bool GetNearestTeamContact (Team team, const ystl::Vector &from, edict_t *&enemy, ystl::Vector &origin, float max_age) const;
+  bool GetNearestTeamContact (
+    Team team, const ystl::Vector &from, edict_t *&enemy, ystl::Vector &origin, float max_age, int *count = nullptr) const;
 
-  // team-wide shout arbiter: only one teammate may broadcast within the given gap
-  bool TryTeamSpeech (Team team, float gap);
+  // team-wide shout arbiter: priority lanes, per-topic cooldowns and one speaker at a time
+  bool TryTeamSpeech (Team team, float gap, SpeechTopic topic = SpeechTopic::Social, SpeechPriority priority = SpeechPriority::Normal);
 
   void ClearTeamContact (Team team) {
     if (team == Team::CT || team == Team::Terrorist) {

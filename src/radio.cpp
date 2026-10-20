@@ -638,6 +638,11 @@ void Bot::CheckRadioQueue () {
 }
 
 void Bot::HandleChatterTaskChange (TaskId tid) {
+  // don't announce chores while fighting
+  if (IsInCombat ()) {
+    return;
+  }
+
   // announce intent more as teamwork rises (team players keep mates informed)
   const int announce = 55 + static_cast<int> (teamwork_level_ * 35.0f);
 
@@ -657,7 +662,7 @@ void Bot::HandleChatterTaskChange (TaskId tid) {
   // holding a zone is the more specific intel: one mate calls it, more often with higher teamwork
   const bool holds_zone = (team_ == Team::CT && in_escape_zone_) || (team_ == Team::Terrorist && (in_rescue_zone_ || in_vip_zone_));
 
-  if (holds_zone && rg.chance (announce) && bots.TryTeamSpeech (team_, 1.5f)) {
+  if (holds_zone && rg.chance (announce) && bots.TryTeamSpeech (team_, 1.5f, SpeechTopic::Objective, SpeechPriority::Social)) {
     if (team_ == Team::CT) {
       PushRadioChat (RadioChat::GoingToGuardEscapeZone);
     }
@@ -674,7 +679,7 @@ void Bot::HandleChatterTaskChange (TaskId tid) {
     if (game.MapIs (MapFlags::Demolition) && game_state.IsBombPlanted ()) {
       PushRadioChat (RadioChat::GuardingPlantedC4);
     }
-    else if (rg.chance (radio_percent_) && bots.TryTeamSpeech (team_, 1.5f)) {
+    else if (rg.chance (radio_percent_) && bots.TryTeamSpeech (team_, 1.5f, SpeechTopic::Objective, SpeechPriority::Social)) {
       PushRadioChat (RadioChat::GoingToCamp);
     }
   }
@@ -813,7 +818,9 @@ void Bot::ExecuteChatterFrameEvents () {
       }
 
       if (callout != RadioChat::Invalid && !bots.IsTeamCalloutRecent (team_, callout, 4.0f) &&
-          rg.chance (30 + static_cast<int> (teamwork_level_ * 60.0f)) && bots.TryTeamSpeech (team_, 1.2f)) {
+          rg.chance (30 + static_cast<int> (teamwork_level_ * 60.0f)) &&
+          bots.TryTeamSpeech (team_, 1.2f, SpeechTopic::Enemy,
+            (callout == RadioChat::SpotTheBomber || callout == RadioChat::SniperWarning) ? SpeechPriority::Critical : SpeechPriority::Normal)) {
         PushRadioChat (callout);
       }
     }
@@ -825,7 +832,8 @@ void Bot::ExecuteChatterFrameEvents () {
   }
 
   // if bomb planted warn players, but only a ct that actually knows about it
-  if (bots.HasBombSay (BombPlantedSay::Chatter) && game_state.IsBombPlanted () && team_ == Team::CT && bomb_known_) {
+  if (bots.HasBombSay (BombPlantedSay::Chatter) && game_state.IsBombPlanted () && team_ == Team::CT && bomb_known_ &&
+      bots.TryTeamSpeech (team_, 1.0f, SpeechTopic::Bomb, SpeechPriority::Critical)) {
     PushRadioChat (RadioChat::GottaFindC4);
     bots.SetBombKnown (Team::CT); // whatever a ct learns is shared with the team
     bots.ClearBombSay (BombPlantedSay::Chatter);

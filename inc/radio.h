@@ -103,6 +103,22 @@ enum class RadioChat : int32_t {
 };
 YSTL_ENABLE_ENUM_ARITHMETIC (RadioChat);
 
+// how urgent a shout is and what it is about
+enum class SpeechPriority : int32_t {
+  Social,
+  Normal,
+  Critical
+};
+
+enum class SpeechTopic : int32_t {
+  Enemy,
+  Bomb,
+  Sniper,
+  Objective,
+  Social,
+  Count
+};
+
 // bot radio and chatter data mixin
 class RadioData {
   friend struct TestHook;

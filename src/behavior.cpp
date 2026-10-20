@@ -614,15 +614,24 @@ void Bot::UpdateTeamAwareness () {
 
   edict_t *contact_entity = nullptr;
   ystl::Vector contact_origin {};
+  int contact_count = 0;
 
   // ignore stale contacts and ones on the far side of the map
-  if (!bots.GetNearestTeamContact (team_, pev->origin, contact_entity, contact_origin, 6.0f) || game.IsNullEntity (contact_entity) ||
-      !game.IsAliveEntity (contact_entity) || pev->origin.distance_sq (contact_origin) > ystl::sqrf (2048.0f)) {
+  if (!bots.GetNearestTeamContact (team_, pev->origin, contact_entity, contact_origin, 6.0f, &contact_count) ||
+      game.IsNullEntity (contact_entity) || !game.IsAliveEntity (contact_entity) ||
+      pev->origin.distance_sq (contact_origin) > ystl::sqrf (2048.0f)) {
     return;
   }
 
   // team players react almost always, lone wolves rarely
   if (!rg.chance (static_cast<int> (teamwork_level_ * 100.0f))) {
+    team_contact_timer_.start (rg (2.0f, 4.0f));
+
+    return;
+  }
+
+  // don't lone-wolf into a group: let teammates gather first
+  if (contact_count >= 2 && NumFriendsNear (pev->origin, 512.0f) == 0) {
     team_contact_timer_.start (rg (2.0f, 4.0f));
 
     return;
@@ -647,7 +656,7 @@ void Bot::UpdateTeamAwareness () {
 
   team_contact_timer_.start (rg (3.0f, 6.0f));
 
-  if (cv_radio_mode.As<int> () != 2) {
+  if (cv_radio_mode.As<int> () != 2 && bots.TryTeamSpeech (team_, 2.0f, SpeechTopic::Social, SpeechPriority::Social)) {
     PushRadioChat (RadioChat::OnMyWay);
   }
 }

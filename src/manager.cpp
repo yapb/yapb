@@ -18,6 +18,10 @@ Manager::Manager () {
     td.bomb_known = false;
     td.last_radio_slot = RadioChat::Invalid;
     td.last_radio_timestamp = 0.0f;
+
+    for (auto &topic_time : td.last_topic_time) {
+      topic_time = 0.0f;
+    }
   }
   Reset ();
 
@@ -707,18 +711,27 @@ bool Manager::GetTeamContact (Team team, edict_t *&enemy, ystl::Vector &origin, 
   return true;
 }
 
-bool Manager::TryTeamSpeech (Team team, float gap) {
-  // serialize team-wide shouts: a mate that just spoke keeps the floor
+bool Manager::TryTeamSpeech (Team team, float gap, SpeechTopic topic, SpeechPriority priority) {
+  // serialize team-wide shouts: priority lanes, per-topic cooldowns and one speaker
   if (team != Team::CT && team != Team::Terrorist) {
     return false;
   }
-  auto &last_speech = team_data_[team].last_speech_time;
+  auto &td = team_data_[team];
   const float now = game.Time ();
+  const int topic_index = ystl::clamp<int> (ystl::to_underlying (topic), 0, ystl::to_underlying (SpeechTopic::Count) - 1);
 
-  if (last_speech > 0.0f && now - last_speech < gap) {
-    return false;
+  if (priority != SpeechPriority::Critical) {
+    static constexpr float kTopicGap[] = { 2.0f, 3.0f, 4.0f, 2.0f, 5.0f };
+
+    if (td.last_topic_time[topic_index] > 0.0f && now - td.last_topic_time[topic_index] < kTopicGap[topic_index]) {
+      return false;
+    }
+    if (td.last_speech_time > 0.0f && now - td.last_speech_time < gap) {
+      return false;
+    }
   }
-  last_speech = now;
+  td.last_speech_time = now;
+  td.last_topic_time[topic_index] = now;
 
   return true;
 }
@@ -733,7 +746,8 @@ bool Manager::IsTeamCalloutRecent (Team team, RadioChat message, float gap) cons
   return td.last_radio_slot == message && td.last_radio_slot != RadioChat::Invalid && td.last_radio_timestamp + gap > game.Time ();
 }
 
-bool Manager::GetNearestTeamContact (Team team, const ystl::Vector &from, edict_t *&enemy, ystl::Vector &origin, float max_age) const {
+bool Manager::GetNearestTeamContact (
+  Team team, const ystl::Vector &from, edict_t *&enemy, ystl::Vector &origin, float max_age, int *count) const {
   if (team != Team::CT && team != Team::Terrorist) {
     return false;
   }
@@ -741,17 +755,19 @@ bool Manager::GetNearestTeamContact (Team team, const ystl::Vector &from, edict_
   const float now = game.Time ();
 
   const TeamContact *best = nullptr;
-  float best_distance_sq = kInfiniteDistance;
+  float best_weight = kInfiniteDistance;
 
   for (const auto &contact : contacts) {
     if (contact.time <= 0.0f || game.IsNullEntity (contact.entity) ||
         (!game.IsPlayerEntity (contact.entity) && !game.IsMonsterEntity (contact.entity)) || now - contact.time > max_age) {
       continue;
     }
-    const float distance_sq = from.distance_sq (contact.origin);
 
-    if (distance_sq < best_distance_sq) {
-      best_distance_sq = distance_sq;
+    // prefer a nearby cluster: the more enemies there, the more it is worth converging on
+    const float weight = from.distance_sq (contact.origin) / (1.0f + static_cast<float> (contact.count));
+
+    if (weight < best_weight) {
+      best_weight = weight;
       best = &contact;
     }
   }
@@ -762,6 +778,9 @@ bool Manager::GetNearestTeamContact (Team team, const ystl::Vector &from, edict_
   enemy = best->entity;
   origin = best->origin;
 
+  if (count != nullptr) {
+    *count = best->count;
+  }
   return true;
 }
 
@@ -2449,6 +2468,10 @@ void Manager::InitRound () {
     team_data_[team].last_speech_time = 0.0f;
     team_data_[team].bomb_known = false; // bomb knowledge does not survive a round
     team_data_[team].contacts = {}; // contacts do not survive a round
+
+    for (auto &topic_time : team_data_[team].last_topic_time) {
+      topic_time = 0.0f;
+    }
   }
   Reset ();
 
