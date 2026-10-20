@@ -456,7 +456,7 @@ void Bot::CheckRadioQueue () {
         else if (has_flag (path.flags, NodeFlag::Camp) && rg.chance (radio_percent_)) {
           PushRadioChat (RadioChat::GoingToCamp);
         }
-        else if (has_flag (states_, Sense::HearingEnemy)) {
+        else if (has_flag (states_, Sense::HearingEnemy) && bots.TryTeamSpeech (team_, 6.0f, SpeechTopic::Social, SpeechPriority::Social)) {
           PushRadioChat (RadioChat::HeardTheEnemy);
         }
       }

@@ -2355,7 +2355,8 @@ void Bot::UpdateHearing () {
     heard_sound_timer_.start ();
     states_ |= Sense::HearingEnemy;
 
-    if (rg.chance (10) && game.IsNullEntity (enemy_) && game.IsNullEntity (last_enemy_) && see_enemy_timer_.greater_than (7.0f)) {
+    if (rg.chance (10) && game.IsNullEntity (enemy_) && game.IsNullEntity (last_enemy_) && see_enemy_timer_.greater_than (7.0f) &&
+        bots.TryTeamSpeech (team_, 6.0f, SpeechTopic::Social, SpeechPriority::Social)) {
       PushRadioChat (RadioChat::HeardTheEnemy);
     }
 
