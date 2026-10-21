@@ -9,8 +9,27 @@ NATIVE="OFF"
 SKIP_CHECKS="OFF"
 EXTRA_D=()
 
+usage() {
+  cat <<'EOF'
+Usage: ./build.sh [options]
+
+Options:
+  --arch=<preset>     cmake preset to build (default: release)
+  -c, --compiler=<cc> force gcc or clang
+  -j, --jobs=<n>      parallel build jobs
+  --native            build with -march=native
+  --skip-checks       skip toolchain checks
+  -D<var>=<val>       extra cmake cache entries
+  -h, --help          show this help
+EOF
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
     --arch=*)
       PRESET="${1#*=}"
       shift
