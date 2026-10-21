@@ -991,10 +991,12 @@ bool Game::LoadCsBinary () {
   ystl::SmallArray<ystl::String> libs {};
   ConstructCsBinaryName (libs);
 
-  auto lib_check = [&] (ystl::StringRef mod, ystl::StringRef dll) {
+  auto lib_check = [&] (ystl::StringRef dll, ystl::StringRef path) {
     // try to load gamedll
     if (!game_lib_) {
-      ystl::logger.fatal ("Unable to load gamedll \"%s\". Exiting... (gamedir: %s)", dll, mod);
+      // capture the OS error right after the failed load, dlerror is one-shot
+      const auto error = ystl::SharedLibrary::last_error ();
+      ystl::logger.fatal ("Unable to load gamedll \"%s\". Exiting... (path: %s, error: %s)", dll.chars (), path.chars (), error.chars ());
     }
     auto ent = game_lib_.resolve<EntityProto> ("trigger_random_unique");
 
@@ -1053,13 +1055,13 @@ bool Game::LoadCsBinary () {
       game_lib_.load (path);
 
       // verify dll is ok
-      return lib_check (modname, lib);
+      return lib_check (lib, path);
     }
     else {
       game_lib_.load (path);
 
       // verify dll is ok
-      if (!lib_check (modname, lib)) {
+      if (!lib_check (lib, path)) {
         return false;
       }
 
