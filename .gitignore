@@ -27,6 +27,12 @@ vc/debug/
 vc/.vs/
 vc/enc_temp_folder/
 
+# Object and static library files
+*.o
+*.obj
+*.a
+*.lib
+
 # Build directories
 build/
 bin/
@@ -48,6 +54,7 @@ out/
 **/*.cbp
 **/CMakeScripts
 **/compile_commands.json
+CMakeUserPresets.json
 
 # OS specific
 .DS_Store
