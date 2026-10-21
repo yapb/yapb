@@ -19,10 +19,10 @@ VS_VERSION_INFO VERSIONINFO
 FILEVERSION MODULE_VERSION_FILE
 PRODUCTVERSION MODULE_VERSION_FILE
 FILEOS 0x40004
-FILETYPE 0x2 {  
+FILETYPE 0x2 {
     BLOCK "StringFileInfo" {
-      BLOCK "040904E4" {   
-         VALUE "CompanyName",       "YaPB Team   "                                                               "\0"
+      BLOCK "040904E4" {
+         VALUE "CompanyName",       "YaPB Team"                                                               "\0"
          VALUE "FileDescription",   "YaPB v" MODULE_VERSION "." MODULE_COMMIT_COUNT  " - The Counter-Strike Bot" "\0"
          VALUE "LegalCopyright",    "Copyright (c) 2004-2026 YaPB Team"                                          "\0"
          VALUE "OriginalFilename",  "yapb.dll"                                                                   "\0"
