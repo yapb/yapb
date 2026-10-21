@@ -1,4 +1,5 @@
 ---
+InsertNewlineAtEOF: true
 Language: Cpp
 BasedOnStyle: LLVM
 
