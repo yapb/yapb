@@ -150,6 +150,14 @@ if(CLANG_OR_GCC AND NOT ANDROID)
       list(APPEND _ldflags -Wl,--allow-shlib-undefined)
     endif()
 
+    # xp baseline for the mingw/clang path (mirrors the msvc /D_USING_V110_SDK71_ one).
+    # zig predefines _WIN32_WINNT (0x0a00) for this target, so undef it first.
+    if(YAPB_WINXP AND NOT MSVC)
+      list(APPEND _cflags -U_WIN32_WINNT -UWINVER -D_WIN32_WINNT=0x0501 -DWINVER=0x0501 -DYSTL_HAS_WINXP_SUPPORT)
+      list(APPEND _ldflags -Wl,--major-subsystem-version=5 -Wl,--minor-subsystem-version=1 -Wl,--major-os-version=5
+        -Wl,--minor-os-version=1)
+    endif()
+
     list(APPEND _strict_ldflags -Werror)
     list(APPEND _ldflags -luser32 -lws2_32 -lkernel32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32)
   elseif(APPLE)

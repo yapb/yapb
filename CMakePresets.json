@@ -103,6 +103,18 @@
       "toolchainFile": "cmake/toolchains/windows-x86-clang.cmake"
     },
     {
+      "name": "winxp-mingw",
+      "displayName": "Windows XP compatible DLL (mingw-w64 msvcrt)",
+      "inherits": [
+        "base"
+      ],
+      "toolchainFile": "cmake/toolchains/windows-x86-mingw.cmake",
+      "cacheVariables": {
+        "YAPB_WINXP": "ON",
+        "YAPB_LTO": "OFF"
+      }
+    },
+    {
       "name": "ci-windows-amd64",
       "inherits": [
         "base"
@@ -280,6 +292,13 @@
     {
       "name": "ci-windows-x86-clang",
       "configurePreset": "ci-windows-x86-clang",
+      "inherits": [
+        "base"
+      ]
+    },
+    {
+      "name": "winxp-mingw",
+      "configurePreset": "winxp-mingw",
       "inherits": [
         "base"
       ]

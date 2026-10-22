@@ -210,6 +210,12 @@ elseif(NOT VITA AND NOT WIN32 AND NOT APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "
   target_link_libraries(${PROJECT_NAME} PRIVATE m dl pthread)
 endif()
 
+# mingw needs the system libs after the objects: gnu ld is order sensitive,
+# unlike the lld used by the zig target
+if(WIN32 AND NOT MSVC AND NOT IS_ZIG)
+  target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32 user32 gdi32 winspool shell32 ole32 oleaut32 uuid comdlg32 advapi32 kernel32)
+endif()
+
 find_package(Python3 COMPONENTS Interpreter)
 
 if(GIT_FOUND AND Python3_FOUND AND PROJECT_IS_TOP_LEVEL)
