@@ -105,6 +105,7 @@ private:
   ystl::HashMap<uint32_t, ystl::String, ystl::Hash<int32_t>> missing_translations_ {}; // untranslated strings, collected at runtime
   ystl::HashMap<Difficulty, DifficultyData> difficulty_ {};
   ystl::HashMap<ystl::String, ystl::String> custom_ {};
+  ystl::Array<ystl::String> blocked_client_commands_ {}; // client commands bots must not be forced to run
 
   // parsed gamedef.cfg document; keeps string storage alive for weapon info and sound templates
   ystl::ConfNode gamedef_ {};
@@ -437,6 +438,16 @@ public:
   // simple accessors to c4 model name
   ystl::StringRef GetBombModelName () {
     return FetchCustom ("C4ModelName");
+  }
+
+  // is the client command blocked for bots (custom.cfg: BlockedClientCommands)
+  bool IsClientCommandBlocked (ystl::StringRef command) const {
+    for (const auto &blocked : blocked_client_commands_) {
+      if (blocked.equals_no_case (command)) {
+        return true;
+      }
+    }
+    return false;
   }
 };
 

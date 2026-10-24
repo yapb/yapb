@@ -1103,6 +1103,7 @@ void Config::LoadCustomConfig () {
       { "DisableLogFile",        "no"                                 },
       { "DisableSpawnControl",   "no"                                 },
       { "UnlockThinkFPS",        "no"                                 },
+      { "BlockedClientCommands", "lastinv"                            },
       { "CheckConnectivityHost", GraphUrlResolver::kConnectivityHost  },
       { "GraphGithubDownload",   GraphUrlResolver::kGithubDownloadUrl },
       { "GraphRussiaDownload",   GraphUrlResolver::kRussiaDownloadUrl },
@@ -1118,7 +1119,21 @@ void Config::LoadCustomConfig () {
       custom_[ystl::String (def.key)] = ystl::String (def.value);
     }
   };
+  auto rebuild_blocked = [&] () {
+    blocked_client_commands_.clear ();
+
+    for (auto part : FetchCustom ("BlockedClientCommands").split (",")) {
+      for (auto token : part.split (" ")) {
+        const auto cleaned = ystl::Tokenizer::trim (token, " \t\r\n");
+
+        if (!cleaned.empty ()) {
+          blocked_client_commands_.push (ystl::String (cleaned));
+        }
+      }
+    }
+  };
   set_defaults ();
+  rebuild_blocked ();
 
   if (rc == ConfigRead::Missing) {
     return;
@@ -1144,6 +1159,7 @@ void Config::LoadCustomConfig () {
       }
     }
   }
+  rebuild_blocked ();
   MarkConfigApplied ("custom", text);
 }
 

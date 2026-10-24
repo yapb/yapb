@@ -312,6 +312,18 @@ YSTL_EXPORT int GetEntityAPI (gamefuncs_t *table, int interface_version) {
       return;
     }
 
+    // bots have no client dll; block commands that can crash the gamedll
+    if (!bot::game.IsNullEntity (ent) && (bot::bots[ent] != nullptr || bot::game.IsFakeClientEntity (ent))) {
+      const char *cmd = engfuncs.pfnCmd_Argv (0);
+
+      if (cmd != nullptr && bot::conf.IsClientCommandBlocked (cmd)) {
+        if (bot::game.Is (bot::GameFlags::Metamod)) {
+          RETURN_META (MRES_SUPERCEDE);
+        }
+        return;
+      }
+    }
+
     // record stuff about radio and chat
     bot::bots.CaptureChatRadio (engfuncs.pfnCmd_Argv (0), engfuncs.pfnCmd_Argv (1), ent);
 
