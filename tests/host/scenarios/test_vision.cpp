@@ -560,6 +560,9 @@ TEST_CASE ("unit/vision_nav") {
   // then the walk lookahead takes the two-node point (past the glance)
   practice.SetIndex (Team::Terrorist, 0, 0, kInvalidNodeIndex);
   engine.AdvanceTime (12.0f);
+
+  // sloped lookahead stays level with the eyes, so pitch does not step with node z
+  graph.paths_[2].origin.z = -40.0f;
   VisionHook::AimDirection (*bot);
   CHECK (VisionHook::LookAt (*bot) == ystl::Vector (200.0f, 0.0f, 28.0f));
 

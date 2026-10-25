@@ -562,20 +562,18 @@ void Bot::SetAimDirection () {
 
         const auto is_narrow_place = IsInNarrowPlace ();
 
-        if (path_walk_.Length () > 2 && !is_narrow_place) {
-          const auto next_path_index_x2 = path_walk_.NextX2 ();
+        if (!is_narrow_place) {
+          auto target_index = next_path_index;
 
-          // prefer two-node lookahead, fall back to one-node if not visible
-          if (vistab.VisibleBothSides (current_node_index_, next_path_index_x2)) {
-            look_at_ = graph[next_path_index_x2].origin + pev->view_ofs;
+          if (path_walk_.Length () > 2) {
+            const auto next_path_index_x2 = path_walk_.NextX2 ();
+
+            if (vistab.VisibleBothSides (current_node_index_, next_path_index_x2)) {
+              target_index = next_path_index_x2;
+            }
           }
-          else {
-            look_at_ = graph[next_path_index].origin + pev->view_ofs;
-          }
-          target_set = true;
-        }
-        else if (!is_narrow_place) {
-          look_at_ = graph[next_path_index].origin + pev->view_ofs;
+          look_at_ = graph[target_index].origin + pev->view_ofs;
+          look_at_.z = GetEyesPos ().z; // keep the nav lookahead level, node z steps cause pitch jitter on slopes
           target_set = true;
         }
       }
