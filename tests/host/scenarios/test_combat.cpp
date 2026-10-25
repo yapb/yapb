@@ -242,6 +242,15 @@ struct CombatHook {
   static void StartFightStyle (Bot &bot, float value) {
     bot.fight_style_check_timer_.start (value);
   }
+  static void SetFightStyle (Bot &bot, Fight style) {
+    bot.fight_style_ = style;
+  }
+  static void ClearEnemyParts (Bot &bot) {
+    bot.enemy_parts_ = {};
+  }
+  static void StartLastUsedNodes (Bot &bot) {
+    bot.last_used_nodes_timer_.start ();
+  }
   static void InvalidateStrafeSet (Bot &bot) {
     bot.strafe_set_timer_.invalidate ();
   }
@@ -1020,6 +1029,52 @@ TEST_CASE ("unit/combat_attack_move") {
   CombatHook::SetStates (*bot, Sense::SuspectEnemy);
   CombatHook::AttackMove (*bot);
   CHECK (CombatHook::MoveSpeed (*bot) == 0.0f);
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/combat_knife_close_stay") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootCombat (engine, cs);
+
+  bots.Addbot ("KnSt", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("KnSt");
+  HOST_REQUIRE (bot != nullptr);
+
+  // enemy sits behind the view cone: the close-knife strafe branch does not
+  // fire, so the style stays stay and only the stuck-freeze guard can move us
+  edict_t *foe = MakeFoe ("KnFoe", ystl::Vector (50.0f, 0.0f, 0.0f));
+  HOST_REQUIRE (foe != nullptr);
+
+  bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->pev->maxspeed = 270.0f;
+  bot->pev->health = 100.0f;
+  bot->team_ = Team::Terrorist;
+  bot->enemy_ = foe;
+  clients.Update ();
+  clients[foe].team = Team::CT;
+
+  // point-blank knife with the fight style pinned to stay (full view lost)
+  // must not stand still next to the enemy, the safety check may flip direction
+  bot->weapon_type_ = WeaponType::Melee;
+  bot->current_weapon_ = Weapon::Knife;
+  bot->pev->weapons = 0;
+  CombatHook::SetStates (*bot, Sense::SeeingEnemy);
+  CombatHook::ClearEnemyParts (*bot);
+  CombatHook::SetFightStyle (*bot, Fight::Stay);
+  CombatHook::SetReloading (*bot, false);
+  CombatHook::StartFightStyle (*bot, 10.0f);
+  CombatHook::StartLastUsedNodes (*bot);
+  CombatHook::AttackMove (*bot);
+
+  CHECK (CombatHook::FightStyle (*bot) == Fight::Stay);
+  CHECK (CombatHook::MoveSpeed (*bot) != 0.0f);
 
   bots.Destroy ();
 }

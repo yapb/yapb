@@ -1256,25 +1256,33 @@ void Bot::AttackMovement () {
     }
   }
   else if (fight_style_ == Fight::Stay) {
-    const bool already_ducking = !duck_timer_.elapsed () || IsDucking () || ((pev->button | pev->oldbuttons) & IN_DUCK);
-
-    if (already_ducking) {
-      duck_timer_.start (frame_interval_ * 3.0f);
+    // a knife/creature bot that settled into stay at point-blank range just
+    // stands still next to the enemy, keep closing the gap instead
+    if ((UsesKnife () || is_creature_) && distance_sq < ystl::sqrf (128.0f)) {
+      move_speed_ = pev->maxspeed;
+      strafe_speed_ = 0.0f;
     }
-    else if ((distance_sq > ystl::sqrf (kSprayDistanceX2) && HasPrimaryWeapon ()) && is_full_view && GetTaskId () != TaskId::SeekCover &&
-             GetTaskId () != TaskId::Hunt) {
+    else {
+      const bool already_ducking = !duck_timer_.elapsed () || IsDucking () || ((pev->button | pev->oldbuttons) & IN_DUCK);
 
-      // skilled bots duck at long range for accuracy, noobs don't think of it
-      if (difficulty_ >= Difficulty::Normal) {
-        const int enemy_nearest_index = graph.GetNearest (enemy_->v.origin);
+      if (already_ducking) {
+        duck_timer_.start (frame_interval_ * 3.0f);
+      }
+      else if ((distance_sq > ystl::sqrf (kSprayDistanceX2) && HasPrimaryWeapon ()) && is_full_view && GetTaskId () != TaskId::SeekCover &&
+               GetTaskId () != TaskId::Hunt) {
 
-        if (vistab.VisibleBothSides (current_node_index_, enemy_nearest_index, VisIndex::Crouch)) {
-          duck_timer_.start (frame_interval_ * 3.0f);
+        // skilled bots duck at long range for accuracy, noobs don't think of it
+        if (difficulty_ >= Difficulty::Normal) {
+          const int enemy_nearest_index = graph.GetNearest (enemy_->v.origin);
+
+          if (vistab.VisibleBothSides (current_node_index_, enemy_nearest_index, VisIndex::Crouch)) {
+            duck_timer_.start (frame_interval_ * 3.0f);
+          }
         }
       }
+      move_speed_ = 0.0f;
+      strafe_speed_ = 0.0f;
     }
-    move_speed_ = 0.0f;
-    strafe_speed_ = 0.0f;
   }
 
   if (reload_data_.is_reloading) {
