@@ -229,6 +229,7 @@ class BotRelease(object):
                      'windows-x86-clang': 'dll',
                      'windows-x86-clang-cl': 'dll',
                      'windows-x86-msvc-xp': 'dll',
+                     'windows-x86-mingw': 'dll',
                      'windows-amd64': 'dll',
                      'apple-amd64': 'dylib',
                      'apple-arm64': 'dylib',

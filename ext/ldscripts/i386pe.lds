@@ -1,5 +1,4 @@
-/* Special ld script needed, because HL engine does some PE section checking on loaded gamedlls. */
-/* These checks fail and segfault HL process if default ld script is used! */
+/* hl engine checks pe sections of the gamedll and faults on the default layout */
 OUTPUT_FORMAT(pei-i386)
 SEARCH_DIR("/mingw/mingw32/lib"); SEARCH_DIR("/mingw/lib"); SEARCH_DIR("/usr/local/lib"); SEARCH_DIR("/lib"); SEARCH_DIR("/usr/lib");
 ENTRY(_mainCRTStartup)
@@ -9,6 +8,7 @@ SECTIONS
   {
     *(.init)
     *(.text)
+    *(.text.*)
     *(SORT(.text$*))
     *(.glue_7t)
     *(.glue_7)
@@ -27,7 +27,6 @@ SECTIONS
 			*crtend.o (.dtors);
 			LONG (0);
      *(.fini)
-    /* ??? Why is .gcc_exc here?  */
      *(.gcc_exc)
     PROVIDE (etext = .);
     *(.gcc_except_table)
@@ -37,11 +36,6 @@ SECTIONS
     *(.rdata)
     *(SORT(.rdata$*))
   }
-  /* The Cygwin32 library uses a section to avoid copying certain data
-     on fork.  This used to be named ".data".  The linker used
-     to include this between __data_start__ and __data_end__, but that
-     breaks building the cygwin32 dll.  Instead, we name the section
-     ".data_cygwin_nocopy" and explictly include it after __data_end__. */
   .data BLOCK(__section_alignment__) :
   {
     __data_start__ = . ;
@@ -70,8 +64,6 @@ SECTIONS
   }
   .idata BLOCK(__section_alignment__) :
   {
-    /* This cannot currently be handled with grouped sections.
-	See pe.em:sort_sections.  */
     SORT(*)(.idata$2)
     SORT(*)(.idata$3)
     /* These zeroes mark the end of the import list.  */
@@ -138,10 +130,6 @@ SECTIONS
   {
     *(.stabstr)
   }
-  /* DWARF debug sections.
-     Symbols in the DWARF debugging sections are relative to the beginning
-     of the section.  Unlike other targets that fake this by putting the
-     section VMA at 0, the PE format will not allow it.  */
   /* DWARF 1.1 and DWARF 2.  */
   .debug_aranges BLOCK(__section_alignment__) (NOLOAD) :
   {
@@ -202,4 +190,54 @@ SECTIONS
   {
     *(.debug_ranges)
   }
+  /* DWARF 4/5, keeps them after the loaded sections so .text stays first.  */
+  .debug_addr BLOCK(__section_alignment__) (NOLOAD) :
+  {
+    *(.debug_addr)
+  }
+  .debug_loclists BLOCK(__section_alignment__) (NOLOAD) :
+  {
+    *(.debug_loclists)
+  }
+  .debug_rnglists BLOCK(__section_alignment__) (NOLOAD) :
+  {
+    *(.debug_rnglists)
+  }
+  .debug_line_str BLOCK(__section_alignment__) (NOLOAD) :
+  {
+    *(.debug_line_str)
+  }
+  .debug_str_offsets BLOCK(__section_alignment__) (NOLOAD) :
+  {
+    *(.debug_str_offsets)
+  }
+  .debug_macro BLOCK(__section_alignment__) (NOLOAD) :
+  {
+    *(.debug_macro)
+  }
+  .debug_types BLOCK(__section_alignment__) (NOLOAD) :
+  {
+    *(.debug_types)
+  }
+  .debug_pubtypes BLOCK(__section_alignment__) (NOLOAD) :
+  {
+    *(.debug_pubtypes)
+  }
+  .debug_names BLOCK(__section_alignment__) (NOLOAD) :
+  {
+    *(.debug_names)
+  }
+  .debug_sup BLOCK(__section_alignment__) (NOLOAD) :
+  {
+    *(.debug_sup)
+  }
+  .debug_cu_index BLOCK(__section_alignment__) (NOLOAD) :
+  {
+    *(.debug_cu_index)
+  }
+  .debug_tu_index BLOCK(__section_alignment__) (NOLOAD) :
+  {
+    *(.debug_tu_index)
+  }
 }
+

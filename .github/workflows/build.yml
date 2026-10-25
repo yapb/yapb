@@ -2,13 +2,14 @@ name: build
 
 on:
   push:
-    branches: [master, main, dev]
+    branches: [master, main, dev, winxp-mingw]
     paths-ignore:
       - '**.md'
   pull_request:
     types: [opened, reopened, synchronize]
   release:
     types: [published]
+  workflow_dispatch:
 
 jobs:
   amxx-include:
@@ -51,6 +52,8 @@ jobs:
           - os: ubuntu-latest
             arch: windows-x86-clang
           - os: ubuntu-latest
+            arch: windows-x86-mingw
+          - os: ubuntu-latest
             arch: windows-amd64
           - os: macos-latest
             arch: apple-arm64
@@ -86,8 +89,12 @@ jobs:
           }
           clang-cl --version
 
+      - name: Setup mingw-w64
+        if: matrix.arch == 'windows-x86-mingw'
+        run: sudo apt-get update && sudo apt-get install -y g++-mingw-w64-i686
+
       - name: Setup Zig
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.arch != 'windows-x86-mingw'
         shell: bash
         # NOTE: deliberately not mlugg/setup-zig (still Node 20): a pinned
         # upstream tarball + PATH is all this project needs, with zero
@@ -108,7 +115,7 @@ jobs:
         # bundled libc++ from source every time. that rebuild is also where
         # the -Wnullability-completeness log spam comes from (zig-internal
         # compile, our flags can't reach it), so a warm cache keeps logs clean.
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.arch != 'windows-x86-mingw'
         uses: actions/cache@v5
         with:
           path: ~/.cache/zig
@@ -123,6 +130,12 @@ jobs:
       - name: Build
         # NOTE: default shell on purpose, see above.
         run: cmake --build --preset ci-${{ matrix.arch }}
+
+      - name: Strip mingw symbols
+        if: matrix.arch == 'windows-x86-mingw'
+        run: |
+          i686-w64-mingw32-objcopy --only-keep-debug $BUILD_DIR/yapb.dll $BUILD_DIR/yapb.debug
+          i686-w64-mingw32-objcopy --strip-debug $BUILD_DIR/yapb.dll
 
       - name: Check DLL ABI (windows, cross)
         if: startsWith(matrix.arch, 'windows-') && runner.os == 'Linux'
@@ -172,6 +185,13 @@ jobs:
             ${{ env.BUILD_DIR }}/yapb*.dylib
           if-no-files-found: error
 
+      - name: Upload symbols (mingw)
+        if: matrix.arch == 'windows-x86-mingw'
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-x86-mingw-symbols
+          path: ${{ env.BUILD_DIR }}/yapb.debug
+
       - name: Upload PDB (Windows MSVC)
         if: runner.os == 'Windows' && startsWith(matrix.arch, 'windows-x86')
         uses: actions/upload-artifact@v7
@@ -213,7 +233,7 @@ jobs:
         run: ctest --test-dir build/${{ matrix.preset }} --output-on-failure
 
   release:
-    if: github.event_name == 'push' || (github.event_name == 'release' && github.event.action == 'published')
+    if: (github.event_name == 'push' && github.ref != 'refs/heads/winxp-mingw') || (github.event_name == 'release' && github.event.action == 'published')
     name: ${{ github.event_name == 'release' && 'release' || 'release-continuous' }}
     runs-on: ubuntu-latest
     needs: [build, test, amxx-include]
@@ -279,3 +299,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.API_TOKEN }}
         run: gh release upload ${{ github.ref_name }} ./pkg/*
+
+
