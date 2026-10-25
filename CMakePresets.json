@@ -111,8 +111,14 @@
       "toolchainFile": "cmake/toolchains/windows-x86-mingw.cmake",
       "cacheVariables": {
         "YAPB_WINXP": "ON",
-        "YAPB_LTO": "OFF"
+        "YAPB_LTO": "ON"
       }
+    },
+    {
+      "name": "ci-windows-x86-mingw",
+      "inherits": [
+        "winxp-mingw"
+      ]
     },
     {
       "name": "ci-windows-amd64",
@@ -299,6 +305,13 @@
     {
       "name": "winxp-mingw",
       "configurePreset": "winxp-mingw",
+      "inherits": [
+        "base"
+      ]
+    },
+    {
+      "name": "ci-windows-x86-mingw",
+      "configurePreset": "ci-windows-x86-mingw",
       "inherits": [
         "base"
       ]

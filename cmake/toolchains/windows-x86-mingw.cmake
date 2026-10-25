@@ -1,6 +1,4 @@
-# mingw-w64 toolchain for windows 32-bit, msvcrt runtime (windows xp compatible).
-# unlike the zig target, the -win32 mingw variant links msvcrt.dll (present on xp)
-# instead of the ucrt api-set.
+# mingw-w64 32-bit windows xp toolchain (msvcrt, not ucrt)
 set(CMAKE_SYSTEM_NAME Windows)
 set(CMAKE_SYSTEM_PROCESSOR x86)
 

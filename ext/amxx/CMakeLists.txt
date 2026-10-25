@@ -17,7 +17,10 @@ set_target_properties(yapb_amxx PROPERTIES
   CXX_EXTENSIONS OFF
 )
 
-yapb_configure_target(yapb_amxx NOLTO)
+yapb_configure_target(yapb_amxx)
+
+# the mingw flags carry -lws2_32 before the objects, so link it again after them
+target_link_libraries(yapb_amxx PRIVATE ws2_32)
 
 # hide everything but the amxx entry points, like version.lds does for the core
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT CMAKE_BUILD_TYPE MATCHES "Debug")

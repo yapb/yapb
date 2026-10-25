@@ -57,7 +57,12 @@ if(CLANG_OR_GCC AND NOT ANDROID)
     endif()
   elseif(NOT CPU_NON_X86)
     if(NOT YAPB_NOSIMD)
-      list(APPEND _cflags -msse -msse2 -msse3 -mssse3 -mfpmath=sse)
+      # xp mirrors msvc /arch:SSE2 (sse2 only)
+      if(YAPB_WINXP)
+        list(APPEND _cflags -msse -msse2 -mfpmath=sse)
+      else()
+        list(APPEND _cflags -msse -msse2 -msse3 -mssse3 -mfpmath=sse)
+      endif()
     endif()
 
     if(YAPB_NATIVE)
@@ -131,8 +136,16 @@ if(CLANG_OR_GCC AND NOT ANDROID)
     list(APPEND _dist_ldflags -Wl,-soname,yapb${LIB_SUFFIX}.so)
     list(APPEND _strict_ldflags -Werror)
   elseif(WIN32)
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "12.0")
+    # hl engine pe check needs this script
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
       list(APPEND _ldflags -Xlinker --script -Xlinker ${PROJECT_SOURCE_DIR}/ext/ldscripts/i386pe.lds)
+
+      # ystl replaces the cxx runtime; drop unused sections
+      list(APPEND _ldflags -nostdlib++ -Wl,--gc-sections)
+
+      if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
+        list(APPEND _cflags -ffunction-sections -fdata-sections)
+      endif()
     endif()
 
     if(CMAKE_CROSSCOMPILING AND CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT IS_ZIG)
