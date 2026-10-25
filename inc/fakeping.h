@@ -12,11 +12,14 @@ namespace bot {
 
 class PingBitMsg final {
 private:
-  int32_t bits_ {};
+  static constexpr size_t kMaxBytes = 128;
+
+  uint32_t bits_ {};
   int32_t used_ {};
+  size_t size_ {};
+  uint8_t bytes_[kMaxBytes] {};
 
   MessageWriter msg_ {};
-  bool started_ {};
 
 public:
   enum : int32_t {
@@ -31,57 +34,36 @@ public:
   ~PingBitMsg () = default;
 
 public:
-  void Write (int32_t bit, int32_t size) {
-    if (size > 32 - used_ || size < 1) {
-      return;
-    }
-    const auto max_size = ystl::bit (size);
+  // clears the packed payload
+  void Clear ();
 
-    if (bit >= max_size) {
-      bit = max_size - 1;
-    }
-    bits_ = bits_ + (bit << used_);
-    used_ += size;
-  }
+  // appends size bits of bit to the payload
+  void Write (int32_t bit, int32_t size);
 
-  void Send (bool remaining = false) {
-    while (used_ >= 8) {
-      msg_.WriteByte (bits_ & (ystl::bit (8) - 1));
-      bits_ = (bits_ >> 8);
-      used_ -= 8;
-    }
+  // writes the terminator and pads the last byte
+  void Finish ();
 
-    if (remaining && used_ > 0) {
-      msg_.WriteByte (bits_);
-      bits_ = used_ = 0;
-    }
-  }
+  // sends the packed payload to a single client
+  void Send (edict_t *ent);
 
-  void Start (edict_t *ent) {
-    if (started_) {
-      return;
-    }
-    msg_.Start (MSG_ONE_UNRELIABLE, SVC_PINGS, nullptr, ent);
-    started_ = true;
-  }
+  // sends the packed payload to every client
+  void Broadcast ();
 
-  void Flush () {
-    if (!started_) {
-      return;
-    }
-    Write (0, Single);
-    Send (true);
-
-    started_ = false;
-    msg_.end ();
-  }
+private:
+  void WritePayload ();
 };
 
 // bot fakeping manager
 class FakePingManager final : public ystl::Singleton<FakePingManager> {
 private:
   ystl::CountdownTimer recalc_time_ {};
-  PingBitMsg pbm_ {};
+  PingBitMsg payload_ {};
+  bool payload_dirty_ { true };
+  int32_t payload_count_ { -1 };
+
+private:
+  // rebuilds the shared bot payload
+  void BuildPayload ();
 
 public:
   explicit FakePingManager () = default;
@@ -95,13 +77,16 @@ public:
   void Reset (edict_t *ent);
 
   // calculate our own pings for all the bots
-  void SyncCalculate ();
+  void Recalculate ();
 
   // calculate our own pings for all the bots
   void Calculate ();
 
-  // emit pings in update client data hook
+  // send pings to a connecting client
   void Emit (edict_t *ent);
+
+  // send pings to scoreboard holders
+  void Broadcast ();
 
   // restarts update timers
   void RestartTimer ();

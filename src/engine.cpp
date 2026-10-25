@@ -1435,6 +1435,9 @@ void Game::Frame () {
 
   // refresh clients after bot ai, so bot input is fresh for the noise simulation
   clients.Update ();
+
+  // send fake pings to scoreboard holders
+  fakeping.Broadcast ();
 }
 
 void Game::SearchEntities (ystl::StringRef field, ystl::StringRef value, EntitySearch functor) {

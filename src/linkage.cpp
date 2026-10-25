@@ -383,29 +383,6 @@ YSTL_EXPORT int GetEntityAPI (gamefuncs_t *table, int interface_version) {
     bot::game.Frame ();
   };
 
-  if (bot::game.Is (bot::GameFlags::HasFakePings) && !bot::game.Is (bot::GameFlags::Metamod)) {
-    table->pfnUpdateClientData = [] (const struct edict_s *player, int sendweapons, struct clientdata_s *cd) YSTL_FORCE_STACK_ALIGN {
-      // this function is a synchronization tool that is used periodically by the engine to tell
-      // the bot::game DLL to send player info over the network to one of its bot::clients when it suspects
-      // that this client is desynchronizing. Early bot::bots were using it to ask the bot::game DLL for the
-      // weapon list of players (by setting sendweapons to TRUE), but most of the time having a
-      // look around the ent->v.weapons bitmask is enough, since that's the place commonly used for
-      // MODs to store weapon information. If it can't be read from there, catching a few network
-      // messages (like in DMC) do the job better than this function anyway
-
-      dllapi.pfnUpdateClientData (player, sendweapons, cd);
-
-      // do a post-processing with non-metamod
-      auto ent = const_cast<edict_t *> (reinterpret_cast<const edict_t *> (player));
-
-      if (bot::fakeping.HasFeature ()) {
-        if (!bot::game.IsFakeClientEntity (ent) && ((ent->v.oldbuttons | ent->v.button) & IN_SCORE) != 0) {
-          bot::fakeping.Emit (ent);
-        }
-      }
-    };
-  }
-
   // add some bullet spread on games, where w're runnung without metamod, but only if
   // yb_enable_bullet_spread is enabled, since randomizing the seed affects bot accuracy
   if (!bot::game.Is (bot::GameFlags::Metamod) && !bot::game.Is (bot::GameFlags::Legacy)) {
@@ -503,6 +480,9 @@ YSTL_C_LINKAGE int GetEntityApiPost (gamefuncs_t *table, int) {
     // refresh bot::clients after bot ai, so bot input is fresh for the noise simulation
     bot::clients.Update ();
 
+    // send fake pings to scoreboard holders
+    bot::fakeping.Broadcast ();
+
     RETURN_META (MRES_IGNORED);
   };
 
@@ -520,28 +500,6 @@ YSTL_C_LINKAGE int GetEntityApiPost (gamefuncs_t *table, int) {
 
     RETURN_META (MRES_IGNORED);
   };
-
-  if (bot::game.Is (bot::GameFlags::HasFakePings)) {
-    table->pfnUpdateClientData = [] (const struct edict_s *player, int, struct clientdata_s *) YSTL_FORCE_STACK_ALIGN {
-      // this function is a synchronization tool that is used periodically by the engine to tell
-      // the bot::game DLL to send player info over the network to one of its bot::clients when it suspects
-      // that this client is desynchronizing. Early bot::bots were using it to ask the bot::game DLL for the
-      // weapon list of players (by setting sendweapons to TRUE), but most of the time having a
-      // look around the ent->v.weapons bitmask is enough, since that's the place commonly used for
-      // MODs to store weapon information. If it can't be read from there, catching a few network
-      // messages (like in DMC) do the job better than this function anyway
-      //
-      // do a post-processing with non-metamod
-      auto ent = const_cast<edict_t *> (reinterpret_cast<const edict_t *> (player));
-
-      if (bot::fakeping.HasFeature ()) {
-        if (!bot::game.IsFakeClientEntity (ent) && ((ent->v.oldbuttons | ent->v.button) & IN_SCORE) != 0) {
-          bot::fakeping.Emit (ent);
-        }
-      }
-      RETURN_META (MRES_IGNORED);
-    };
-  }
 
   return HLTrue;
 }

@@ -109,14 +109,14 @@ TEST_CASE ("unit/fakeping_calc [modern]") {
   // averaged math keeps every bot inside the displayable band
   cv_ping_count_real_players.Set (0);
   bot->ping_ = 9999;
-  fakeping.SyncCalculate ();
+  fakeping.Recalculate ();
   CHECK (bot->ping_.load () >= 1);
   CHECK (bot->ping_.load () <= 40);
 
   // human averaging takes the same path when enabled
   cv_ping_count_real_players.Set (1);
   bot->ping_ = 9999;
-  fakeping.SyncCalculate ();
+  fakeping.Recalculate ();
   CHECK (bot->ping_.load () >= 1);
   CHECK (bot->ping_.load () <= 40);
   cv_ping_count_real_players.Set (0);
@@ -139,6 +139,22 @@ TEST_CASE ("unit/fakeping_calc [modern]") {
   fakeping.Emit (human);
   CHECK (bot->ping_.load () >= 1);
 
+  // scoreboard holders drive the targeted and broadcast paths
+  edict_t *human2 = game.CreateFakeClient ("PingHuman2");
+  HOST_REQUIRE (!game.IsNullEntity (human2));
+  human2->v.flags &= ~FL_FAKECLIENT;
+  clients.Update ();
+
+  human->v.button |= IN_SCORE;
+  fakeping.Broadcast ();
+  human->v.button &= ~IN_SCORE;
+
+  human->v.button |= IN_SCORE;
+  human2->v.button |= IN_SCORE;
+  fakeping.Broadcast ();
+  human->v.button &= ~IN_SCORE;
+  human2->v.button &= ~IN_SCORE;
+
   // timer restart arm the throttle interval exactly
   fakeping.RestartTimer ();
   bot->ping_ = 9999;
@@ -157,18 +173,18 @@ TEST_CASE ("unit/fakeping_calc [modern]") {
   // out-of-band pings are re-rolled back into range
   cv_show_latency.Set (2);
   TestHook::SetPingBase (*bot, -1000);
-  fakeping.SyncCalculate ();
+  fakeping.Recalculate ();
   CHECK (bot->ping_.load () >= 1);
 
   TestHook::SetPingBase (*bot, 1000);
-  fakeping.SyncCalculate ();
+  fakeping.Recalculate ();
   CHECK (bot->ping_.load () >= 1);
 
   // averaging with no real players falls back to a random base
   human->v.flags |= FL_FAKECLIENT;
   clients.Update ();
   cv_ping_count_real_players.Set (1);
-  fakeping.SyncCalculate ();
+  fakeping.Recalculate ();
   CHECK (bot->ping_.load () >= 1);
   cv_ping_count_real_players.Set (0);
 

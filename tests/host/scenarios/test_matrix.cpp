@@ -32,7 +32,6 @@ struct MatrixExpect {
   const char *absent[4] {};
   int absent_count {};
   bool cmd_start_hook {};
-  bool update_client_data_hook {};
 };
 
 void RunMatrixVariant (const char *game_dir_, const char *cs_dll, const MatrixExpect &expect) {
@@ -50,9 +49,9 @@ void RunMatrixVariant (const char *game_dir_, const char *cs_dll, const MatrixEx
   HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
 
   // bot hooks overwrite the baseline only when their conditions hold:
-  // pfnCmdStart needs a non-legacy game, pfnUpdateClientData needs fakepings
+  // pfnCmdStart needs a non-legacy game, pfnUpdateClientData is not hooked
   CHECK ((table.pfnCmdStart != dllapi.pfnCmdStart) == expect.cmd_start_hook);
-  CHECK ((table.pfnUpdateClientData != dllapi.pfnUpdateClientData) == expect.update_client_data_hook);
+  CHECK (table.pfnUpdateClientData == dllapi.pfnUpdateClientData);
 
   // version banner goes through the print queue, flushed by StartFrame
   table.pfnGameInit ();
@@ -98,7 +97,6 @@ TEST_CASE ("gamedll/matrix_legacy") {
     { "BotVoice", "ReGameDLL", "FakePing" },
     3,
     false,
-    false,
   };
   RunMatrixVariant (YAPB_TEST_GAMEDIR "/cstrike", YAPB_TEST_GAMEDIR "/cstrike/dlls/" YAPB_TEST_CSSUFFIX, expect);
 }
@@ -111,7 +109,6 @@ TEST_CASE ("gamedll/matrix_modern [modern]") {
     { "ReGameDLL" },
     1,
     true,
-    true,
   };
   RunMatrixVariant (YAPB_TEST_GAMEDIR "-modern/cstrike", YAPB_TEST_GAMEDIR "-modern/cstrike/dlls/" YAPB_TEST_CSSUFFIX, expect);
 }
@@ -123,7 +120,6 @@ TEST_CASE ("gamedll/matrix_regame [regame]") {
     3,
     { nullptr },
     0,
-    true,
     true,
   };
   RunMatrixVariant (YAPB_TEST_GAMEDIR "-regame/cstrike", YAPB_TEST_GAMEDIR "-regame/cstrike/dlls/" YAPB_TEST_CSSUFFIX, expect);

@@ -9,34 +9,118 @@
 
 namespace bot {
 
+void PingBitMsg::Clear () {
+  bits_ = 0;
+  used_ = 0;
+  size_ = 0;
+}
+
+void PingBitMsg::Write (const int32_t bit, const int32_t size) {
+  if (size < 1 || size > 32 - used_) {
+    return;
+  }
+  const auto limit = 1u << size;
+
+  auto value = bit;
+  if (value < 0) {
+    value = 0;
+  }
+  if (static_cast<uint32_t> (value) >= limit) {
+    value = static_cast<int32_t> (limit - 1);
+  }
+
+  bits_ |= static_cast<uint32_t> (value) << used_;
+  used_ += size;
+
+  while (used_ >= 8) {
+    if (size_ < kMaxBytes) {
+      bytes_[size_++] = static_cast<uint8_t> (bits_ & 0xFFu);
+    }
+    bits_ >>= 8;
+    used_ -= 8;
+  }
+}
+
+void PingBitMsg::Finish () {
+  Write (0, 1);
+
+  if (used_ > 0 && size_ < kMaxBytes) {
+    bytes_[size_++] = static_cast<uint8_t> (bits_ & 0xFFu);
+  }
+  bits_ = 0;
+  used_ = 0;
+}
+
+void PingBitMsg::WritePayload () {
+  size_t offset = 0;
+  for (; offset + sizeof (uint32_t) <= size_; offset += sizeof (uint32_t)) {
+    uint32_t word {};
+    memcpy (&word, bytes_ + offset, sizeof (word));
+    msg_.WriteLong (static_cast<int32_t> (word));
+  }
+  for (; offset < size_; ++offset) {
+    msg_.WriteByte (bytes_[offset]);
+  }
+}
+
+void PingBitMsg::Send (edict_t *ent) {
+  if (!size_) {
+    return;
+  }
+  msg_.Start (MSG_ONE_UNRELIABLE, SVC_PINGS, nullptr, ent);
+  WritePayload ();
+  msg_.end ();
+}
+
+void PingBitMsg::Broadcast () {
+  if (!size_) {
+    return;
+  }
+  msg_.Start (MSG_BROADCAST, SVC_PINGS, nullptr, nullptr);
+  WritePayload ();
+  msg_.end ();
+}
+
 bool FakePingManager::HasFeature () const {
   return game.Is (GameFlags::HasFakePings) && cv_show_latency.As<int> () >= 2;
 }
 
 void FakePingManager::Reset (edict_t *to) {
-
-  // no reset if game isn't support them
   if (!HasFeature ()) {
     return;
   }
+
+  PingBitMsg reset {};
+  reset.Write (1, PingBitMsg::Single);
+  reset.Write (game.IndexOfPlayer (to), PingBitMsg::PlayerID);
+  reset.Write (0, PingBitMsg::Ping);
+  reset.Write (0, PingBitMsg::Loss);
+  reset.Finish ();
 
   for (const auto &client : clients) {
     if (!client.IsUsed () || client.IsBot ()) {
       continue;
     }
-    pbm_.Start (client.ent);
-
-    pbm_.Write (1, PingBitMsg::Single);
-    pbm_.Write (game.IndexOfPlayer (to), PingBitMsg::PlayerID);
-    pbm_.Write (0, PingBitMsg::Ping);
-    pbm_.Write (0, PingBitMsg::Loss);
-
-    pbm_.Send ();
-    pbm_.Flush ();
+    reset.Send (client.ent);
   }
+  payload_dirty_ = true;
 }
 
-void FakePingManager::SyncCalculate () {
+void FakePingManager::BuildPayload () {
+  payload_.Clear ();
+
+  for (const auto &bot : bots) {
+    payload_.Write (1, PingBitMsg::Single);
+    payload_.Write (bot.Entindex () - 1, PingBitMsg::PlayerID);
+    payload_.Write (bot.ping_.load (ystl::MemoryOrder::relaxed), PingBitMsg::Ping);
+    payload_.Write (0, PingBitMsg::Loss);
+  }
+  payload_.Finish ();
+  payload_count_ = bots.GetBotCount ();
+  payload_dirty_ = false;
+}
+
+void FakePingManager::Recalculate () {
   int average_ping {};
 
   if (cv_ping_count_real_players) {
@@ -79,8 +163,10 @@ void FakePingManager::SyncCalculate () {
     else if (bot_ping > 75.0f) {
       bot_ping = ystl::rg (30.0f, 40.0f);
     }
-    bot.ping_ = static_cast<int> (bot.Entindex () % 2 == 0 ? bot_ping * 0.25f : bot_ping * 0.5f);
+
+    bot.ping_.store (static_cast<int> (bot.Entindex () % 2 == 0 ? bot_ping * 0.25f : bot_ping * 0.5f), ystl::MemoryOrder::relaxed);
   }
+  payload_dirty_ = true;
 }
 
 void FakePingManager::Calculate () {
@@ -93,28 +179,52 @@ void FakePingManager::Calculate () {
     return;
   }
   RestartTimer ();
-
-  worker.Enqueue ([this] () {
-    SyncCalculate ();
-  });
+  Recalculate ();
 }
 
 void FakePingManager::Emit (edict_t *ent) {
-  if (!HasFeature () || !game.IsPlayerEntity (ent)) {
+  if (!HasFeature () || !game.IsPlayerEntity (ent) || bots.GetBotCount () == 0) {
     return;
   }
 
-  for (const auto &bot : bots) {
-    pbm_.Start (ent);
-
-    pbm_.Write (1, PingBitMsg::Single);
-    pbm_.Write (bot.Entindex () - 1, PingBitMsg::PlayerID);
-    pbm_.Write (bot.ping_, PingBitMsg::Ping);
-    pbm_.Write (0, PingBitMsg::Loss);
-
-    pbm_.Send ();
+  if (payload_dirty_ || payload_count_ != bots.GetBotCount ()) {
+    BuildPayload ();
   }
-  pbm_.Flush ();
+  payload_.Send (ent);
+}
+
+void FakePingManager::Broadcast () {
+  if (!HasFeature () || bots.GetBotCount () == 0) {
+    return;
+  }
+
+  edict_t *holder = nullptr;
+  int holders = 0;
+
+  for (const auto &client : clients) {
+    if (!client.IsUsed () || client.IsBot ()) {
+      continue;
+    }
+    if (((client.ent->v.button | client.ent->v.oldbuttons) & IN_SCORE) == 0) {
+      continue;
+    }
+    holder = client.ent;
+    ++holders;
+  }
+
+  if (!holders) {
+    return;
+  }
+
+  if (payload_dirty_ || payload_count_ != bots.GetBotCount ()) {
+    BuildPayload ();
+  }
+  if (holders == 1) {
+    payload_.Send (holder);
+  }
+  else {
+    payload_.Broadcast ();
+  }
 }
 
 void FakePingManager::RestartTimer () {
