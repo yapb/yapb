@@ -57,14 +57,6 @@ private:
   int32_t size_ {}; // current graph size
   bool initialized_ {}; // storage initialized flag
 
-  ystl::Atomic<bool> busy_ {}; // storage is being updated/loaded on worker thread
-
-private:
-  // is storage being updated on worker thread ?
-  bool Busy () const noexcept {
-    return busy_.load (ystl::MemoryOrder::acquire);
-  }
-
 private:
   // flat diagonal position
   size_t DiagPos (Team team, int src) const noexcept {
@@ -98,9 +90,6 @@ private:
   // initialize storage for given graph size
   void Initialize () noexcept;
 
-  void SyncUpdate ();
-  void SyncLoad ();
-
 public:
   int32_t GetIndex (Team team, int32_t start, int32_t goal) noexcept;
   void SetIndex (Team team, int32_t start, int32_t goal, int32_t value) noexcept;
@@ -125,16 +114,10 @@ public:
 
 public:
   template <typename U = int32_t> U GetTeamDamage (Team team) const {
-    if (Busy ()) [[unlikely]] {
-      return static_cast<U> (1);
-    }
     return static_cast<U> (ystl::max (1, static_cast<int32_t> (team_damage_[team])));
   }
 
   void SetTeamDamage (Team team, int32_t value) {
-    if (Busy ()) [[unlikely]] {
-      return;
-    }
     team_damage_[team] = static_cast<uint16_t> (value);
   }
 };

@@ -22,7 +22,7 @@ void Practice::Initialize () noexcept {
 }
 
 int32_t Practice::GetIndex (Team team, int32_t start, int32_t goal) noexcept {
-  if (!Valid (team, start, goal) || !initialized_ || Busy ()) [[unlikely]] {
+  if (!Valid (team, start, goal) || !initialized_) [[unlikely]] {
     return kInvalidNodeIndex;
   }
 
@@ -40,7 +40,7 @@ int32_t Practice::GetIndex (Team team, int32_t start, int32_t goal) noexcept {
 }
 
 void Practice::SetIndex (Team team, int32_t start, int32_t goal, int32_t value) noexcept {
-  if (Busy () || !Valid (team, start, goal)) [[unlikely]] {
+  if (!Valid (team, start, goal)) [[unlikely]] {
     return;
   }
 
@@ -64,7 +64,7 @@ void Practice::SetIndex (Team team, int32_t start, int32_t goal, int32_t value) 
 }
 
 int32_t Practice::GetValue (Team team, int32_t start, int32_t goal) const noexcept {
-  if (!Valid (team, start, goal) || !initialized_ || Busy ()) [[unlikely]] {
+  if (!Valid (team, start, goal) || !initialized_) [[unlikely]] {
     return 0;
   }
 
@@ -76,7 +76,7 @@ int32_t Practice::GetValue (Team team, int32_t start, int32_t goal) const noexce
 }
 
 void Practice::SetValue (Team team, int32_t start, int32_t goal, int32_t value) noexcept {
-  if (Busy () || !Valid (team, start, goal)) [[unlikely]] {
+  if (!Valid (team, start, goal)) [[unlikely]] {
     return;
   }
 
@@ -99,7 +99,7 @@ void Practice::SetValue (Team team, int32_t start, int32_t goal, int32_t value) 
 }
 
 int32_t Practice::GetDamage (Team team, int32_t start, int32_t goal) const noexcept {
-  if (!Valid (team, start, goal) || !initialized_ || Busy () || !vistab.IsReady ()) [[unlikely]] {
+  if (!Valid (team, start, goal) || !initialized_ || !vistab.IsReady ()) [[unlikely]] {
     return 0;
   }
 
@@ -112,7 +112,7 @@ int32_t Practice::GetDamage (Team team, int32_t start, int32_t goal) const noexc
 }
 
 void Practice::SetDamage (Team team, int32_t start, int32_t goal, int32_t value) noexcept {
-  if (Busy () || !Valid (team, start, goal) || !vistab.IsReady ()) [[unlikely]] {
+  if (!Valid (team, start, goal) || !vistab.IsReady ()) [[unlikely]] {
     return;
   }
 
@@ -123,6 +123,7 @@ void Practice::SetDamage (Team team, int32_t start, int32_t goal, int32_t value)
   }
   const auto key = SparseKey (team, start, goal);
   const auto *found = sparse_.find (key);
+
   Cell updated = found ? *found : Cell {};
   updated.damage = static_cast<uint16_t> (value);
 
@@ -147,10 +148,6 @@ float Practice::GetDamageEx (Team team, int32_t start, int32_t goal, bool add_te
 void Practice::UpdateValue (Bot *bot, int damage) {
   // gets called each time a bot gets damaged by some enemy
 
-  // storage is being updated on worker thread, drop the update
-  if (Busy ()) [[unlikely]] {
-    return;
-  }
   if (graph.Length () < 1 || graph.HasChanged () || bot->chosen_goal_index_ < 0 || bot->prev_goal_index_ < 0) [[unlikely]] {
     return;
   }
@@ -169,10 +166,6 @@ void Practice::UpdateValue (Bot *bot, int damage) {
 void Practice::UpdateDamage (Bot *bot, edict_t *attacker, int damage) {
   // this function gets called each time a bot gets damaged by some enemy. stores the damage (team-specific) done by victim
 
-  // storage is being updated on worker thread, drop the update
-  if (Busy ()) [[unlikely]] {
-    return;
-  }
   if (!game.IsPlayerEntity (attacker)) [[unlikely]] {
     return;
   }
@@ -214,19 +207,16 @@ void Practice::UpdateDamage (Bot *bot, edict_t *attacker, int damage) {
 }
 
 void Practice::Update () {
-  worker.Enqueue ([this] () {
-    SyncUpdate ();
-  });
-}
-
-void Practice::SyncUpdate () {
   // called after round end to update the most dangerous nodes per team
 
   // no nodes, no practice used or nodes edited or being edited?
   if (!size_ || graph.HasChanged () || !vistab.IsReady ()) [[unlikely]] {
     return; // no action
   }
-  busy_.store (true, ystl::MemoryOrder::relaxed);
+  if (size_ != graph.Length () || diag_.size () < static_cast<size_t> (ystl::to_underlying (Team::Num)) * static_cast<size_t> (size_))
+    [[unlikely]] {
+    return; // stale storage, skip until next load
+  }
 
   const auto n = size_;
   const auto nn = static_cast<uint32_t> (n) * static_cast<uint32_t> (n);
@@ -309,14 +299,11 @@ void Practice::SyncUpdate () {
   for (auto team = Team::Terrorist; team < Team::Num; ++team) {
     team_damage_[team] = static_cast<uint16_t> (ystl::clamp (team_damage_[team] - kHalfDamageVal, 1, kFullDamageVal));
   }
-
-  // publish updated storage to main thread
-  busy_.store (false, ystl::MemoryOrder::release);
 }
 
 void Practice::Save () {
-  if (!size_ || !initialized_ || Busy ()) [[unlikely]] {
-    return; // no action, storage is being updated on worker thread
+  if (!size_ || !initialized_) [[unlikely]] {
+    return; // no action
   }
   const auto n = size_;
 
@@ -358,11 +345,10 @@ void Practice::Save () {
   bstor.Save<Entry> (entries);
 }
 
-void Practice::SyncLoad () {
+void Practice::Load () {
   if (!graph.Length ()) [[unlikely]] {
     return; // no action
   }
-  busy_.store (true, ystl::MemoryOrder::relaxed);
 
   // initialize sparse storage for current graph size
   Initialize ();
@@ -396,15 +382,6 @@ void Practice::SyncLoad () {
   else {
     Initialize ();
   }
-
-  // publish loaded storage to main thread
-  busy_.store (false, ystl::MemoryOrder::release);
-}
-
-void Practice::Load () {
-  worker.Enqueue ([this] () {
-    SyncLoad ();
-  });
 }
 
 } // namespace bot
