@@ -162,7 +162,8 @@ void Bot::UpdateLookAngles () {
   constexpr float kPitchDampingRatio = 0.8f; // pitch slightly underdamped for faster vertical tracking
   constexpr float kSnapAngle = 1.0f; // deg, snap-to-target window
 
-  const bool engaging = has_flag (aim_flags_, AimFlags::Enemy | AimFlags::Grenade) || wants_to_fire_;
+  // override explicitly drives the view (breakables, blinded spray), never freeze its pitch
+  const bool engaging = has_flag (aim_flags_, AimFlags::Enemy | AimFlags::Grenade | AimFlags::Override) || wants_to_fire_;
 
   AimConfig yaw {};
   AimConfig pitch {};

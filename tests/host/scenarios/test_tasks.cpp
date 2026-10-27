@@ -43,6 +43,10 @@ struct TasksHook {
   static bool BlindFired (Bot &bot) {
     return bot.wants_to_fire_;
   }
+  static void Aim (Bot &bot) {
+    bot.SetAimDirection ();
+    bot.UpdateLookAngles ();
+  }
   static int GetAimFlags (Bot &bot) {
     return static_cast<int> (bot.aim_flags_);
   }
@@ -139,6 +143,12 @@ struct TasksHook {
   static void SetBreakable (Bot &bot, edict_t *ent, const ystl::Vector &pos) {
     bot.breakable_entity_ = ent;
     bot.breakable_origin_ = pos;
+  }
+  static void IgnoreBreakable (Bot &bot, edict_t *ent) {
+    bot.ignored_breakable_.push (ent);
+  }
+  static bool IsBreakableIgnored (Bot &bot, edict_t *ent) {
+    return bot.IsIgnoredBreakable (ent);
   }
   static void SetEnemyOrigin (Bot &bot, const ystl::Vector &pos) {
     bot.enemy_origin_ = pos;
@@ -707,6 +717,14 @@ TEST_CASE ("unit/tasks_break") {
     HOST_REQUIRE (bot->GetTaskId () == TaskId::ShootBreakable);
   }
 
+  // a breakable that blocks the path is retried on touch, even if ignored as decor
+  armed->ClearTasks ();
+  TasksHook::IgnoreBreakable (*armed, brk);
+  HOST_REQUIRE (TasksHook::IsBreakableIgnored (*armed, brk));
+  TasksHook::CheckBreakable (*armed, brk);
+  CHECK (armed->GetTaskId () == TaskId::ShootBreakable);
+  CHECK (!TasksHook::IsBreakableIgnored (*armed, brk));
+
   // loaded guns hold the trigger on the facing breakable...
   // (clip lookup keys off conf ids, so fill every slot)
   armed->pev->weapons = ystl::to_underlying (kPrimaryWeaponMask);
@@ -720,6 +738,23 @@ TEST_CASE ("unit/tasks_break") {
   CHECK (armed->GetTaskId () == TaskId::ShootBreakable);
   CHECK (TasksHook::MoveSpeed (*armed) == 0.0f);
   CHECK (!!(TasksHook::GetAimFlags (*armed) & static_cast<int> (AimFlags::Override)));
+  CHECK (TasksHook::BlindFired (*armed));
+
+  // ...a grate below the feet still gets aimed at and fired at
+  brk->v.origin = ystl::Vector (100.0f, 0.0f, -64.0f);
+  armed->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  armed->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  armed->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  armed->ClearTasks ();
+  TasksHook::BreakableShootTimer (*armed).invalidate ();
+  TasksHook::CheckBreakable (*armed, brk);
+
+  for (int i = 0; i < 20; ++i) {
+    engine.AdvanceTime (0.1f);
+    TasksHook::Execute (*armed);
+    TasksHook::Aim (*armed);
+  }
+  CHECK (armed->GetTaskId () == TaskId::ShootBreakable);
   CHECK (TasksHook::BlindFired (*armed));
 
   // ...dry ones stand the task down instead

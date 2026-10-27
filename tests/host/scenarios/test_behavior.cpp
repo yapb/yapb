@@ -2794,9 +2794,10 @@ TEST_CASE ("unit/behavior_breakables") {
   CHECK (BehaviorHook::Lookup (*bot) == nullptr);
   brk->v.team = 0;
 
+  // path lookup outranks the decor ignore list
   BehaviorHook::SetBreakable (*bot, brk);
   BehaviorHook::IgnoreBreakable (*bot, brk);
-  CHECK (BehaviorHook::Lookup (*bot) == nullptr);
+  CHECK (BehaviorHook::Lookup (*bot) == brk);
   BehaviorHook::ClearIgnoredBreakable (*bot);
 
   BehaviorHook::SetBreakable (*bot, brk);
@@ -2819,11 +2820,12 @@ TEST_CASE ("unit/behavior_breakables") {
   engine.SetTraceLineHook (nullptr);
   engine.AdvanceTime (0.2f); // past the 0.1s trace cache TTL
 
-  // ...ignored breakables never resolve...
+  // ...ignored path blockers are retried on touch and leave the ignore list...
   BehaviorHook::IgnoreBreakable (*bot, brk);
   BehaviorHook::SetBreakable (*bot, nullptr);
   BehaviorHook::CheckBreakable (*bot, brk);
-  CHECK (BehaviorHook::Breakable (*bot) == nullptr);
+  CHECK (BehaviorHook::Breakable (*bot) == brk);
+  CHECK (BehaviorHook::Lookup (*bot) == brk);
   BehaviorHook::ClearIgnoredBreakable (*bot);
 
   // ...enemies and frozen legs stop the tracking cold...

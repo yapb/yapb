@@ -177,15 +177,12 @@ void Bot::CheckBreakable (edict_t *touch) {
       breakable_origin_.clear ();
     }
   }
-  else if (IsIgnoredBreakable (touch)) {
-    breakable_entity_ = nullptr;
-    breakable_origin_.clear ();
-  }
   else {
-    if (breakable_entity_ != touch) {
-      breakable_entity_ = touch;
-      breakable_origin_ = game.GetEntityOrigin (touch);
-    }
+    // a touched breakable blocks us, retry it even if it was ignored as decor
+    ForgetIgnoredBreakable (touch);
+
+    breakable_entity_ = touch;
+    breakable_origin_ = game.GetEntityOrigin (touch);
   }
 
   // re-check from previous steps
@@ -270,8 +267,8 @@ edict_t *Bot::LookupBreakable () {
       breakable_origin_.clear ();
     }
     else if (IsIgnoredBreakable (breakable_entity_)) {
-      breakable_entity_ = nullptr;
-      breakable_origin_.clear ();
+      // lookup is for path blockers, decor-only ignores do not apply here
+      ForgetIgnoredBreakable (breakable_entity_);
     }
 
     if (!game.IsNullEntity (breakable_entity_)) {
@@ -308,9 +305,8 @@ edict_t *Bot::LookupBreakable () {
       return false;
     }
 
-    if (IsIgnoredBreakable (ent)) {
-      return false;
-    }
+    // a trace hit means it blocks the path, so retry it despite the decor ignore list
+    ForgetIgnoredBreakable (ent);
     return true;
   };
   auto hit = do_lookup (pev->origin, dest_origin_, detect_breakable_distance);

@@ -1218,6 +1218,15 @@ public:
     return !game.IsNullEntity (ent) && ignored_breakable_.contains (ent);
   }
 
+  // path blockers are retried even after being ignored as decor
+  void ForgetIgnoredBreakable (edict_t *ent) {
+    if (!game.IsNullEntity (ent)) {
+      ignored_breakable_.erase_if ([ent] (edict_t *ignored) {
+        return ignored == ent;
+      });
+    }
+  }
+
   // no smashing decor while frozen or right after spawn
   bool IsBreakableAllowed () const {
     return pev->maxspeed >= 10.0f && spawn_timer_.greater_than (5.0f);

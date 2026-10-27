@@ -1881,7 +1881,7 @@ void Bot::TaskShootBreakable () {
 
   {
     Trace::Result tr {};
-    trace.Line (pev->origin, breakable_origin_, TraceIgnore::Monsters, Ent (), &tr);
+    trace.Line (GetEyesPos (), breakable_origin_, TraceIgnore::Monsters, Ent (), &tr);
 
     if (tr.hit != breakable_entity_ && !ystl::fequal (tr.fraction, 1.0f)) {
       if (game.IsBreakableEntity (tr.hit)) {
