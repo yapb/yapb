@@ -269,6 +269,9 @@ float PlannerHeuristicOptimalHostage::H (int index, int goal_index) const {
 }
 
 float PlannerHeuristicSafe::G (Team team, int current_index, int, int) const {
+  if (!graph.Exists (current_index)) {
+    return kInfiniteHeuristic;
+  }
   // only cost of current node, not its neighbors (fixes a* optimality)
   auto cost = practice.GetDamageEx (team, current_index, current_index, false);
 
@@ -279,6 +282,9 @@ float PlannerHeuristicSafe::G (Team team, int current_index, int, int) const {
 }
 
 float PlannerHeuristicSafe::H (int index, int goal_index) const {
+  if (!graph.Exists (index) || !graph.Exists (goal_index)) {
+    return kInfiniteHeuristic;
+  }
   const auto &start = graph[index];
   const auto &goal = graph[goal_index];
 
@@ -589,7 +595,7 @@ AStarResult AStarAlgo::Find (Team bot_team, int src_index, int dest_index, NodeA
 
     // now expand the current node
     for (const auto &child : graph[current_index].links) {
-      if (child.index < 0 || child.index >= size_) {
+      if (child.index < 0 || child.index >= size_ || !graph.Exists (child.index)) {
         continue;
       }
 

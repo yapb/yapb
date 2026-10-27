@@ -323,4 +323,44 @@ TEST_CASE ("unit/planner_search") {
   }
 }
 
+TEST_CASE ("unit/planner_stale_graph") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootPlanner (engine, cs);
+  BuildPlannerGraph ();
+
+  AStarAlgo stale (graph.Length ());
+
+  // shrink the graph behind the planner, leaving a link that fits the old size
+  graph.Reset ();
+
+  auto add_node = [] (int number) {
+    Path path {};
+
+    path.number = number;
+    path.origin = ystl::Vector (100.0f * static_cast<float> (number), 0.0f, 0.0f);
+    path.light = kInvalidLightLevel;
+
+    for (auto &link : path.links) {
+      link.index = kInvalidNodeIndex;
+    }
+    graph.paths_.push (path);
+  };
+  add_node (0);
+  add_node (1);
+  graph.paths_[0].links[0].index = 7;
+  graph.paths_[0].links[0].distance = 100;
+
+  ystl::SmallArray<int> nodes {};
+  ystl::Lambda<bool (int)> sink = [&] (int node) {
+    nodes.push (node);
+    return true;
+  };
+  stale.SetHeuristic (&plannerHeuristics::safe);
+
+  CHECK (stale.Find (Team::CT, 0, 1, sink) == AStarResult::Failed);
+  CHECK (nodes.empty ());
+}
+
 } // namespace bot
