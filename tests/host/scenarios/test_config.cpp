@@ -49,6 +49,9 @@ struct ConfigHook {
   static const SoundTemplate *ClassifySound (ystl::StringRef sample) {
     return sounds.Classify (sample);
   }
+  static size_t ChatterBankCount () {
+    return conf.chatter_.size ();
+  }
   static ConfigRead ReadText (ystl::StringRef file_name, ystl::StringRef error_if_not_exists, ystl::String &out_text, bool language_dependant) {
     return conf.ReadConfigText (file_name, error_if_not_exists, out_text, language_dependant);
   }
@@ -654,6 +657,7 @@ TEST_CASE ("unit/config_chatterbox") {
   conf.LoadChatterConfig ();
 
   // ...eleven missing waves trip the breaker, the two real ones still land...
+  CHECK (ConfigHook::ChatterBankCount () == ystl::to_underlying (RadioChat::Count));
   CHECK (cv_radio_mode.As<int> () == 1);
   CHECK (conf.HasChatterBank (RadioChat::CoverMe));
   CHECK (conf.HasChatterBank (RadioChat::EnemySpotted));
@@ -665,10 +669,13 @@ TEST_CASE ("unit/config_chatterbox") {
 
   WriteConfFile (ConfFile ("chatter"), chatter_v2);
   conf.LoadChatterConfig ();
+  CHECK (ConfigHook::ChatterBankCount () == ystl::to_underlying (RadioChat::Count));
   CHECK (conf.HasChatterBank (RadioChat::CoverMe));
+  CHECK (!conf.HasChatterBank (RadioChat::EnemySpotted));
 
   // ...identical content skips the second parse...
   conf.LoadChatterConfig ();
+  CHECK (ConfigHook::ChatterBankCount () == ystl::to_underlying (RadioChat::Count));
   CHECK (conf.HasChatterBank (RadioChat::CoverMe));
 
   // ...garbage silences the radio...

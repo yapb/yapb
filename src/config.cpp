@@ -505,7 +505,9 @@ void Config::LoadChatterConfig () {
 
   if (radio_ready && rc == ConfigRead::Ready) {
 
-    chatter_.clear ();
+    for (auto &bank : chatter_) {
+      bank.clear ();
+    }
 
     // chatter event names; sounds of every event go into the bank of its radiochat code
     static constexpr struct EventMap {
