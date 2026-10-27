@@ -1444,12 +1444,16 @@ TEST_CASE ("unit/tasks_shelter") {
   TasksHook::Rng (*bot).clear_forced ();
 
   // ...reaching the far side camps the spot...
-  TasksHook::SetCurrentNode (*bot, bot->Task ()->data);
-  TasksHook::FindValid (*bot);
-  bot->pev->origin = graph[bot->Task ()->data].origin;
-  TasksHook::Rng (*bot).force_float (1600.0f);
-  TasksHook::Execute (*bot);
-  TasksHook::Rng (*bot).clear_forced ();
+  const int escape_index = bot->Task ()->data;
+
+  if (graph.Exists (escape_index)) {
+    TasksHook::SetCurrentNode (*bot, escape_index);
+    TasksHook::FindValid (*bot);
+    bot->pev->origin = graph[escape_index].origin;
+    TasksHook::Rng (*bot).force_float (1600.0f);
+    TasksHook::Execute (*bot);
+    TasksHook::Rng (*bot).clear_forced ();
+  }
   game_state.SetBombPlanted (false);
 
   bots.Destroy ();
