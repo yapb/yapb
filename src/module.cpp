@@ -10,7 +10,7 @@
 // module interface implementation
 namespace bot {
 
-class Module : public IBotModule {
+class Module : public IBotModule, public IBotChatAPI {
 public:
   virtual ~Module () override = default;
 
@@ -530,7 +530,7 @@ public:
   virtual bool IsBotAlive (int entity) override {
     auto bot = GetBot (entity);
 
-    return bot ? game.IsAliveEntity (bot->Ent ()) : false;
+    return bot ? bot->IsAlive () : false;
   }
 
   // checks whether bot is leaving the server
@@ -586,11 +586,43 @@ public:
     return true;
   }
 
-  // receives core bot events
-  virtual void SetEventCallback (BotEventCallback callback) override {
-    bots.SetEventCallback (callback);
+  // receives all core and chat notifications
+  virtual void SetEventSink (BotEventSink sink) override {
+    bots.SetEventSink (sink);
+  }
+
+  // queues a plugin chat message
+  virtual bool SendBotChat (int entity, const char *message, bool team_only, bool force) override {
+    auto bot = GetBot (entity);
+
+    return bot && message ? bot->QueueChat (message, team_only, force) : false;
+  }
+
+  // changes the bot chat ownership
+  virtual bool SetBotChatMode (int entity, BotChatMode mode) override {
+    auto bot = GetBot (entity);
+
+    return bot && bot->SetChatMode (mode);
+  }
+
+  // gets the bot chat ownership
+  virtual BotChatMode GetBotChatMode (int entity) override {
+    auto bot = GetBot (entity);
+
+    return bot ? bot->GetChatMode () : BotChatMode::Invalid;
+  }
+
+  // exposes the chat extension through the main api
+  virtual IBotChatAPI *GetChatAPI () override {
+    return this;
   }
 };
+
+Module &BotModule () {
+  static Module bot_module {};
+
+  return bot_module;
+}
 
 YSTL_EXPORT IBotModule *GetBotAPI (int version) {
   // same major, and a module no newer than the bot (interface is append-only)
@@ -598,9 +630,7 @@ YSTL_EXPORT IBotModule *GetBotAPI (int version) {
       IBotModule::ApiMinor (version) > IBotModule::ApiMinor (kBotModuleVersion)) {
     return nullptr;
   }
-  static Module bot_module {};
-
-  return &bot_module;
+  return &BotModule ();
 }
 
 } // namespace bot

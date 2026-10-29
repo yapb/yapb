@@ -70,6 +70,7 @@ using FnGetModname = const char *(*)();
 using FnLog = void (*) (const char *, ...);
 using FnLogError = void (*) (AMX *, int, const char *, ...);
 using FnGetAmxAddr = cell *(*)(AMX *, cell);
+using FnGetAmxString = char *(*)(AMX *, cell, int, int &);
 using FnSetAmxString = int (*) (AMX *, cell, const char *, int);
 using FnCellToReal = float (*) (cell);
 using FnRealToCell = cell (*) (float);
@@ -99,6 +100,10 @@ public:
 
   cell *GetAmxAddr (AMX *amx, cell offset) {
     return get_amx_addr_ (amx, offset);
+  }
+
+  char *GetAmxString (AMX *amx, cell address, int id, int &length) {
+    return get_amx_string_ (amx, address, id, length);
   }
 
   int SetAmxString (AMX *amx, cell address, const char *source, int max) {
@@ -134,12 +139,34 @@ private:
   FnAddNatives add_natives_ = nullptr;
   FnGetModname get_modname_ = nullptr;
   FnGetAmxAddr get_amx_addr_ = nullptr;
+  FnGetAmxString get_amx_string_ = nullptr;
   FnSetAmxString set_amx_string_ = nullptr;
   FnCellToReal cell_to_real_ = nullptr;
   FnRealToCell real_to_cell_ = nullptr;
 };
 
 YSTL_EXPOSE_GLOBAL_SINGLETON (AmxxCore, amxx);
+
+// one registration/execution wrapper for every amxx forward
+class ForwardSink final {
+private:
+  int id_ = -1;
+
+public:
+  bool IsValid () const {
+    return id_ > -1;
+  }
+
+  template <typename... Args>
+  void Register (const char *name, int exec, Args... params) {
+    id_ = amxx.register_forward_ (name, exec, params..., -1);
+  }
+
+  template <typename... Args>
+  int Execute (Args... args) const {
+    return id_ > -1 ? amxx.execute_forward_ (id_, args...) : 0;
+  }
+};
 
 // loads the bot dll and forwards the natives to it
 class YaPBModule final : public ystl::Singleton<YaPBModule> {
@@ -149,17 +176,21 @@ private:
   enum : int {
     kForwardIgnore = 0,
     kForwardCell = 0,
-    kForwardDone = -1
+    kForwardString = 2,
+    kForwardStop = 1
   };
 
 private:
   ystl::SharedLibrary botdll_;
 
   IBotModule *api_ = nullptr;
+  IBotChatAPI *chat_api_ = nullptr;
 
-  int bot_spawned_forward_ = -1;
-  int bot_killed_forward_ = -1;
-  int bot_removed_forward_ = -1;
+  ForwardSink bot_spawned_forward_;
+  ForwardSink bot_killed_forward_;
+  ForwardSink bot_removed_forward_;
+  ForwardSink chat_pre_forward_;
+  ForwardSink chat_post_forward_;
 
 public:
   YaPBModule () = default;
@@ -167,7 +198,7 @@ public:
 
 public:
   static const AmxxModuleInfo &ModuleInfo ();
-  static void BotEventSink (BotEvent event, int arg1, int arg2);
+  static int EventSink (const BotEvent &event);
 
 public:
   void Load ();
@@ -175,11 +206,15 @@ public:
   void DisableNatives ();
 
 private:
-  void DispatchEvent (BotEvent event, int arg1, int arg2);
+  int Dispatch (const BotEvent &event);
 
 public:
   IBotModule *Api () {
     return api_;
+  }
+
+  IBotChatAPI *ChatApi () {
+    return chat_api_;
   }
 };
 
