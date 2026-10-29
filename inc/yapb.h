@@ -19,6 +19,7 @@ namespace bot {
 
 struct Overrides {
   bool allow_move { true }; // movement allowed, false freezes the bot
+  bool simulate { true }; // simulation allowed, false suspends all bot ticks
   ystl::Vector look_at {}; // forced look target, empty means ai decides
 };
 
@@ -1012,6 +1013,44 @@ public:
     overrides_.allow_move = state;
   }
 
+  // simulation allowed, false suspends all bot ticks
+  bool IsSimulating () const {
+    return overrides_.simulate;
+  }
+
+  // player is frozen by the engine or another plugin
+  bool IsFrozen () const {
+    return (pev->flags & FL_FROZEN) != 0;
+  }
+
+  // enable/disable simulation
+  void SetSimulating (bool state);
+
+  // clear movement inputs while simulation is suspended
+  void ResetSimulation ();
+
+  // bot is leaving the server
+  bool IsStale () const {
+    return is_stale_;
+  }
+
+  // set the bot personality
+  bool SetPersonality (Personality personality) {
+    if (personality < Personality::Normal || personality > Personality::Careful) {
+      return false;
+    }
+
+    personality_ = personality;
+    return true;
+  }
+
+  // get the current weapon classname
+  const char *GetWeaponName () const {
+    const auto weapon = conf.GetWeapon (current_weapon_);
+
+    return weapon ? weapon->name.chars () : "";
+  }
+
   // forced look target, empty means ai decides
   ystl::Vector &ForcedLookAt () {
     return overrides_.look_at;
@@ -1122,7 +1161,7 @@ public:
   void SendBotToOrigin (const ystl::Vector &origin);
 
   // mark bot as stale (leaving)
-  void MarkStale ();
+  void MarkStale (bool kicked = false);
 
   // set new difficulty level
   void SetNewDifficulty (Difficulty new_difficulty);

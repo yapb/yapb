@@ -6,6 +6,7 @@
 //
 
 #include "yapb_amxx.h"
+#include <product.h>
 
 #ifdef VERSION_GENERATED
   #include <version.build.h>
@@ -14,10 +15,10 @@
 #endif
 namespace bot {
 
-static const AmxxModuleInfo &BotModuleInfo () {
+const AmxxModuleInfo &YaPBModule::ModuleInfo () {
   static const ystl::String version =
     ystl::strings.format ("%s.%s (api %d.%d)", MODULE_VERSION, MODULE_COMMIT_COUNT, kBotModuleApiMajor, kBotModuleApiMinor);
-  static const AmxxModuleInfo info { "YaPB API", MODULE_AUTHOR, version.chars (),
+  static const AmxxModuleInfo info { "YaPB API", product.author.chars (), version.chars (),
     1, // reload on mapchange
     "YB", "yapb", "" };
 
@@ -41,8 +42,10 @@ bool AmxxCore::Bind (PFN_REQ_FNPTR request) {
   set_amx_string_ = reinterpret_cast<FnSetAmxString> (require ("SetAmxString"));
   cell_to_real_ = reinterpret_cast<FnCellToReal> (require ("CellToReal"));
   real_to_cell_ = reinterpret_cast<FnRealToCell> (require ("RealToCell"));
+  register_forward_ = reinterpret_cast<FnRegisterForward> (require ("RegisterForward"));
+  execute_forward_ = reinterpret_cast<FnExecuteForward> (require ("ExecuteForward"));
 
-  return add_natives_ && get_modname_ && log_ && log_error_ && get_amx_addr_ && set_amx_string_ && cell_to_real_ && real_to_cell_;
+  return add_natives_ && get_modname_ && log_ && log_error_ && get_amx_addr_ && set_amx_string_ && cell_to_real_ && real_to_cell_ && register_forward_ && execute_forward_;
 }
 
 namespace {
@@ -460,6 +463,145 @@ cell AMX_NATIVE_CALL yb_is_bot_movement (AMX *amx, cell *params) {
   auto api = yapb.Api ();
 
   return api && api->IsBotMovement (params[1]) ? 1 : 0;
+}
+
+/**
+ * Enables or disables bot simulation.
+ *
+ * @param index     Bot index.
+ * @param simulate  True to allow simulation, false to suspend all bot ticks.
+ *
+ * @return          1 on success, 0 if the bot is invalid.
+ */
+// @native bool:yb_set_bot_simulation(index, bool:simulate);
+cell AMX_NATIVE_CALL yb_set_bot_simulation (AMX *amx, cell *params) {
+  auto api = yapb.Api ();
+
+  if (!api) {
+    return 0;
+  }
+  return api->SetBotSimulation (params[1], params[2] != 0) ? 1 : 0;
+}
+
+/**
+ * Checks whether bot simulation is enabled.
+ *
+ * @param index     Bot index.
+ *
+ * @return          True if simulation is allowed, false otherwise.
+ */
+// @native bool:yb_is_bot_simulating(index);
+cell AMX_NATIVE_CALL yb_is_bot_simulating (AMX *amx, cell *params) {
+  auto api = yapb.Api ();
+
+  return api && api->IsBotSimulating (params[1]) ? 1 : 0;
+}
+
+/**
+ * Checks whether the bot is alive.
+ *
+ * @param index     Bot index.
+ *
+ * @return          True if the bot is alive, false otherwise.
+ */
+// @native bool:yb_is_bot_alive(index);
+cell AMX_NATIVE_CALL yb_is_bot_alive (AMX *amx, cell *params) {
+  auto api = yapb.Api ();
+
+  return api && api->IsBotAlive (params[1]) ? 1 : 0;
+}
+
+/**
+ * Checks whether the bot is leaving the server.
+ *
+ * @param index     Bot index.
+ *
+ * @return          True if the bot is stale, false otherwise.
+ */
+// @native bool:yb_is_bot_stale(index);
+cell AMX_NATIVE_CALL yb_is_bot_stale (AMX *amx, cell *params) {
+  auto api = yapb.Api ();
+
+  return api && api->IsBotStale (params[1]) ? 1 : 0;
+}
+
+/**
+ * Kicks a single bot.
+ *
+ * @param index         Bot index.
+ * @param silent        Suppress the kick message.
+ * @param reduce_quota  Reduce the bot quota after the kick.
+ *
+ * @return              1 on success, 0 if the bot is invalid.
+ */
+// @native bool:yb_kick_bot(index, bool:silent = true, bool:reduce_quota = true);
+cell AMX_NATIVE_CALL yb_kick_bot (AMX *amx, cell *params) {
+  auto api = yapb.Api ();
+
+  if (!api) {
+    return 0;
+  }
+  return api->KickBot (params[1], params[2] != 0, params[3] != 0) ? 1 : 0;
+}
+
+/**
+ * Sets the bot personality.
+ *
+ * @param index         Bot index.
+ * @param personality   Personality, see Personality.
+ *
+ * @return              1 on success, 0 if the bot is invalid or personality is out of range.
+ */
+// @native bool:yb_set_bot_personality(index, Personality:personality);
+cell AMX_NATIVE_CALL yb_set_bot_personality (AMX *amx, cell *params) {
+  auto api = yapb.Api ();
+
+  return api && api->SetBotPersonality (params[1], params[2]) ? 1 : 0;
+}
+
+/**
+ * Gets the current bot weapon classname.
+ *
+ * @param index     Bot index.
+ * @param output    Buffer to copy the classname to.
+ * @param len       Maximum buffer size.
+ *
+ * @return          1 on success, 0 if the bot is invalid.
+ */
+// @native bool:yb_get_bot_weapon_name(index, output[], len);
+cell AMX_NATIVE_CALL yb_get_bot_weapon_name (AMX *amx, cell *params) {
+  auto api = yapb.Api ();
+
+  if (!api) {
+    return 0;
+  }
+  return amxx.SetAmxString (amx, params[2], api->GetBotWeaponName (params[1]), params[3]) > 0 ? 1 : 0;
+}
+
+/**
+ * Gets the bot quota.
+ *
+ * @return          Bot quota.
+ */
+// @native yb_get_quota();
+cell AMX_NATIVE_CALL yb_get_quota (AMX *amx, cell *params) {
+  auto api = yapb.Api ();
+
+  return api ? api->GetQuota () : 0;
+}
+
+/**
+ * Sets the bot quota.
+ *
+ * @param count     New bot quota.
+ *
+ * @return          1 on success, 0 if the bot is not loaded.
+ */
+// @native bool:yb_set_quota(count);
+cell AMX_NATIVE_CALL yb_set_quota (AMX *amx, cell *params) {
+  auto api = yapb.Api ();
+
+  return api && api->SetQuota (params[1]) ? 1 : 0;
 }
 
 /**
@@ -930,6 +1072,15 @@ AMX_NATIVE_INFO bot_natives[] = {
   { "yb_is_bot_camping",              yb_is_bot_camping              },
   { "yb_set_bot_movement",            yb_set_bot_movement            },
   { "yb_is_bot_movement",             yb_is_bot_movement             },
+  { "yb_set_bot_simulation",          yb_set_bot_simulation          },
+  { "yb_is_bot_simulating",           yb_is_bot_simulating           },
+  { "yb_is_bot_alive",                yb_is_bot_alive                },
+  { "yb_is_bot_stale",                yb_is_bot_stale                },
+  { "yb_kick_bot",                    yb_kick_bot                    },
+  { "yb_set_bot_personality",         yb_set_bot_personality         },
+  { "yb_get_bot_weapon_name",         yb_get_bot_weapon_name         },
+  { "yb_get_quota",                   yb_get_quota                   },
+  { "yb_set_quota",                   yb_set_quota                   },
   { "yb_get_bot_look_at",             yb_get_bot_look_at             },
   { "yb_set_bot_look_at",             yb_set_bot_look_at             },
   { "yb_get_bot_enemy",               yb_get_bot_enemy               },
@@ -960,6 +1111,32 @@ AMX_NATIVE_INFO bot_natives[] = {
   { nullptr,                          nullptr                        }
 };
 } // namespace
+
+void YaPBModule::BotEventSink (BotEvent event, int arg1, int arg2) {
+  yapb.DispatchEvent (event, arg1, arg2);
+}
+
+void YaPBModule::DispatchEvent (BotEvent event, int arg1, int arg2) {
+  switch (event) {
+    case BotEvent::Spawned:
+      if (bot_spawned_forward_ > -1) {
+        amxx.execute_forward_ (bot_spawned_forward_, arg1);
+      }
+      break;
+
+    case BotEvent::Killed:
+      if (bot_killed_forward_ > -1) {
+        amxx.execute_forward_ (bot_killed_forward_, arg1, arg2);
+      }
+      break;
+
+    case BotEvent::Removed:
+      if (bot_removed_forward_ > -1) {
+        amxx.execute_forward_ (bot_removed_forward_, arg1, arg2);
+      }
+      break;
+  }
+}
 
 void YaPBModule::Load () {
   amxx.AddNatives (bot_natives);
@@ -995,9 +1172,19 @@ void YaPBModule::Load () {
     return fail (ystl::strings.format ("YaPB binary %s returned no API, api %d.%d required", bot_path.chars (),
       IBotModule::ApiMajor (kBotModuleVersion), IBotModule::ApiMinor (kBotModuleVersion)));
   }
+
+  if (bot_spawned_forward_ < 0) {
+    bot_spawned_forward_ = amxx.register_forward_ ("yb_bot_spawned", kForwardIgnore, kForwardCell, kForwardDone);
+    bot_killed_forward_ = amxx.register_forward_ ("yb_bot_killed", kForwardIgnore, kForwardCell, kForwardCell, kForwardDone);
+    bot_removed_forward_ = amxx.register_forward_ ("yb_bot_removed", kForwardIgnore, kForwardCell, kForwardCell, kForwardDone);
+  }
+  api_->SetEventCallback (&YaPBModule::BotEventSink);
 }
 
 void YaPBModule::Unload () {
+  if (api_) {
+    api_->SetEventCallback (nullptr);
+  }
   if (botdll_) {
     botdll_.unload ();
   }
@@ -1024,7 +1211,7 @@ YSTL_EXPORT int AMXX_Query (int *interface_version, AmxxModuleInfo *module_info)
     *interface_version = kAmxxInterfaceVersion;
     return ystl::to_underlying (AmxxStatus::IfVers);
   }
-  *module_info = BotModuleInfo ();
+  *module_info = YaPBModule::ModuleInfo ();
 
   return ystl::to_underlying (AmxxStatus::Ok);
 }

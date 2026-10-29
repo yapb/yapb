@@ -1285,8 +1285,9 @@ void Bot::SlowFrame () {
 
   if (game_state.IsBombPlanted () && team_ == Team::CT && is_alive_) {
     const auto &bomb_position = game_state.GetBombOrigin ();
+    const bool force_bomb = num_friends_left_ == 0 || num_enemies_left_ == 0;
 
-    if (!has_progress_bar_ && GetTaskId () != TaskId::EscapeFromBomb && pev->origin.distance_sq (bomb_position) < ystl::sqrf (1540.0f) &&
+    if (!has_progress_bar_ && GetTaskId () != TaskId::EscapeFromBomb && (force_bomb || pev->origin.distance_sq (bomb_position) < ystl::sqrf (1540.0f)) &&
         !IsBombDefusing (bomb_position)) {
 
       ignored_items_.clear ();
@@ -1298,10 +1299,16 @@ void Bot::SlowFrame () {
         ClearTask (GetTaskId ());
       }
 
-      // try pickup chain first, fall back to defuse task if bot lingers near bomb
       if (tid != TaskId::DefuseBomb) {
         if (bomb_position.distance_sq (pev->origin) >= ystl::sqrf (96.0f)) {
           near_bomb_timer_.invalidate ();
+
+          if ((bomb_known_ || force_bomb) && game.IsNullEntity (enemy_) && !has_flag (states_, Sense::SeeingEnemy) &&
+              (GetTaskId () != TaskId::MoveTo || position_.distance_sq (bomb_position) > ystl::sqrf (64.0f))) {
+            position_ = bomb_position;
+            ClearSearchNodes ();
+            StartTask (TaskId::MoveTo, TaskPri::kMoveTo, kInvalidNodeIndex, 0.0f, true);
+          }
         }
         else if (!near_bomb_timer_.started ()) {
           near_bomb_timer_.start (rg (2.0f, 4.0f));
@@ -1739,7 +1746,31 @@ void Bot::Logic () {
   last_damage_type_ = -1; // reset damage
 }
 
+void Bot::ResetSimulation () {
+  pev->button = 0;
+  pev->oldbuttons = 0;
+  pending_buttons_ = 0;
+  old_buttons_ = 0;
+  pev->velocity.clear ();
+}
+
+void Bot::SetSimulating (bool state) {
+  overrides_.simulate = state;
+
+  if (!state) {
+    pev->flags |= FL_FROZEN;
+    ResetSimulation ();
+  }
+  else {
+    pev->flags &= ~FL_FROZEN;
+  }
+}
+
 void Bot::Spawned () {
+  if (game.IsAliveEntity (Ent ())) {
+    bots.NotifyEvent (BotEvent::Spawned, index_ + 1, 0);
+  }
+
   if (game.Is (GameFlags::CSDM | GameFlags::ZombieMod)) {
     NewRound ();
     ClearTasks ();

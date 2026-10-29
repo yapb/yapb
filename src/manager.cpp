@@ -268,8 +268,27 @@ void Manager::Frame () {
   }
 }
 
+void Manager::SetEventCallback (BotEventCallback callback) {
+  event_callback_ = callback;
+}
+
+void Manager::NotifyEvent (BotEvent event, int arg1, int arg2) {
+  if (event_callback_) {
+    event_callback_ (event, arg1, arg2);
+  }
+}
+
 void TickManager::Frame (Bot *bot) {
   // ai runs at think rate, movement commands are capped at the same rate, like official bots do
+
+  if (!bot->IsSimulating ()) {
+    return;
+  }
+
+  if (bot->IsFrozen ()) {
+    bot->ResetSimulation ();
+    return;
+  }
 
   if (bot->think_timer_.elapsed ()) {
     bot->think_timer_.start (bot->think_interval_);
@@ -1749,6 +1768,9 @@ void Manager::HandleDeath (edict_t *killer, edict_t *victim) {
 
   // mark bot as "spawned", and reset it to new-round state when it dead (for csdm/zombie only)
   if (victim_bot != nullptr) {
+    bots.NotifyEvent (BotEvent::Killed, victim_bot->index_ + 1,
+                      killer_bot != nullptr ? killer_bot->index_ + 1 : game.IndexOfEntity (killer));
+
     victim_bot->Spawned ();
 
     victim_bot->is_alive_ = false;
@@ -2137,7 +2159,7 @@ void Bot::Kick (bool silent) {
   if (!(pev->flags & FL_CLIENT) || (pev->flags & FL_DORMANT) || ystl::strings.is_empty (username)) {
     return;
   }
-  MarkStale ();
+  MarkStale (true);
 
   // prefer direct SV_DropClient on rehlds (the engine reports the drop
   // itself), kick command stays as fallback
@@ -2150,7 +2172,11 @@ void Bot::Kick (bool silent) {
   }
 }
 
-void Bot::MarkStale () {
+void Bot::MarkStale (bool kicked) {
+  if (is_stale_) {
+    return;
+  }
+
   // switch chatter icon off
   ShowChatterIcon (false, true);
 
@@ -2159,6 +2185,7 @@ void Bot::MarkStale () {
 
   // mark bot as leaving
   is_stale_ = true;
+  bots.NotifyEvent (BotEvent::Removed, index_ + 1, kicked ? 1 : 0);
 
   // clear the bot name
   conf.ClearUsedName (this);

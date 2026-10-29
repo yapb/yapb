@@ -11,8 +11,16 @@
 namespace bot {
 
 constexpr int kBotModuleApiMajor = 3;
-constexpr int kBotModuleApiMinor = 0;
+constexpr int kBotModuleApiMinor = 4;
 constexpr int kBotModuleVersion = (kBotModuleApiMajor << 16) | kBotModuleApiMinor;
+
+enum class BotEvent : int {
+  Spawned = 0,
+  Killed,
+  Removed
+};
+
+using BotEventCallback = void (*) (BotEvent event, int arg1, int arg2);
 
 // basic module interface, if you need to additional stuff, please post an issue
 class IBotModule {
@@ -188,6 +196,36 @@ public:
 
   // gets the packed bot api version
   virtual int GetApiVersion () = 0;
+
+  // enable/disable bot simulation, false suspends all bot ticks
+  virtual bool SetBotSimulation (int entity, bool simulate) = 0;
+
+  // checks whether bot simulation is enabled
+  virtual bool IsBotSimulating (int entity) = 0;
+
+  // checks whether bot is alive
+  virtual bool IsBotAlive (int entity) = 0;
+
+  // checks whether bot is leaving the server
+  virtual bool IsBotStale (int entity) = 0;
+
+  // kicks a single bot
+  virtual bool KickBot (int entity, bool silent, bool reduce_quota) = 0;
+
+  // sets the bot personality
+  virtual bool SetBotPersonality (int entity, int personality) = 0;
+
+  // gets the current weapon classname
+  virtual const char *GetBotWeaponName (int entity) = 0;
+
+  // gets the bot quota
+  virtual int GetQuota () = 0;
+
+  // sets the bot quota
+  virtual bool SetQuota (int count) = 0;
+
+  // receives core bot events
+  virtual void SetEventCallback (BotEventCallback callback) = 0;
 };
 
 } // namespace bot

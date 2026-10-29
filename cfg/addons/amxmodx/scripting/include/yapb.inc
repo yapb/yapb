@@ -336,6 +336,91 @@ native bool:yb_set_bot_movement(index, bool:movement);
 native bool:yb_is_bot_movement(index);
 
 /**
+ * Enables or disables bot simulation.
+ *
+ * @param index     Bot index.
+ * @param simulate  True to allow simulation, false to suspend all bot ticks.
+ *
+ * @return          1 on success, 0 if the bot is invalid.
+ */
+native bool:yb_set_bot_simulation(index, bool:simulate);
+
+/**
+ * Checks whether bot simulation is enabled.
+ *
+ * @param index     Bot index.
+ *
+ * @return          True if simulation is allowed, false otherwise.
+ */
+native bool:yb_is_bot_simulating(index);
+
+/**
+ * Checks whether the bot is alive.
+ *
+ * @param index     Bot index.
+ *
+ * @return          True if the bot is alive, false otherwise.
+ */
+native bool:yb_is_bot_alive(index);
+
+/**
+ * Checks whether the bot is leaving the server.
+ *
+ * @param index     Bot index.
+ *
+ * @return          True if the bot is stale, false otherwise.
+ */
+native bool:yb_is_bot_stale(index);
+
+/**
+ * Kicks a single bot.
+ *
+ * @param index         Bot index.
+ * @param silent        Suppress the kick message.
+ * @param reduce_quota  Reduce the bot quota after the kick.
+ *
+ * @return              1 on success, 0 if the bot is invalid.
+ */
+native bool:yb_kick_bot(index, bool:silent = true, bool:reduce_quota = true);
+
+/**
+ * Sets the bot personality.
+ *
+ * @param index         Bot index.
+ * @param personality   Personality, see Personality.
+ *
+ * @return              1 on success, 0 if the bot is invalid or personality is out of range.
+ */
+native bool:yb_set_bot_personality(index, Personality:personality);
+
+/**
+ * Gets the current bot weapon classname.
+ *
+ * @param index     Bot index.
+ * @param output    Buffer to copy the classname to.
+ * @param len       Maximum buffer size.
+ *
+ * @return          1 on success, 0 if the bot is invalid.
+ */
+native bool:yb_get_bot_weapon_name(index, output[], len);
+
+/**
+ * Gets the bot quota.
+ *
+ * @return          Bot quota.
+ */
+native yb_get_quota();
+
+/**
+ * Sets the bot quota.
+ *
+ * @param count     New bot quota.
+ *
+ * @return          1 on success, 0 if the bot is not loaded.
+ */
+native bool:yb_set_quota(count);
+
+/**
  * Gets the bot look at origin.
  *
  * @param index     Bot index.
@@ -577,3 +662,37 @@ native yb_get_graph_author(output[], len);
  * @return          Number of characters copied.
  */
 native yb_get_graph_modified(output[], len);
+
+
+/**
+ * Checks whether the loaded bot API is at least the requested version.
+ *
+ * @param major     Required API major version.
+ * @param minor     Required API minor version.
+ *
+ * @return          True if the loaded API is at least the requested version.
+ */
+stock bool:yb_api_at_least (const major, const minor)
+{
+  new version = yb_get_api_version ();
+  new loadedMajor = version >>> 16;
+  new loadedMinor = version & 0xFFFF;
+
+  return loadedMajor > major || (loadedMajor == major && loadedMinor >= minor);
+}
+
+
+/**
+ * Called when a bot is spawned.
+ */
+forward yb_bot_spawned (index);
+
+/**
+ * Called when a bot is killed.
+ */
+forward yb_bot_killed (victim, killer);
+
+/**
+ * Called when a bot is removed.
+ */
+forward yb_bot_removed (index, bool:kicked);

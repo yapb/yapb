@@ -505,6 +505,91 @@ public:
   virtual int GetApiVersion () override {
     return kBotModuleVersion;
   }
+
+  // enable/disable bot simulation, false suspends all bot ticks
+  virtual bool SetBotSimulation (int entity, bool simulate) override {
+    auto bot = GetBot (entity);
+
+    if (!bot) {
+      return false;
+    }
+
+    bot->SetSimulating (simulate);
+
+    return true;
+  }
+
+  // checks whether bot simulation is enabled
+  virtual bool IsBotSimulating (int entity) override {
+    auto bot = GetBot (entity);
+
+    return bot ? bot->IsSimulating () : false;
+  }
+
+  // checks whether bot is alive
+  virtual bool IsBotAlive (int entity) override {
+    auto bot = GetBot (entity);
+
+    return bot ? game.IsAliveEntity (bot->Ent ()) : false;
+  }
+
+  // checks whether bot is leaving the server
+  virtual bool IsBotStale (int entity) override {
+    auto bot = GetBot (entity);
+
+    return bot ? bot->IsStale () : false;
+  }
+
+  // kicks a single bot
+  virtual bool KickBot (int entity, bool silent, bool reduce_quota) override {
+    auto bot = GetBot (entity);
+
+    if (!bot) {
+      return false;
+    }
+
+    bot->Kick (silent);
+
+    if (reduce_quota) {
+      bots.DecrementQuota ();
+    }
+
+    return true;
+  }
+
+  // sets the bot personality
+  virtual bool SetBotPersonality (int entity, int personality) override {
+    auto bot = GetBot (entity);
+
+    if (!bot) {
+      return false;
+    }
+
+    return bot->SetPersonality (static_cast<Personality> (personality));
+  }
+
+  // gets the current weapon classname
+  virtual const char *GetBotWeaponName (int entity) override {
+    auto bot = GetBot (entity);
+
+    return bot ? bot->GetWeaponName () : "";
+  }
+
+  // gets the bot quota
+  virtual int GetQuota () override {
+    return cv_quota.As<int> ();
+  }
+
+  // sets the bot quota
+  virtual bool SetQuota (int count) override {
+    cv_quota.Set (ystl::clamp (count, 0, kGameMaxPlayers));
+    return true;
+  }
+
+  // receives core bot events
+  virtual void SetEventCallback (BotEventCallback callback) override {
+    bots.SetEventCallback (callback);
+  }
 };
 
 YSTL_EXPORT IBotModule *GetBotAPI (int version) {

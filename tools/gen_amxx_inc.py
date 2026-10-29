@@ -49,6 +49,42 @@ HEADER = '''//
 #define INVALID_ENTITY_INDEX 0
 '''
 
+API_HELPERS = '''
+/**
+ * Checks whether the loaded bot API is at least the requested version.
+ *
+ * @param major     Required API major version.
+ * @param minor     Required API minor version.
+ *
+ * @return          True if the loaded API is at least the requested version.
+ */
+stock bool:yb_api_at_least (const major, const minor)
+{
+  new version = yb_get_api_version ();
+  new loadedMajor = version >>> 16;
+  new loadedMinor = version & 0xFFFF;
+
+  return loadedMajor > major || (loadedMajor == major && loadedMinor >= minor);
+}
+'''
+
+FORWARDS = '''
+/**
+ * Called when a bot is spawned.
+ */
+forward yb_bot_spawned (index);
+
+/**
+ * Called when a bot is killed.
+ */
+forward yb_bot_killed (victim, killer);
+
+/**
+ * Called when a bot is removed.
+ */
+forward yb_bot_removed (index, bool:kicked);
+'''
+
 NATIVE_RE = re.compile(r'^\s*//\s*@native\s+(.+?)\s*$')
 ARRAY_RE = re.compile(r'\{\s*"(yb_\w+)"')
 
@@ -200,6 +236,9 @@ def generate():
             out.append(pawn_doc(doc))
         out.append('native %s;' % proto)
         out.append('')
+
+    out.append(API_HELPERS)
+    out.append(FORWARDS)
 
     return '\n'.join(out).rstrip('\n') + '\n'
 

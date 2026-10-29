@@ -73,6 +73,8 @@ using FnGetAmxAddr = cell *(*)(AMX *, cell);
 using FnSetAmxString = int (*) (AMX *, cell, const char *, int);
 using FnCellToReal = float (*) (cell);
 using FnRealToCell = cell (*) (float);
+using FnRegisterForward = int (*) (const char *, int, ...);
+using FnExecuteForward = int (*) (int, ...);
 
 // amxx core bindings, filled once at attach
 class AmxxCore final : public ystl::Singleton<AmxxCore> {
@@ -83,6 +85,8 @@ public:
   // variadic, so call the pointers directly
   FnLog log_ = nullptr;
   FnLogError log_error_ = nullptr;
+  FnRegisterForward register_forward_ = nullptr;
+  FnExecuteForward execute_forward_ = nullptr;
 
 public:
   int AddNatives (const AMX_NATIVE_INFO *list) {
@@ -142,19 +146,36 @@ class YaPBModule final : public ystl::Singleton<YaPBModule> {
 private:
   using Export = IBotModule *(*)(int);
 
+  enum : int {
+    kForwardIgnore = 0,
+    kForwardCell = 0,
+    kForwardDone = -1
+  };
+
 private:
   ystl::SharedLibrary botdll_;
 
   IBotModule *api_ = nullptr;
+
+  int bot_spawned_forward_ = -1;
+  int bot_killed_forward_ = -1;
+  int bot_removed_forward_ = -1;
 
 public:
   YaPBModule () = default;
   ~YaPBModule () = default;
 
 public:
+  static const AmxxModuleInfo &ModuleInfo ();
+  static void BotEventSink (BotEvent event, int arg1, int arg2);
+
+public:
   void Load ();
   void Unload ();
   void DisableNatives ();
+
+private:
+  void DispatchEvent (BotEvent event, int arg1, int arg2);
 
 public:
   IBotModule *Api () {
