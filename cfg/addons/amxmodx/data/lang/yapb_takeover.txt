@@ -1,0 +1,27 @@
+[en]
+TAKEOVER_VIP_DENIED = This VIP bot cannot be taken
+TAKEOVER_LIMIT = You have reached the takeover limit
+TAKEOVER_BUSY = This bot is already controlled
+TAKEOVER_NO_SPACE = There is no free space to place you
+TAKEOVER_PROMPT_E = Press E to take control of %s
+TAKEOVER_PROMPT_N = Press N to take control of %s
+TAKEOVER_ANNOUNCE = ^4[YaPB]^1 %s took control of %s
+TAKEOVER_BOT_CHAT1 = ^3%s^1: I am all yours.
+TAKEOVER_BOT_CHAT2 = ^3%s^1: Take it, you need it more.
+TAKEOVER_BOT_CHAT3 = ^3%s^1: Do not waste this body.
+TAKEOVER_BOT_CHAT4 = ^3%s^1: You owe me one.
+TAKEOVER_BOT_CHAT5 = ^3%s^1: Good luck out there.
+
+[ru]
+TAKEOVER_VIP_DENIED = Этого VIP-бота нельзя взять
+TAKEOVER_LIMIT = Лимит захватов на раунд исчерпан
+TAKEOVER_BUSY = Этот бот уже занят
+TAKEOVER_NO_SPACE = Нет свободного места для спавна
+TAKEOVER_PROMPT_E = Нажми E, чтобы взять бота %s
+TAKEOVER_PROMPT_N = Нажми N, чтобы взять бота %s
+TAKEOVER_ANNOUNCE = ^4[YaPB]^1 %s взял бота %s
+TAKEOVER_BOT_CHAT1 = ^3%s^1: Я весь твой.
+TAKEOVER_BOT_CHAT2 = ^3%s^1: Забирай, тебе нужнее.
+TAKEOVER_BOT_CHAT3 = ^3%s^1: Не просри это тело.
+TAKEOVER_BOT_CHAT4 = ^3%s^1: Ты мне должен.
+TAKEOVER_BOT_CHAT5 = ^3%s^1: Удачи там.
