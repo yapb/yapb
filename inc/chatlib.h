@@ -112,6 +112,19 @@ public:
 // expose global
 YSTL_EXPOSE_GLOBAL_SINGLETON (ChatManager, chatlib);
 
+struct PendingChat {
+  ystl::String message {};
+  bool team_only {};
+  bool force {};
+
+public:
+  PendingChat () = default;
+  PendingChat (ystl::StringRef text, bool team, bool strong) : message (text.chars (), text.size ()), team_only (team), force (strong) {}
+};
+
+constexpr size_t kBotChatMaxLength = 190; // safe SayText payload limit
+constexpr size_t kBotChatMaxPending = 8; // plugin messages waiting for a tick
+
 // bot chat data mixin
 class ChatData {
   friend class DebugPanel;
@@ -121,8 +134,11 @@ class ChatData {
 protected:
   ystl::IntervalTimer last_chat_timer_ {}; // time bot last chatted
   bool need_to_send_welcome_chat_ {}; // bot needs to greet people on server?
+  int chat_pre_checked_ {}; // queued say messages already passed the pre hook
+  BotChatMode chat_mode_ { BotChatMode::Auto }; // who may chat for this bot
   ystl::String chat_buffer_ {}; // space for strings (say text...)
   ystl::String reply_buffer_ {}; // reused buffer for chat keyword replies, so reply picking doesn't allocate
+  ystl::Deque<PendingChat> pending_chats_ {}; // plugin messages waiting for the next bot tick
 
 public:
   ChatCollection say_text_buffer_ {}; // holds the index & the actual message of the last unprocessed text message of a player

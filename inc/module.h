@@ -11,16 +11,58 @@
 namespace bot {
 
 constexpr int kBotModuleApiMajor = 3;
-constexpr int kBotModuleApiMinor = 4;
+constexpr int kBotModuleApiMinor = 6;
 constexpr int kBotModuleVersion = (kBotModuleApiMajor << 16) | kBotModuleApiMinor;
 
-enum class BotEvent : int {
+enum class BotEventType : int {
   Spawned = 0,
   Killed,
-  Removed
+  Removed,
+  ChatPre,
+  ChatPost
 };
 
-using BotEventCallback = void (*) (BotEvent event, int arg1, int arg2);
+enum class BotChatSource : int {
+  Human = 0,
+  Bot,
+  Plugin
+};
+
+enum class BotChatMode : int {
+  Invalid = -1,
+  Auto = 0, // core ai decides when and what to say
+  Manual, // core ai is silent, plugin controls all chat
+  Off // no chat at all
+};
+
+struct BotEvent {
+  BotEventType type = BotEventType::Spawned;
+  int entity = 0;
+  int arg1 = 0;
+  int arg2 = 0;
+  const char *message = nullptr;
+  bool team_only = false;
+  BotChatSource source = BotChatSource::Bot;
+};
+
+// return non-zero from ChatPre to block the message
+using BotEventSink = int (*) (const BotEvent &event);
+
+// optional chat extension, returned by IBotModule::GetChatAPI
+class IBotChatAPI {
+public:
+  virtual ~IBotChatAPI () = default;
+
+public:
+  // queues a plugin message, returns false for invalid bots or a full queue
+  virtual bool SendBotChat (int entity, const char *message, bool team_only, bool force) = 0;
+
+  // changes whether core ai, plugin, or nobody may chat for this bot
+  virtual bool SetBotChatMode (int entity, BotChatMode mode) = 0;
+
+  // gets the current chat mode, invalid for bad entities
+  virtual BotChatMode GetBotChatMode (int entity) = 0;
+};
 
 // basic module interface, if you need to additional stuff, please post an issue
 class IBotModule {
@@ -224,8 +266,11 @@ public:
   // sets the bot quota
   virtual bool SetQuota (int count) = 0;
 
-  // receives core bot events
-  virtual void SetEventCallback (BotEventCallback callback) = 0;
+  // receives all core and chat notifications
+  virtual void SetEventSink (BotEventSink sink) = 0;
+
+  // gets the optional chat extension, safe to call when api >= 3.6
+  virtual IBotChatAPI *GetChatAPI () = 0;
 };
 
 } // namespace bot

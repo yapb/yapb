@@ -87,6 +87,7 @@ public:
   friend class TickManager;
   friend class Practice;
   friend class DebugPanel;
+  friend class Module;
 
   friend struct NavigateHook;
   friend struct ChatHook;
@@ -589,6 +590,11 @@ private:
   // lookup button entity by target name
   edict_t *LookupButton (ystl::StringRef target, bool blind_test = false);
 
+  // check if bot is alive in the bot state machine
+  bool IsAlive () const {
+    return is_alive_;
+  }
+
   // check if bot is currently on ladder
   bool IsOnLadder () const {
     return pev->movetype == MOVETYPE_FLY;
@@ -842,6 +848,15 @@ private:
   // check and process message queue
   void CheckMsgQueue ();
 
+  // process one plugin chat request when the bot is between actions
+  bool ProcessPendingChat ();
+
+  // mode/cvar guards shared by queued and direct chat
+  bool IsChatAllowed (ystl::StringRef message, BotChatSource source, bool force);
+
+  // run the pre hook and guards for a text message
+  bool CanSendChat (ystl::StringRef message, bool team_only, BotChatSource source, bool force);
+
   // update hearing and sound tracking
   void UpdateHearing ();
 
@@ -1085,8 +1100,15 @@ public:
   // called when entering buy zone
   void EnteredBuyZone (BuyState buy_state);
 
-  // push message to message queue
-  void PushMsgQueue (Msg message);
+  // push message to message queue, false when a chat pre hook blocked it
+  bool PushMsgQueue (Msg message);
+
+  // queue a plugin chat message, sent on the next safe bot tick
+  bool QueueChat (ystl::StringRef message, bool team_only, bool force);
+
+  // set/get who is allowed to chat for this bot
+  bool SetChatMode (BotChatMode mode);
+  BotChatMode GetChatMode () const;
 
   // prepare chat message for sending
   void PrepareChatMessage (ystl::StringRef message);
@@ -1131,7 +1153,7 @@ public:
   void DropWeaponForUser (edict_t *user, bool discard_c4);
 
   // send message to chat
-  void SendToChat (ystl::StringRef message, bool team_only);
+  void SendToChat (ystl::StringRef message, bool team_only, BotChatSource source = BotChatSource::Bot, bool force = false, bool from_queue = false);
 
   // send legacy chat message
   void SendToChatLegacy (ystl::StringRef message, bool team_only);
