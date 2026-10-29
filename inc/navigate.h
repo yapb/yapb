@@ -276,6 +276,7 @@ protected:
 
   float avoid_strafe_dir_ {}; // committed player avoidance strafe direction
   ystl::CountdownTimer avoid_commit_timer_ {}; // time until which avoidance direction is committed
+  bool avoid_in_narrow_ {}; // player avoidance owns movement in a crowded choke
 
   ystl::CountdownTimer avoid_strafe_change_timer_ {}; // timer for terrain avoidance strafe direction change
   float terrain_strafe_dir_ {}; // current strafe direction for terrain avoidance (+1 or -1)

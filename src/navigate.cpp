@@ -656,6 +656,8 @@ void Bot::IgnoreCollision () {
 }
 
 void Bot::DoPlayerAvoidance (const ystl::Vector &normal) {
+  avoid_in_narrow_ = false;
+
   if (IsOnLadder () || pev->solid == SOLID_NOT || cv_has_team_semiclip || game.Is (GameFlags::FreeForAll) || HasUninterruptibleTask ()) {
     return; // no player avoiding when with semiclip plugin
   }
@@ -808,36 +810,73 @@ void Bot::DoPlayerAvoidance (const ystl::Vector &normal) {
   // is player that near now or in future that we need to steer away?
   if (moved_distance_sq <= ystl::sqrf (avoid_distance_near) ||
       (distance_sq <= ystl::sqrf (avoid_distance_far) && next_frame_distance_sq < distance_sq)) {
-    // if we already committed to an avoidance direction, keep it until commitment expires
-    if (!avoid_commit_timer_.elapsed ()) {
-      SetStrafeSpeed (normal, avoid_strafe_dir_);
+    // a choke is where the bot hull cannot move sideways, measured against the movement heading
+    const auto hull = IsDucking () ? head_hull : human_hull;
+
+    auto side_blocked = [&] (const ystl::Vector &side) {
+      Trace::Result tr {};
+      trace.Hull (pev->origin, pev->origin + side * 40.0f, TraceIgnore::Monsters, hull, Ent (), &tr);
+      return tr.fraction < 1.0f;
+    };
+
+    const bool in_narrow = IsOnFloor () && side_blocked (-right) && side_blocked (right);
+    const auto to_hindrance = hindrance_->v.origin - pev->origin;
+    const bool hindrance_ahead = (to_hindrance.get2d () | forward.get2d ()) > 0.0f || distance_sq <= ystl::sqrf (8.0f);
+    avoid_in_narrow_ = in_narrow;
+
+    if (in_narrow) {
+      const bool head_on = (hindrance_->v.velocity.get2d () | forward.get2d ()) < -10.0f;
+      const float queue_distance = ystl::min (avoid_distance_near, 48.0f);
+
+      // stop behind the bot ahead, never strafe into walls or back into the crowd
+      strafe_speed_ = 0.0f;
+      avoid_strafe_dir_ = 0.0f;
+      avoid_commit_timer_.invalidate ();
+
+      if (hindrance_ahead) {
+        if (head_on && distance_sq <= ystl::sqrf (avoid_distance_near)) {
+          // opposite directions in a one-lane choke: back out instead of stalling
+          move_speed_ = -pev->maxspeed;
+          avoid_commit_timer_.start (0.35f + static_cast<float> (Entindex () % 4) * 0.05f);
+        }
+        else if (distance_sq <= ystl::sqrf (queue_distance)) {
+          move_speed_ = 0.0f;
+          avoid_commit_timer_.start (0.45f + static_cast<float> (Entindex () % 4) * 0.1f);
+        }
+      }
     }
     else {
-      if (!dir.empty ()) {
-        const float dot_right = dir | right.normalize2d ();
-
-        // dead-zone to prevent direction flipping when hindrance is nearly straight ahead
-        if (ystl::abs (dot_right) > 0.1f) {
-          avoid_strafe_dir_ = dot_right > 0.0f ? pev->maxspeed : -pev->maxspeed;
-        }
-        else if (ystl::fzero (avoid_strafe_dir_)) {
-          avoid_strafe_dir_ = pev->maxspeed;
-        }
+      // if we already committed to an avoidance direction, keep it until commitment expires
+      if (!avoid_commit_timer_.elapsed ()) {
+        SetStrafeSpeed (normal, avoid_strafe_dir_);
       }
       else {
-        if (ystl::fzero (avoid_strafe_dir_)) {
-          avoid_strafe_dir_ = pev->maxspeed;
+        if (!dir.empty ()) {
+          const float dot_right = dir | right.normalize2d ();
+
+          // dead-zone to prevent direction flipping when hindrance is nearly straight ahead
+          if (ystl::abs (dot_right) > 0.1f) {
+            avoid_strafe_dir_ = dot_right > 0.0f ? pev->maxspeed : -pev->maxspeed;
+          }
+          else if (ystl::fzero (avoid_strafe_dir_)) {
+            avoid_strafe_dir_ = pev->maxspeed;
+          }
         }
+        else {
+          if (ystl::fzero (avoid_strafe_dir_)) {
+            avoid_strafe_dir_ = pev->maxspeed;
+          }
+        }
+
+        avoid_commit_timer_.start (0.4f);
+        SetStrafeSpeed (normal, avoid_strafe_dir_);
       }
 
-      avoid_commit_timer_.start (0.4f);
-      SetStrafeSpeed (normal, avoid_strafe_dir_);
-    }
-
-    // only back off if hindrance is approaching us (closing distance), not just moving
-    if (!dir.empty () && distance_sq < ystl::sqrf (96.0f) && next_frame_distance_sq < distance_sq) {
-      if ((dir | forward.normalize2d ()) < 0.0f) {
-        move_speed_ = -pev->maxspeed;
+      // only back off if hindrance is approaching us (closing distance), not just moving
+      if (!dir.empty () && distance_sq < ystl::sqrf (96.0f) && next_frame_distance_sq < distance_sq) {
+        if ((dir | forward.normalize2d ()) < 0.0f) {
+          move_speed_ = -pev->maxspeed;
+        }
       }
     }
 
@@ -1099,6 +1138,12 @@ void Bot::ComputeCollisionWeights (const ystl::Vector &dir_normal, CollisionWeig
       weights[CollisionState::StrafeLeft].weight += 15;
       weights[CollisionState::StrafeRight].weight -= 5;
     }
+
+    // both sides are walls: lateral probing can only shake the bot in place
+    if (blocked_left && blocked_right) {
+      weights[CollisionState::StrafeLeft].weight = -1000;
+      weights[CollisionState::StrafeRight].weight = -1000;
+    }
   }
 
   // duck weight calculation
@@ -1164,6 +1209,13 @@ void Bot::CheckTerrain (const ystl::Vector &dir_normal) {
   const float minimal_speed = IsDucking () ? 7.0f : 10.0f;
 
   constexpr float kProbeTestTime = 0.625f;
+
+  // in a crowded choke player avoidance owns movement, terrain probing only shakes the bot
+  if (avoid_in_narrow_) {
+    first_collide_timer_.invalidate ();
+    ResetCollision ();
+    return;
+  }
 
   // skip terrain response while player avoidance handles movement
   if (!game.IsNullEntity (hindrance_) && !avoid_commit_timer_.elapsed ()) {
