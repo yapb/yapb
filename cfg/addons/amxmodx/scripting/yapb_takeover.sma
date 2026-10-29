@@ -950,7 +950,7 @@ restore_bot_simulation (bot) {
     return;
   }
 
-  if (yb_is_bot_stale (bot) || !yb_is_bot_alive (bot)) {
+  if (yb_is_bot_stale (bot)) {
     return;
   }
 
