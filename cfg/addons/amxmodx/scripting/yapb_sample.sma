@@ -74,9 +74,9 @@ public cmd_info (id, level, cid) {
   }
 
   new name[32], Float:origin[3];
-  new Difficulty:difficulty = yb_get_bot_difficulty (target);
-  new Personality:personality = yb_get_bot_personality (target);
-  new Task:task = yb_get_bot_task (target);
+  new YBDifficulty:difficulty = yb_get_bot_difficulty (target);
+  new YBPersonality:personality = yb_get_bot_personality (target);
+  new YBTask:task = yb_get_bot_task (target);
   new weapon = yb_get_bot_weapon (target);
 
   get_user_name (target, name, charsmax (name));
@@ -205,7 +205,7 @@ public cmd_add (id, level, cid) {
     team = CS_TEAM_CT;
   }
 
-  if (!yb_add_bot (Difficulty:Normal, Personality:Normal, team)) {
+  if (!yb_add_bot (YBDifficulty:YB_DIFFICULTY_NORMAL, YBPersonality:YB_PERSONALITY_NORMAL, team)) {
     client_print (id, print_chat, "[YaPB] failed to add a bot");
     return PLUGIN_HANDLED;
   }
@@ -242,7 +242,7 @@ public cmd_graph (id, level, cid) {
 
   if (yb_is_node_valid (node)) {
     new Float:node_origin[3];
-    new NodeFlag:flags;
+    new YBNodeFlag:flags;
 
     yb_get_node_origin (node, node_origin);
     flags = yb_get_node_flags (node);
@@ -250,7 +250,7 @@ public cmd_graph (id, level, cid) {
     client_print (id, print_console, "[YaPB] nearest node %d at %.0f %.0f %.0f",
       node, node_origin[0], node_origin[1], node_origin[2]);
     client_print (id, print_console, "  lift %d | crouch %d | camp %d | sniper %d | links %d",
-      !!(_:flags & _:Lift), !!(_:flags & _:Crouch), !!(_:flags & _:Camp), !!(_:flags & _:Sniper),
+      !!(_:flags & _:YB_NODE_FLAG_LIFT), !!(_:flags & _:YB_NODE_FLAG_CROUCH), !!(_:flags & _:YB_NODE_FLAG_CAMP), !!(_:flags & _:YB_NODE_FLAG_SNIPER),
       yb_get_node_link_count (node));
   }
   else {
