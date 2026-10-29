@@ -392,6 +392,7 @@ class BotRelease(object):
    def install_amxx(self, pkg: BotPackage):
       dest_dir = os.path.join(self.work_dir, 'addons', 'amxmodx', 'modules')
       os.makedirs(dest_dir, exist_ok=True)
+      installed = 0
 
       for artifact, filename in pkg.amxx.items():
          binary = os.path.join(self.artifacts, self.resolve_artifact(artifact), filename)
@@ -402,10 +403,13 @@ class BotRelease(object):
             continue
 
          print(f'[{binary_base}: OK]', end=' ')
+         installed += 1
 
          dest = os.path.join(dest_dir, binary_base)
          shutil.copy(binary, dest)
          self.sign_binary(dest)
+
+      return installed == len(pkg.amxx)
 
    def create_pkg(self, pkg: BotPackage):
       dest = os.path.join(self.pkg_dir, f'{self.project}-{self.version}-{pkg.name}.{pkg.archive}')
@@ -420,10 +424,11 @@ class BotRelease(object):
 
       if not self.install_binary(pkg):
          print(' -> Failed...')
-         return
+         return False
 
-      if not pkg.extra:
-         self.install_amxx(pkg)
+      if not pkg.extra and not self.install_amxx(pkg):
+         print(' -> Failed (AMXX module missing)...')
+         return False
 
       if dest.endswith('zip') or dest.endswith('exe'):
          if pkg.extra:
@@ -450,11 +455,17 @@ class BotRelease(object):
       if os.path.exists(dest_tmp):
          os.remove(dest_tmp)
 
+      return True
+
    def create_pkgs(self):
+      failed = 0
+
       for pkg in self.pkg_matrix:
-         self.create_pkg(pkg)
+         if not self.create_pkg(pkg):
+            failed += 1
 
       print('Finished release')
+      return failed == 0
 
    @staticmethod
    def run():
@@ -463,7 +474,9 @@ class BotRelease(object):
       r.create_dirs()
       r.create_graphs()
       r.create_cacert()
-      r.create_pkgs()
+
+      if not r.create_pkgs():
+         raise SystemExit(1)
 
 # entry point
 if __name__ == "__main__":

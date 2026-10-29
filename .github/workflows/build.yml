@@ -131,6 +131,40 @@ jobs:
         # NOTE: default shell on purpose, see above.
         run: cmake --build --preset ci-${{ matrix.arch }}
 
+      - name: Stage AMXX module (Linux)
+        if: runner.os == 'Linux' && (matrix.arch == 'linux-x86' || matrix.arch == 'linux-x86-nosimd' || startsWith(matrix.arch, 'windows-x86'))
+        shell: bash
+        run: |
+          for file in "$BUILD_DIR"/ext/amxx/yapb_amxx*.so "$BUILD_DIR"/ext/amxx/yapb_amxx*.dll; do
+            if [ -f "$file" ]; then
+              cp "$file" "$BUILD_DIR/"
+            fi
+          done
+
+      - name: Stage AMXX module (Windows)
+        if: runner.os == 'Windows' && startsWith(matrix.arch, 'windows-x86')
+        shell: pwsh
+        run: |
+          Get-ChildItem "$env:BUILD_DIR\ext\amxx\yapb_amxx*.dll" | Copy-Item -Destination $env:BUILD_DIR -Force
+
+      - name: Verify AMXX module (Linux)
+        if: runner.os == 'Linux' && (matrix.arch == 'linux-x86' || matrix.arch == 'linux-x86-nosimd' || startsWith(matrix.arch, 'windows-x86'))
+        shell: bash
+        run: |
+          if [[ "${{ matrix.arch }}" == linux-x86* ]]; then
+            test -f "$BUILD_DIR/yapb_amxx_i386.so"
+          else
+            test -f "$BUILD_DIR/yapb_amxx.dll"
+          fi
+
+      - name: Verify AMXX module (Windows)
+        if: runner.os == 'Windows' && startsWith(matrix.arch, 'windows-x86')
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "$env:BUILD_DIR\yapb_amxx.dll")) {
+            throw "yapb_amxx.dll was not produced"
+          }
+
       - name: Strip mingw symbols
         if: matrix.arch == 'windows-x86-mingw'
         run: |
