@@ -78,6 +78,10 @@ x64. No std::* in harness code (ystl only).
     `m_blindNodeIndex` defaults out of range (was 0, a valid node:
     Normal blinds navigated to node 0 since `blind_` accepts
     `>= Normal` but `takeBlind` assigns cover only above it).
+  - `unit/chat_api` — chat extension contract: pre/post ordering, block
+    before side effects, source/team flags, auto/manual/off modes,
+    plugin queue, force vs `cv_chat`, one-line sanitizing and human
+    say capture. Uses `ChatHook` for the private queue tick.
   - `unit/vision_{angles,sees,aim,nav}` — per-file coverage for
     vision.cpp: FOV math with wrap, view cone, body angles with frustum
     refresh, frustum planes directly, item/C4/entity visibility incl.
