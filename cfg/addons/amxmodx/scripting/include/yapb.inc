@@ -21,71 +21,86 @@
   #pragma loadlib yapb
 #endif
 
-#define INVALID_NODE_INDEX -1
-#define INVALID_ENTITY_INDEX 0
+enum {
+  YB_INVALID_NODE_INDEX = -1,
+  YB_INVALID_ENTITY_INDEX = 0
+};
 
-enum NodeFlag {
-  Button = (1 << 0),
-  Lift = (1 << 1),
-  Crouch = (1 << 2),
-  Crossing = (1 << 3),
-  Goal = (1 << 4),
-  Ladder = (1 << 5),
-  Rescue = (1 << 6),
-  Camp = (1 << 7),
-  NoHostage = (1 << 8),
-  DoubleJump = (1 << 9),
-  Narrow = (1 << 10),
-  Sniper = (1 << 28),
-  TerroristOnly = (1 << 29),
-  CTOnly = (1 << 30)
+enum YBNodeFlag {
+  YB_NODE_FLAG_BUTTON = (1 << 0),
+  YB_NODE_FLAG_LIFT = (1 << 1),
+  YB_NODE_FLAG_CROUCH = (1 << 2),
+  YB_NODE_FLAG_CROSSING = (1 << 3),
+  YB_NODE_FLAG_GOAL = (1 << 4),
+  YB_NODE_FLAG_LADDER = (1 << 5),
+  YB_NODE_FLAG_RESCUE = (1 << 6),
+  YB_NODE_FLAG_CAMP = (1 << 7),
+  YB_NODE_FLAG_NO_HOSTAGE = (1 << 8),
+  YB_NODE_FLAG_DOUBLE_JUMP = (1 << 9),
+  YB_NODE_FLAG_NARROW = (1 << 10),
+  YB_NODE_FLAG_SNIPER = (1 << 28),
+  YB_NODE_FLAG_TERRORIST_ONLY = (1 << 29),
+  YB_NODE_FLAG_CT_ONLY = (1 << 30)
 }
 
-enum NodeType {
-  Terrorist = 0,
-  CT = 1,
-  Goal = 2,
-  Camp = 3,
-  Sniper = 4,
-  Rescue = 5
+enum YBNodeType {
+  YB_NODE_TYPE_TERRORIST = 0,
+  YB_NODE_TYPE_CT = 1,
+  YB_NODE_TYPE_GOAL = 2,
+  YB_NODE_TYPE_CAMP = 3,
+  YB_NODE_TYPE_SNIPER = 4,
+  YB_NODE_TYPE_RESCUE = 5
 }
 
-enum Difficulty {
-  Noob = 0,
-  Easy = 1,
-  Normal = 2,
-  Hard = 3,
-  Expert = 4
+enum YBDifficulty {
+  YB_DIFFICULTY_NOOB = 0,
+  YB_DIFFICULTY_EASY = 1,
+  YB_DIFFICULTY_NORMAL = 2,
+  YB_DIFFICULTY_HARD = 3,
+  YB_DIFFICULTY_EXPERT = 4
 }
 
-enum Personality {
-  Normal = 0,
-  Rusher = 1,
-  Careful = 2
+enum YBPersonality {
+  YB_PERSONALITY_NORMAL = 0,
+  YB_PERSONALITY_RUSHER = 1,
+  YB_PERSONALITY_CAREFUL = 2
 }
 
-enum Task {
-  Normal = 0,
-  Pause = 1,
-  MoveTo = 2,
-  FollowUser = 3,
-  PickupItem = 4,
-  Camp = 5,
-  PlantBomb = 6,
-  DefuseBomb = 7,
-  Attack = 8,
-  Hunt = 9,
-  SeekCover = 10,
-  ThrowExplosive = 11,
-  ThrowFlashbang = 12,
-  ThrowSmoke = 13,
-  DoubleJump = 14,
-  EscapeFromBomb = 15,
-  ShootBreakable = 16,
-  Hide = 17,
-  Blind = 18,
-  Spraypaint = 19,
-  None = 20
+enum YBTask {
+  YB_TASK_NORMAL = 0,
+  YB_TASK_PAUSE = 1,
+  YB_TASK_MOVE_TO = 2,
+  YB_TASK_FOLLOW_USER = 3,
+  YB_TASK_PICKUP_ITEM = 4,
+  YB_TASK_CAMP = 5,
+  YB_TASK_PLANT_BOMB = 6,
+  YB_TASK_DEFUSE_BOMB = 7,
+  YB_TASK_ATTACK = 8,
+  YB_TASK_HUNT = 9,
+  YB_TASK_SEEK_COVER = 10,
+  YB_TASK_THROW_EXPLOSIVE = 11,
+  YB_TASK_THROW_FLASHBANG = 12,
+  YB_TASK_THROW_SMOKE = 13,
+  YB_TASK_DOUBLE_JUMP = 14,
+  YB_TASK_ESCAPE_FROM_BOMB = 15,
+  YB_TASK_SHOOT_BREAKABLE = 16,
+  YB_TASK_HIDE = 17,
+  YB_TASK_BLIND = 18,
+  YB_TASK_SPRAYPAINT = 19,
+  YB_TASK_NONE = 20
+}
+
+enum YBChatMode {
+  YB_CHAT_INVALID = -1,
+  YB_CHAT_AUTO = 0,
+  YB_CHAT_MANUAL = 1,
+  YB_CHAT_OFF = 2
+}
+
+enum YBChatSource {
+  YB_CHAT_HUMAN = 0,
+  YB_CHAT_BOT = 1,
+  YB_CHAT_PLUGIN = 2
 }
 
 /**
@@ -122,13 +137,13 @@ native yb_get_bot_count();
 /**
  * Adds a bot to the server.
  *
- * @param difficulty    Difficulty, see Difficulty.
- * @param personality   Personality, see Personality.
+ * @param difficulty    Difficulty, see YBDifficulty.
+ * @param personality   Personality, see YBPersonality.
  * @param team          CS team, see CsTeams.
  *
  * @return              1 if the request is queued, 0 otherwise.
  */
-native bool:yb_add_bot(Difficulty:difficulty = Difficulty:Normal, Personality:personality = Personality:Normal, CsTeams:team = CS_TEAM_UNASSIGNED);
+native bool:yb_add_bot(YBDifficulty:difficulty = YBDifficulty:YB_DIFFICULTY_NORMAL, YBPersonality:personality = YBPersonality:YB_PERSONALITY_NORMAL, CsTeams:team = CS_TEAM_UNASSIGNED);
 
 /**
  * Checks whether the player is a YaPB bot.
@@ -191,44 +206,44 @@ native yb_get_bot_ping(index);
  *
  * @param index     Bot index.
  *
- * @return          Difficulty, see Difficulty.
+ * @return          Difficulty, see YBDifficulty.
  */
-native Difficulty:yb_get_bot_difficulty(index);
+native YBDifficulty:yb_get_bot_difficulty(index);
 
 /**
  * Sets the bot difficulty.
  *
  * @param index         Bot index.
- * @param difficulty    Difficulty, see Difficulty.
+ * @param difficulty    Difficulty, see YBDifficulty.
  *
  * @return              1 on success, 0 otherwise.
  */
-native bool:yb_set_bot_difficulty(index, Difficulty:difficulty);
+native bool:yb_set_bot_difficulty(index, YBDifficulty:difficulty);
 
 /**
  * Gets the bot personality.
  *
  * @param index     Bot index.
  *
- * @return          Personality, see Personality.
+ * @return          Personality, see YBPersonality.
  */
-native Personality:yb_get_bot_personality(index);
+native YBPersonality:yb_get_bot_personality(index);
 
 /**
  * Gets the bot current task id.
  *
  * @param index     Bot index.
  *
- * @return          Task id, see Task.
+ * @return          Task id, see YBTask.
  */
-native Task:yb_get_bot_task(index);
+native YBTask:yb_get_bot_task(index);
 
 /**
  * Gets the bot current task data.
  *
  * @param index     Bot index.
  *
- * @return          Task node index, INVALID_NODE_INDEX if none.
+ * @return          Task node index, YB_INVALID_NODE_INDEX if none.
  */
 native yb_get_bot_task_data(index);
 
@@ -237,7 +252,7 @@ native yb_get_bot_task_data(index);
  *
  * @param index     Bot index.
  *
- * @return          Graph node index, INVALID_NODE_INDEX if dead or camping.
+ * @return          Graph node index, YB_INVALID_NODE_INDEX if dead or camping.
  */
 native yb_get_bot_node(index);
 
@@ -246,7 +261,7 @@ native yb_get_bot_node(index);
  *
  * @param index     Bot index.
  *
- * @return          Graph node index, INVALID_NODE_INDEX if none.
+ * @return          Graph node index, YB_INVALID_NODE_INDEX if none.
  */
 native yb_get_bot_goal(index);
 
@@ -285,7 +300,7 @@ native yb_get_bot_path_length(index);
  * @param index     Bot index.
  * @param offset    Offset from the current path cursor, 0 is the next node.
  *
- * @return          Graph node index, INVALID_NODE_INDEX if none.
+ * @return          Graph node index, YB_INVALID_NODE_INDEX if none.
  */
 native yb_get_bot_path_node(index, offset);
 
@@ -387,11 +402,11 @@ native bool:yb_kick_bot(index, bool:silent = true, bool:reduce_quota = true);
  * Sets the bot personality.
  *
  * @param index         Bot index.
- * @param personality   Personality, see Personality.
+ * @param personality   Personality, see YBPersonality.
  *
  * @return              1 on success, 0 if the bot is invalid or personality is out of range.
  */
-native bool:yb_set_bot_personality(index, Personality:personality);
+native bool:yb_set_bot_personality(index, YBPersonality:personality);
 
 /**
  * Gets the current bot weapon classname.
@@ -445,7 +460,7 @@ native bool:yb_set_bot_look_at(index, const Float:origin[3]);
  *
  * @param index     Bot index.
  *
- * @return          Entity index, INVALID_ENTITY_INDEX if none.
+ * @return          Entity index, YB_INVALID_ENTITY_INDEX if none.
  */
 native yb_get_bot_enemy(index);
 
@@ -454,7 +469,7 @@ native yb_get_bot_enemy(index);
  *
  * @param index     Bot index.
  *
- * @return          Entity index, INVALID_ENTITY_INDEX if none.
+ * @return          Entity index, YB_INVALID_ENTITY_INDEX if none.
  */
 native yb_get_bot_last_enemy(index);
 
@@ -463,7 +478,7 @@ native yb_get_bot_last_enemy(index);
  *
  * @param index     Bot index.
  *
- * @return          Entity index, INVALID_ENTITY_INDEX if none.
+ * @return          Entity index, YB_INVALID_ENTITY_INDEX if none.
  */
 native yb_get_bot_last_victim(index);
 
@@ -514,9 +529,9 @@ native bool:yb_is_node_valid(node);
  *
  * @param node      Graph node index.
  *
- * @return          Node flags, see NodeFlag.
+ * @return          Node flags, see YBNodeFlag.
  */
-native NodeFlag:yb_get_node_flags(node);
+native YBNodeFlag:yb_get_node_flags(node);
 
 /**
  * Gets the graph node origin by index.
@@ -533,7 +548,7 @@ native bool:yb_get_node_origin(node, Float:origin[3]);
  *
  * @param origin    Vector of the location.
  *
- * @return          Graph node index, INVALID_NODE_INDEX if none.
+ * @return          Graph node index, YB_INVALID_NODE_INDEX if none.
  */
 native yb_get_nearest_node(const Float:origin[3]);
 
@@ -543,7 +558,7 @@ native yb_get_nearest_node(const Float:origin[3]);
  * @param origin        Vector of the location.
  * @param maxDistance   Maximum search distance.
  *
- * @return              Graph node index, INVALID_NODE_INDEX if none.
+ * @return              Graph node index, YB_INVALID_NODE_INDEX if none.
  */
 native yb_find_nearest_node(const Float:origin[3], Float:maxDistance = 9999999.0);
 
@@ -553,7 +568,7 @@ native yb_find_nearest_node(const Float:origin[3], Float:maxDistance = 9999999.0
  * @param origin        Vector of the location.
  * @param maxDistance   Minimum search distance.
  *
- * @return              Graph node index, INVALID_NODE_INDEX if none.
+ * @return              Graph node index, YB_INVALID_NODE_INDEX if none.
  */
 native yb_find_farest_node(const Float:origin[3], Float:maxDistance = 32.0);
 
@@ -563,7 +578,7 @@ native yb_find_farest_node(const Float:origin[3], Float:maxDistance = 32.0);
  * @param origin    Vector of the location.
  * @param radius    Search radius.
  *
- * @return          Graph node index, INVALID_NODE_INDEX if none.
+ * @return          Graph node index, YB_INVALID_NODE_INDEX if none.
  */
 native yb_find_nearest_node_in_radius(const Float:origin[3], Float:radius);
 
@@ -620,7 +635,7 @@ native yb_get_node_link_count(node);
  * @param node      Graph node index.
  * @param index     Link slot index.
  *
- * @return          Target node index, INVALID_NODE_INDEX if none.
+ * @return          Target node index, YB_INVALID_NODE_INDEX if none.
  */
 native yb_get_node_link(node, index);
 
@@ -637,11 +652,11 @@ native yb_get_node_link_flags(node, index);
 /**
  * Gets a random node of the specified type.
  *
- * @param type      Node type, see NodeType.
+ * @param type      Node type, see YBNodeType.
  *
- * @return          Graph node index, INVALID_NODE_INDEX if none.
+ * @return          Graph node index, YB_INVALID_NODE_INDEX if none.
  */
-native NodeType:yb_get_random_node(type);
+native YBNodeType:yb_get_random_node(type);
 
 /**
  * Gets the graph author.
@@ -663,6 +678,37 @@ native yb_get_graph_author(output[], len);
  */
 native yb_get_graph_modified(output[], len);
 
+/**
+ * Queues a bot text message.
+ *
+ * @param index     Bot index.
+ * @param message   Message text.
+ * @param team_only Send only to the bot team.
+ * @param force     Bypass the global chat cvar.
+ *
+ * @return          1 if the message was queued, 0 otherwise.
+ */
+native bool:yb_bot_say(index, const message[], bool:team_only = false, bool:force = false);
+
+/**
+ * Sets who may chat for the bot.
+ *
+ * @param index     Bot index.
+ * @param mode      Chat mode, see YBChatMode.
+ *
+ * @return          1 on success, 0 otherwise.
+ */
+native bool:yb_set_bot_chat(index, YBChatMode:mode);
+
+/**
+ * Gets who may chat for the bot.
+ *
+ * @param index     Bot index.
+ *
+ * @return          Chat mode, see YBChatMode.
+ */
+native YBChatMode:yb_get_bot_chat(index);
+
 
 /**
  * Checks whether the loaded bot API is at least the requested version.
@@ -681,7 +727,6 @@ stock bool:yb_api_at_least (const major, const minor)
   return loadedMajor > major || (loadedMajor == major && loadedMinor >= minor);
 }
 
-
 /**
  * Called when a bot is spawned.
  */
@@ -696,3 +741,15 @@ forward yb_bot_killed (victim, killer);
  * Called when a bot is removed.
  */
 forward yb_bot_removed (index, bool:kicked);
+
+/**
+ * Called before a text chat message is emitted.
+ *
+ * Return PLUGIN_HANDLED to block it.
+ */
+forward yb_chat_pre (sender, const message[], bool:team_only, YBChatSource:source);
+
+/**
+ * Called after a text chat message is emitted.
+ */
+forward yb_chat_post (sender, const message[], bool:team_only, YBChatSource:source);
