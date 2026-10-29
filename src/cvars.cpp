@@ -98,7 +98,14 @@ void CvarRegistry::Register (bool game_vars) {
         reg.string = self.RegValue ();
 
         // xash3d extended cvar marker, sized against the pointer width
-        constexpr uintptr_t kSentinel = sizeof (void *) == 8 ? static_cast<uintptr_t> (0xDEADBEEFDEADBEEFULL) : static_cast<uintptr_t> (0xDEADBEEFu);
+        constexpr uintptr_t kSentinel = []<typename T = void *> () {
+          if constexpr (sizeof (T) == 8) {
+            return static_cast<uintptr_t> (0xDEADBEEFDEADBEEFULL);
+          }
+          else {
+            return static_cast<uintptr_t> (0xDEADBEEFu);
+          }
+        }();
 
         // xash3d picks the description up when next holds the sentinel
         if (game.Is (GameFlags::Xash3D) && !ystl::strings.is_empty (reg.desc)) {
