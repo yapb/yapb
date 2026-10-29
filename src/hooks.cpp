@@ -166,7 +166,7 @@ bool EntityLinkHook::CallPlayerFunction (edict_t *ent) {
     ystl::logger.error ("Cannot resolve player() function in GameDLL.");
     return false;
   }
-  exports_["player"] = reinterpret_cast<ystl::SharedLibrary::Func> (player_function);
+  exports_["player"] = ystl::bit_cast<ystl::SharedLibrary::Func> (player_function);
   call_player ();
 
   return true;
