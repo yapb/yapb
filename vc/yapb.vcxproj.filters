@@ -314,6 +314,9 @@
     <ClCompile Include="..\src\control.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\cvars.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\debug.cpp">
       <Filter>src</Filter>
     </ClCompile>

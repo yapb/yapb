@@ -91,6 +91,7 @@ set(SRC
   "src/combat.cpp"
   "src/config.cpp"
   "src/control.cpp"
+  "src/cvars.cpp"
   "src/debug.cpp"
   "src/engine.cpp"
   "src/fakeping.cpp"

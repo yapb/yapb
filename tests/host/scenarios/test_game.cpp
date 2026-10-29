@@ -335,14 +335,14 @@ TEST_CASE ("unit/engine_cvars") {
 
   // bounds checker reverts out-of-range values to the initial one
   cv_breakable_health_limit.Set (99999.0f);
-  game.CheckCvarsBounds ();
+  cvars.CheckBounds ();
   CHECK (cv_breakable_health_limit.As<float> () == 500.0f);
 
   // cvar descriptions are stored on the registration stack
-  game.SetCvarDescription (cv_display_welcome_text, "test description");
+  cvars.SetDescription (cv_display_welcome_text, "test description");
 
   bool found_desc = false;
-  for (const auto &var : game.GetCvars ()) {
+  for (const auto &var : cvars.Get ()) {
     if (strstr (var.name.chars (), "display_welcome_text")) {
       found_desc = true;
       CHECK (strstr (var.info.chars (), "test description") != nullptr);

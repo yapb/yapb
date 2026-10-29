@@ -124,6 +124,7 @@
     <ClCompile Include="..\src\combat.cpp" />
     <ClCompile Include="..\src\config.cpp" />
     <ClCompile Include="..\src\control.cpp" />
+    <ClCompile Include="..\src\cvars.cpp" />
     <ClCompile Include="..\src\debug.cpp">
       <ObjectFileName>$(IntDir)yapb_debug.obj</ObjectFileName>
     </ClCompile>

@@ -91,11 +91,11 @@ void Config::LoadMainConfig (bool is_first_load) {
   };
 
   auto store_var_value = [] (cvar_t *c, ystl::StringRef value) {
-    auto &cvars = game.GetCvars ();
+    auto &list = cvars.Get ();
 
-    for (auto &var : cvars) {
+    for (auto &var : list) {
       if (var.name == c->name) {
-        var.init = value;
+        var.value = value;
         engfuncs.pfnCvar_DirectSet (c, value.chars ());
 
         break;

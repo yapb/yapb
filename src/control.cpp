@@ -278,7 +278,7 @@ CommandResult Control::CmdCvars () {
   if (match == "defaults") {
     Msg ("Bots cvars has been reverted to their default values.");
 
-    for (const auto &cvar : game.GetCvars ()) {
+    for (const auto &cvar : cvars.Get ()) {
       if (!cvar.self || !cvar.self->ptr || cvar.type == Var::GameRef) {
         continue;
       }
@@ -288,7 +288,7 @@ CommandResult Control::CmdCvars () {
         cvar.self->Set (cvar.initial);
       }
       else {
-        cvar.self->Set (cvar.init.chars ());
+        cvar.self->Set (cvar.value.chars ());
       }
     }
     cv_quota.Revert (); // quota should be reverted instead of regval
@@ -331,7 +331,7 @@ CommandResult Control::CmdCvars () {
     SetRapidOutput (true);
   }
 
-  for (const auto &cvar : game.GetCvars ()) {
+  for (const auto &cvar : cvars.Get ()) {
     if (cvar.info.empty () || !cvar.self || !cvar.self->ptr) {
       continue;
     }

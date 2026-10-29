@@ -1003,19 +1003,23 @@ TEST_CASE ("unit/engine_bounds") {
   engine.SetDedicatedServer (true);
 
   // normal type hits the server flag, revert with no pointer is a no-op
-  ConVar tmp_normal ("tmp_normal_xyz", "1", Var::Normal);
-  ConVar tmp_revert ("tmp_revert_xyz", "1");
+  ConVar tmp_normal {
+    ConVarDesc { .name = "tmp_normal_xyz", .value = "1", .type = Var::Normal }
+  };
+  ConVar tmp_revert {
+    ConVarDesc { .name = "tmp_revert_xyz", .value = "1" }
+  };
   tmp_revert.Revert ();
 
   // readonly reverts to init
   engine.SetCvar (cv_version.Name ().chars (), "hacked");
-  game.CheckCvarsBounds ();
+  cvars.CheckBounds ();
   CHECK (strcmp (cv_version.As<ystl::StringRef> ().chars (), product.version.chars ()) == 0);
 
   // min above max swaps
   cv_difficulty_min.Set (3.0f);
   cv_difficulty_max.Set (1.0f);
-  game.CheckCvarsBounds ();
+  cvars.CheckBounds ();
   CHECK (cv_difficulty_min.As<float> () == 1.0f);
   CHECK (cv_difficulty_max.As<float> () == 3.0f);
   cv_difficulty_min.Revert ();
@@ -1024,7 +1028,7 @@ TEST_CASE ("unit/engine_bounds") {
   // xash legacy forces simulating
   game.AddGameFlag (GameFlags::Xash3DLegacy);
   engine.SetCvar ("sv_forcesimulating", "0");
-  game.CheckCvarsBounds ();
+  cvars.CheckBounds ();
   ConVarRef sim ("sv_forcesimulating");
   CHECK (sim.Exists ());
   CHECK (sim.Value<float> () == 1.0f);
@@ -1033,18 +1037,26 @@ TEST_CASE ("unit/engine_bounds") {
 
   // xash sentinel + metamod + missing + error
   game.AddGameFlag (GameFlags::Xash3D);
-  ConVar tmp_xash ("tmp_xash_xyz", "1", "desc", true, 0.0f, 1.0f, Var::NoServer);
-  game.RegisterCvars ();
+  ConVar tmp_xash {
+    ConVarDesc { .name = "tmp_xash_xyz", .value = "1", .info = "desc", .bounded = true, .min = 0.0f, .max = 1.0f }
+  };
+  cvars.Register ();
   game.ClearGameFlag (GameFlags::Xash3D);
   game.AddGameFlag (GameFlags::Metamod);
-  ConVar tmp_meta ("tmp_meta_xyz", "1");
-  game.RegisterCvars ();
+  ConVar tmp_meta {
+    ConVarDesc { .name = "tmp_meta_xyz", .value = "1" }
+  };
+  cvars.Register ();
   game.ClearGameFlag (GameFlags::Metamod);
-  ConVar tmp_missing ("tmp_missing_xyz", nullptr, Var::GameRef, true, "fallback");
-  game.RegisterCvars (true);
+  ConVar tmp_missing {
+    ConVarDesc { .name = "tmp_missing_xyz", .value = nullptr, .type = Var::GameRef, .reg_missing = true, .reg_val = "fallback" }
+  };
+  cvars.Register (true);
   CHECK (strcmp (game.FindCvar ("tmp_missing_xyz").chars (), "fallback") == 0);
-  ConVar tmp_err ("tmp_err_nonexist_xyz", nullptr, Var::GameRef, false);
-  game.RegisterCvars (true);
+  ConVar tmp_err {
+    ConVarDesc { .name = "tmp_err_nonexist_xyz", .value = nullptr, .type = Var::GameRef }
+  };
+  cvars.Register (true);
   CHECK (game.FindCvar ("tmp_err_nonexist_xyz").empty ());
 
   // platform names

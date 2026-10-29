@@ -83,39 +83,6 @@ enum class PlayerPart : int32_t {
   Feet // custom!
 };
 
-// registration block handed to the engine, prefix-compatible with cvar_t
-struct ConVarEngineReg {
-  const char *name {};
-  const char *string {};
-  int flags {};
-  float value {};
-  void *next {};
-  const char *desc {};
-  const char *def {};
-};
-
-static_assert (sizeof (ConVarEngineReg) == sizeof (cvar_t) + 2 * sizeof (void *));
-
-// variable reg pair, string type selects storage: owned copies for logic,
-// views into ConVar members for the transient registration call
-template <typename S> struct ConVarRegT {
-  S name {};
-  S init {};
-  S info {};
-  bool bounded = false;
-  float min = 0.0f;
-  float max = 0.0f;
-  Var type = Var::NoServer;
-  bool missing = false;
-  S regval {};
-  ConVarEngineReg reg {};
-  class ConVar *self {};
-  float initial = 0.0f;
-};
-
-using ConVarReg = ConVarRegT<ystl::String>;
-using ConVarSpec = ConVarRegT<ystl::StringRef>;
-
 // entity prototype
 using EntityProto = void (*) (entvars_t *);
 
@@ -218,7 +185,6 @@ private:
 
   ystl::HashSet<int32_t> checked_breakables_ {};
 
-  ystl::SmallArray<ConVarReg> cvars_ {};
   ystl::SharedLibrary game_lib_ {};
   ystl::SharedLibrary engine_lib_ {};
   EngineWrap engine_wrap_ {};
@@ -276,18 +242,6 @@ public:
 
   // sends bot command
   void PrepareBotArgs (edict_t *ent);
-
-  // adds cvar to registration stack
-  void PushConVar (const ConVarSpec &spec, ConVar *self);
-
-  // check the cvar bounds
-  void CheckCvarsBounds ();
-
-  // modify cvar description
-  void SetCvarDescription (const ConVar &cv, ystl::StringRef info);
-
-  // sends local registration stack for engine registration
-  void RegisterCvars (bool game_vars = false);
 
   // checks whether software rendering is enabled
   bool IsSoftwareRenderer ();
@@ -515,11 +469,6 @@ public:
     return engine_lib_;
   }
 
-  // get registered cvars list (mutable: config load stores parsed values back)
-  ystl::SmallArray<ConVarReg> &GetCvars () {
-    return cvars_;
-  }
-
   // check if map has breakables (sweep-maintained flag, see GameState)
   bool HasBreakables () const;
 
@@ -583,127 +532,6 @@ public:
     SendClientMessage (false, ent,
       ystl::strings.concat (ystl::strings.format (conf.Translate (fmt), ystl::forward<Args> (args)...), "\n", ystl::Strings::StaticBufferSize));
   }
-};
-
-// reference some game/mod cvars for access
-class ConVarRef final : public ystl::NonCopyable {
-private:
-  cvar_t *ptr_ {};
-  ystl::String name_ {};
-  bool checked_ {};
-
-public:
-  ConVarRef (ystl::StringRef name) : name_ (name) {}
-  ~ConVarRef () = default;
-
-public:
-  bool Exists () {
-    if (checked_ && !ptr_) {
-      return false;
-    }
-    checked_ = true;
-    ptr_ = engfuncs.pfnCVarGetPointer (name_.chars ());
-
-    return ptr_ != nullptr;
-  }
-
-  template <typename U = float> U Value () {
-    return Exists () ? static_cast<U> (ptr_->value) : static_cast<U> (0);
-  }
-
-  void Set (ystl::StringRef value) {
-    if (Exists ()) {
-      engfuncs.pfnCvar_DirectSet (ptr_, value.chars ());
-    }
-  }
-};
-
-// simplify access for console variables
-class ConVar final : public ystl::NonCopyable {
-public:
-  cvar_t *ptr;
-
-private:
-  ystl::String name_ {};
-  ystl::String initval_ {}; // owned once, engine-visible pointers aim here: never reassign after construction
-
-public:
-  ConVar () = delete;
-  ~ConVar () = default;
-
-public:
-  ConVar (ystl::StringRef name, ystl::StringRef initval, Var type = Var::NoServer, bool reg_missing = false, ystl::StringRef reg_val = nullptr) :
-    ptr (nullptr) {
-    SetPrefix (name, type);
-    initval_ = initval;
-    Game::instance ().PushConVar ({ name_.chars (), initval_.chars (), {}, false, 0.0f, 0.0f, type, reg_missing, reg_val }, this);
-  }
-
-  ConVar (ystl::StringRef name, ystl::StringRef initval, ystl::StringRef info, bool bounded = true, float min = 0.0f, float max = 1.0f,
-    Var type = Var::NoServer, bool reg_missing = false, ystl::StringRef reg_val = nullptr) : ptr (nullptr) {
-    SetPrefix (name, type);
-    initval_ = initval;
-
-    Game::instance ().PushConVar ({ name_.chars (), initval_.chars (), info, bounded, min, max, type, reg_missing, reg_val }, this);
-  }
-
-public:
-  template <typename U> constexpr U As () const {
-    if constexpr (ystl::is_same_v<U, float>) {
-      return ptr->value;
-    }
-    else if constexpr (ystl::is_same_v<U, bool>) {
-      return ptr->value > 0.0f;
-    }
-    else if constexpr (ystl::is_same_v<U, int>) {
-      return static_cast<U> (ptr->value);
-    }
-    else if constexpr (ystl::is_same_v<U, ystl::StringRef>) {
-      return ptr->string;
-    }
-  }
-
-public:
-  operator bool () const {
-    return As<bool> ();
-  }
-
-  operator float () const {
-    return As<float> ();
-  }
-
-  operator int () const {
-    return As<int> ();
-  }
-
-  operator ystl::StringRef () {
-    return As<ystl::StringRef> ();
-  }
-
-public:
-  ystl::StringRef Name () const {
-    return ptr->name;
-  }
-
-  void Set (float val) {
-    engfuncs.pfnCVarSetFloat (ptr->name, val);
-  }
-
-  void Set (int val) {
-    Set (static_cast<float> (val));
-  }
-
-  void Set (const char *val) {
-    if (ptr) {
-      engfuncs.pfnCvar_DirectSet (ptr, val);
-    }
-  }
-
-  // revet cvar to default value
-  void Revert ();
-
-  // set the cvar prefix if needed
-  void SetPrefix (ystl::StringRef name, Var type);
 };
 
 class MessageWriter final {

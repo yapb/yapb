@@ -279,7 +279,7 @@ void Support::SetCustomCvarDescriptions () {
   for (const auto &entry : kEquipmentAliases) {
     restrict_info.appendf ("%s - %s\n", entry.alias.chars (), entry.full_name.chars ());
   }
-  game.SetCvarDescription (cv_restricted_weapons, restrict_info);
+  cvars.SetDescription (cv_restricted_weapons, restrict_info);
 }
 
 void Support::ApplySentenceDefs (const ystl::ConfNode *root) {

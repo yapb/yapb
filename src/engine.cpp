@@ -20,8 +20,6 @@ Game::Game () {
 
   one_second_timer_.invalidate ();
   half_second_timer_.invalidate ();
-
-  cvars_.clear ();
 }
 
 void Game::Precache () {
@@ -38,7 +36,7 @@ void Game::Precache () {
   engine_wrap_.PrecacheSound ("common/wpn_hudon.wav"); // path add/delete done
 
   map_flags_ = MapFlags::None; // reset map type as worldspawn is the first entity spawned
-  RegisterCvars (true);
+  cvars.Register (true);
 }
 
 void Game::LevelInitialize (edict_t *entities, int max) {
@@ -735,210 +733,6 @@ void Game::DetectXashEngine () {
   }
 }
 
-void Game::PushConVar (const ConVarSpec &spec, ConVar *self) {
-  // this function adds globally defined variable to registration stack
-
-  ConVarReg reg {};
-
-  // engine-visible pointers aim at ConVar members: static objects, assigned once
-  // in the constructor, never relocated or freed afterwards (unlike registry copies,
-  // which store_var_value reassigns on every config load)
-  reg.reg.name = spec.name.chars ();
-  reg.reg.string = spec.init.chars ();
-  reg.reg.desc = spec.info.chars ();
-  reg.name = spec.name;
-  reg.missing = spec.missing;
-  reg.init = spec.init;
-  reg.info = spec.info;
-  reg.bounded = spec.bounded;
-
-  if (!spec.regval.empty ()) {
-    reg.regval = spec.regval;
-  }
-
-  if (spec.bounded) {
-    reg.min = spec.min;
-    reg.max = spec.max;
-    reg.initial = spec.init.as<float> ();
-  }
-  int eflags = FCVAR_EXTDLL;
-
-  if (spec.type == Var::Normal) {
-    eflags |= FCVAR_SERVER;
-  }
-  else if (spec.type == Var::ReadOnly) {
-    eflags |= FCVAR_SERVER | FCVAR_SPONLY | FCVAR_PRINTABLEONLY;
-  }
-  else if (spec.type == Var::Password) {
-    eflags |= FCVAR_PROTECTED;
-  }
-
-  reg.reg.flags = eflags;
-  reg.self = self;
-  reg.type = spec.type;
-
-  cvars_.push (ystl::move (reg));
-}
-
-void ConVar::Revert () {
-  if (!ptr) {
-    return;
-  }
-  const auto &cvars = game.GetCvars ();
-
-  for (const auto &var : cvars) {
-    if (var.name == ptr->name) {
-      Set (var.init.chars ());
-      break;
-    }
-  }
-}
-
-void ConVar::SetPrefix (ystl::StringRef name, Var type) {
-  if (type == Var::GameRef) {
-    name_ = name;
-    return;
-  }
-  name_.assignf ("%s_%s", product.cmd_pri, name);
-}
-
-void Game::CheckCvarsBounds () {
-  for (const auto &var : cvars_) {
-    if (!var.self || !var.self->ptr) {
-      continue;
-    }
-
-    // read only cvar is not changeable
-    if (var.type == Var::ReadOnly && !var.init.empty ()) {
-      if (var.init != var.self->As<ystl::StringRef> ()) {
-        var.self->Set (var.init.chars ());
-      }
-      continue;
-    }
-
-    if (!var.bounded || !var.self) {
-      continue;
-    }
-    auto value = var.self->As<float> ();
-    const auto str = var.self->As<ystl::StringRef> ();
-
-    // check the bounds and set default if out of bounds
-    if (value > var.max || value < var.min || (!str.empty () && isalpha (str[0]))) {
-      var.self->Set (var.initial);
-
-      // notify about that
-      ctrl.Msg ("Bogus value for cvar '%s', min is '%.1f' and max is '%.1f', and we're got '%s', value reverted to default '%.1f'.", var.name,
-        var.min, var.max, str, var.initial);
-      continue;
-    }
-
-    /// prevent min/max problems
-    const auto max_pos = var.name.find ("_max");
-
-    if (max_pos != ystl::StringRef::InvalidIndex) {
-      // compare via non-owning views, so no temporary strings get constructed per cvar
-      const auto var_view = ystl::StringRef (var.name.chars (), var.name.size ());
-
-      for (auto &mv : cvars_) {
-        // match the "_min" twin cvar without building a temporary string
-        if (mv.name.size () != var.name.size ()) {
-          continue;
-        }
-        const auto min_pos = mv.name.find ("_min");
-
-        if (min_pos != max_pos) {
-          continue;
-        }
-        const auto mv_view = ystl::StringRef (mv.name.chars (), mv.name.size ());
-
-        if (mv_view.substr (0, max_pos) == var_view.substr (0, max_pos) && mv_view.substr (max_pos + 4) == var_view.substr (max_pos + 4)) {
-          const auto min_value = mv.self->As<float> ();
-
-          if (min_value > value) {
-            var.self->Set (min_value);
-            mv.self->Set (value);
-
-            // notify about that
-            ctrl.Msg ("Bogus value for min/max cvar '%s' can't be higher than '%s'. Values swapped.", mv.name, var.name);
-          }
-        }
-      }
-    }
-  }
-
-  // force simulating on xash3d so startframe runs without players
-  if (Is (GameFlags::Xash3DLegacy)) {
-    static ConVarRef sv_forcesimulating ("sv_forcesimulating");
-
-    if (sv_forcesimulating.Exists () && !ystl::fequal (sv_forcesimulating.Value (), 1.0f)) {
-      Print ("Force-enable Xash3D sv_forcesimulating cvar.");
-      sv_forcesimulating.Set ("1.0");
-    }
-  }
-}
-
-void Game::SetCvarDescription (const ConVar &cv, ystl::StringRef info) {
-  for (auto &var : cvars_) {
-    if (var.name == cv.Name ()) {
-      var.info = info;
-      break;
-    }
-  }
-}
-
-void Game::RegisterCvars (bool game_vars) {
-  // this function pushes all added global variables to engine registration
-
-  for (auto &var : cvars_) {
-    ConVar &self = *var.self;
-    ConVarEngineReg &reg = var.reg;
-
-    if (var.type != Var::GameRef) {
-      if (var.type == Var::Xash3D && !Is (GameFlags::Xash3D)) {
-        continue;
-      }
-
-      if (!self.ptr) {
-        // xash3d extended cvar marker, sized against the pointer width
-        constexpr uintptr_t kSentinel = sizeof (void *) == 8 ? 0xDEADBEEFDEADBEEFULL : 0xDEADBEEFu;
-
-        // xash3d picks the description up when next holds the sentinel
-        if (Is (GameFlags::Xash3D) && !ystl::strings.is_empty (reg.desc)) {
-          reg.next = reinterpret_cast<void *> (kSentinel);
-        }
-
-        // fix metamod' memlocs not found
-        if (Is (GameFlags::Metamod)) {
-          static ConVarEngineReg metamod_rg {};
-          metamod_rg = var.reg;
-
-          engfuncs.pfnCVarRegister (reinterpret_cast<cvar_t *> (&metamod_rg));
-        }
-        else {
-          engfuncs.pfnCVarRegister (reinterpret_cast<cvar_t *> (&var.reg));
-        }
-      }
-      self.ptr = engfuncs.pfnCVarGetPointer (reg.name);
-    }
-    else if (game_vars) {
-      self.ptr = engfuncs.pfnCVarGetPointer (reg.name);
-
-      if (var.missing && !self.ptr) {
-        if (var.init.empty () && !var.regval.empty ()) {
-          reg.string = var.regval.chars ();
-          reg.flags |= FCVAR_SERVER;
-        }
-        engfuncs.pfnCVarRegister (reinterpret_cast<cvar_t *> (&var.reg));
-        self.ptr = engfuncs.pfnCVarGetPointer (reg.name);
-      }
-
-      if (!self.ptr) {
-        ystl::logger.error ("Got nullptr on cvar %s!", reg.name);
-      }
-    }
-  }
-}
-
 void Game::ConstructCsBinaryName (ystl::SmallArray<ystl::String> &libs) {
   // platform -> binary suffix; checked top-to-bottom, first match wins
   struct Rule {
@@ -1110,6 +904,9 @@ bool Game::LoadCsBinary () {
 }
 
 bool Game::Postload () {
+  // new engine lifecycle, everything must be precached and resolved again
+  precached_ = false;
+
   bstor.CheckInstallLocation (); // check if installed just as in manual
 
   // register logger
@@ -1145,7 +942,7 @@ bool Game::Postload () {
   DetectXashEngine ();
 
   // register bot cvars
-  RegisterCvars ();
+  cvars.Register ();
 
   // register bot commands
   ctrl.RegisterCommands ();
@@ -1371,7 +1168,7 @@ void Game::SlowFrame () {
   ApplyGameModes ();
 
   // check the cvar bounds
-  CheckCvarsBounds ();
+  cvars.CheckBounds ();
 
   // display welcome message
   util.CheckWelcome ();

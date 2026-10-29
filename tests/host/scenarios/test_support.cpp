@@ -110,7 +110,7 @@ TEST_CASE ("unit/support_conf") {
 
   bool found_restricted = false;
 
-  for (const auto &var : game.GetCvars ()) {
+  for (const auto &var : cvars.Get ()) {
     if (strstr (var.name.chars (), "restricted_weapons")) {
       found_restricted = true;
       CHECK (strstr (var.info.chars (), "flash") != nullptr);
