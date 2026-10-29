@@ -1080,7 +1080,7 @@ TEST_CASE ("unit/manager_balance") {
   CHECK (!bots.KickRandom (false));
   CHECK (!bots.BalancedKickRandom (false));
 
-  // remove-all from a team decrements quota by that team size
+  // remove-all from a team keeps quota at the bots left outside that team
   bots.Addbot ("BalD", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   bots.Addbot ("BalE", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 2));
@@ -1092,7 +1092,7 @@ TEST_CASE ("unit/manager_balance") {
   clients[e->Ent ()].team2 = Team::CT;
   cv_quota.Set (5);
   bots.KickFromTeam (Team::Terrorist, true);
-  CHECK (cv_quota.As<int> () == 4);
+  CHECK (cv_quota.As<int> () == 1);
   CHECK (d->is_stale_);
   CHECK (!e->is_stale_);
 

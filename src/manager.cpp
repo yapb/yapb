@@ -893,18 +893,11 @@ void Manager::KickFromTeam (Team team, bool remove_all) {
   // this function remove random bot from specified team (if removeall value = 1 then removes all players from team)
 
   if (remove_all) {
-    const auto &[ts, cts] = CountTeamPlayers ();
-
     quota_maintain_timer_.start (3.0f);
     add_requests_.clear ();
-
-    if (team == Team::Terrorist) {
-      DecrementQuota (ts);
-    }
-    else {
-      DecrementQuota (cts);
-    }
   }
+
+  int remaining = 0;
 
   for (auto &bot : bots_) {
     if (team == game.GetRealPlayerTeam (bot.Ent ())) {
@@ -915,6 +908,14 @@ void Manager::KickFromTeam (Team team, bool remove_all) {
         break;
       }
     }
+    else if (remove_all) {
+      ++remaining;
+    }
+  }
+
+  // keep quota at the bots left outside the kicked team, never at stale/connected slack
+  if (remove_all) {
+    cv_quota.Set (ystl::max (0, remaining));
   }
 }
 
