@@ -281,7 +281,7 @@ bool ChatManager::CheckKeywords (ystl::StringRef line, ystl::String &reply, bool
 void Bot::PrepareChatMessage (ystl::StringRef message) {
   // this function parses messages from the botchat, replaces keywords and converts names into a more human style
 
-  if (!cv_chat || message.empty ()) {
+  if (chat_mode_ != BotChatMode::Auto || !cv_chat || message.empty ()) {
     return;
   }
 
@@ -462,10 +462,101 @@ bool Bot::CheckChatKeywords (ystl::StringRef chat_text, ystl::String &reply) {
   return chatlib.CheckKeywordsUpper (chat_text, reply);
 }
 
+bool Bot::IsChatAllowed (ystl::StringRef message, BotChatSource source, bool force) {
+  // common guards shared by core and plugin chat
+  if (is_creature_ || message.empty () || chat_mode_ == BotChatMode::Off) {
+    return false;
+  }
+
+  // core ai is silent in manual mode, plugin sends are still allowed
+  if (source == BotChatSource::Bot && chat_mode_ != BotChatMode::Auto) {
+    return false;
+  }
+
+  // force is for plugins that intentionally override the global chat cvar
+  if (!force && !cv_chat) {
+    return false;
+  }
+  return true;
+}
+
+bool Bot::CanSendChat (ystl::StringRef message, bool team_only, BotChatSource source, bool force) {
+  if (!IsChatAllowed (message, source, force)) {
+    return false;
+  }
+
+  BotEvent event {
+    .type = BotEventType::ChatPre,
+    .entity = Index () + 1,
+    .message = message.chars (),
+    .team_only = team_only,
+    .source = source,
+  };
+
+  return !bots.NotifyEvent (event);
+}
+
+bool Bot::QueueChat (ystl::StringRef message, bool team_only, bool force) {
+  // plugin sends are queued, so they never re-enter the bot while it is ticking
+  if (message.empty () || chat_mode_ == BotChatMode::Off || pending_chats_.size () >= kBotChatMaxPending) {
+    return false;
+  }
+
+  ystl::String text {};
+  text.reserve (ystl::min (message.size (), kBotChatMaxLength));
+
+  for (size_t i = 0; i < message.size () && text.size () < kBotChatMaxLength; ++i) {
+    const auto c = message[i];
+
+    // keep one command line, and never let plugin text close the say argument
+    if (c == '\r' || c == '\n' || c == '"') {
+      continue;
+    }
+    text.append (c);
+  }
+
+  if (text.empty ()) {
+    return false;
+  }
+  pending_chats_.emplace_last (text, team_only, force);
+
+  return true;
+}
+
+bool Bot::ProcessPendingChat () {
+  if (pending_chats_.empty ()) {
+    return false;
+  }
+
+  auto request = ystl::move (pending_chats_.front ());
+  pending_chats_.pop_front ();
+
+  SendToChat (request.message, request.team_only, BotChatSource::Plugin, request.force);
+
+  return true;
+}
+
+bool Bot::SetChatMode (BotChatMode mode) {
+  if (mode == BotChatMode::Invalid) {
+    return false;
+  }
+  chat_mode_ = mode;
+
+  if (mode == BotChatMode::Off) {
+    pending_chats_.clear ();
+  }
+
+  return true;
+}
+
+BotChatMode Bot::GetChatMode () const {
+  return chat_mode_;
+}
+
 bool Bot::IsReplyingToChat () {
   // this function sends reply to a player
 
-  if (say_text_buffer_.entity_index == -1) {
+  if (chat_mode_ != BotChatMode::Auto || say_text_buffer_.entity_index == -1) {
     return false;
   }
 
@@ -504,13 +595,13 @@ bool Bot::IsReplyingToChat () {
 
     if (want_reply) {
       PrepareChatMessage (reply_text);
-      PushMsgQueue (Msg::Say);
+      const bool queued = PushMsgQueue (Msg::Say);
 
       say_text_buffer_.entity_index = -1;
       say_text_buffer_.time_next_chat = game.Time () + say_text_buffer_.chat_delay;
       say_text_buffer_.say_text.clear ();
 
-      return true;
+      return queued;
     }
     say_text_buffer_.entity_index = -1;
     say_text_buffer_.say_text.clear ();
@@ -519,7 +610,7 @@ bool Bot::IsReplyingToChat () {
 }
 
 void Bot::PushChatMessage (Chat type, bool is_team_say) {
-  if (!conf.HasChatBank (type) || !cv_chat) {
+  if (chat_mode_ != BotChatMode::Auto || !conf.HasChatBank (type) || !cv_chat) {
     return;
   }
 
@@ -530,7 +621,7 @@ void Bot::PushChatMessage (Chat type, bool is_team_say) {
 void Bot::CheckForChat () {
   // say a text every now and then
 
-  if (is_alive_ || !cv_chat || game.Is (GameFlags::CSDM)) {
+  if (chat_mode_ != BotChatMode::Auto || is_alive_ || !cv_chat || game.Is (GameFlags::CSDM)) {
     return;
   }
 
@@ -552,13 +643,16 @@ void Bot::CheckForChat () {
 
       if (!say_buffer_exists) {
         PrepareChatMessage (phrase);
-        PushMsgQueue (Msg::Say);
+        const bool queued = PushMsgQueue (Msg::Say);
 
+        // rate-limit even when a pre hook blocked the line, so the core
+        // does not retry the same phrase every frame
         last_chat_timer_.start ();
         bots.MarkLastChatTime ();
 
-        // add to ignore list
-        say_text_buffer_.last_used_sentences.push (phrase);
+        if (queued) {
+          say_text_buffer_.last_used_sentences.push (phrase);
+        }
       }
     }
 
@@ -569,10 +663,20 @@ void Bot::CheckForChat () {
   }
 }
 
-void Bot::SendToChat (ystl::StringRef message, bool team_only) {
+void Bot::SendToChat (ystl::StringRef message, bool team_only, BotChatSource source, bool force, bool from_queue) {
   // this function prints saytext message to all players
 
-  if (is_creature_ || message.empty () || !cv_chat) {
+  bool approved = false;
+
+  if (from_queue && chat_pre_checked_ > 0) {
+    --chat_pre_checked_;
+    approved = IsChatAllowed (message, source, force);
+  }
+  else {
+    approved = CanSendChat (message, team_only, source, force);
+  }
+
+  if (!approved) {
     return;
   }
 
@@ -583,6 +687,16 @@ void Bot::SendToChat (ystl::StringRef message, bool team_only) {
   else {
     IssueCommand ("%s \"%s\"", team_only ? "say_team" : "say", message);
   }
+
+  BotEvent event {
+    .type = BotEventType::ChatPost,
+    .entity = Index () + 1,
+    .message = message.chars (),
+    .team_only = team_only,
+    .source = source,
+  };
+
+  bots.NotifyEvent (event);
 }
 
 void Bot::SendToChatLegacy (ystl::StringRef message, bool team_only) {

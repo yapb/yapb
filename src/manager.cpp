@@ -268,14 +268,12 @@ void Manager::Frame () {
   }
 }
 
-void Manager::SetEventCallback (BotEventCallback callback) {
-  event_callback_ = callback;
+void Manager::SetEventSink (BotEventSink sink) {
+  event_sink_ = sink;
 }
 
-void Manager::NotifyEvent (BotEvent event, int arg1, int arg2) {
-  if (event_callback_) {
-    event_callback_ (event, arg1, arg2);
-  }
+int Manager::NotifyEvent (const BotEvent &event) {
+  return event_sink_ ? event_sink_ (event) : 0;
 }
 
 void TickManager::Frame (Bot *bot) {
@@ -1548,6 +1546,7 @@ Bot::Bot (edict_t *bot, Difficulty difficulty, Personality personality, Team tea
 
   // just to be sure
   msg_queue_.clear ();
+  chat_pre_checked_ = 0;
 
   // init async planner
   planner_ = ystl::make_unique<AStarAlgo> (graph.Length ());
@@ -1768,8 +1767,11 @@ void Manager::HandleDeath (edict_t *killer, edict_t *victim) {
 
   // mark bot as "spawned", and reset it to new-round state when it dead (for csdm/zombie only)
   if (victim_bot != nullptr) {
-    bots.NotifyEvent (BotEvent::Killed, victim_bot->index_ + 1,
-                      killer_bot != nullptr ? killer_bot->index_ + 1 : game.IndexOfEntity (killer));
+    bots.NotifyEvent ({
+      .type = BotEventType::Killed,
+      .entity = victim_bot->index_ + 1,
+      .arg1 = killer_bot != nullptr ? killer_bot->index_ + 1 : game.IndexOfEntity (killer),
+    });
 
     victim_bot->Spawned ();
 
@@ -2091,6 +2093,7 @@ void Bot::NewRound () {
   sound_memory_ = {};
 
   msg_queue_.clear ();
+  chat_pre_checked_ = 0;
   goal_history_.clear ();
   ignored_breakable_.clear ();
   dropped_dry_weapons_mask_ = 0;
@@ -2185,7 +2188,11 @@ void Bot::MarkStale (bool kicked) {
 
   // mark bot as leaving
   is_stale_ = true;
-  bots.NotifyEvent (BotEvent::Removed, index_ + 1, kicked ? 1 : 0);
+  bots.NotifyEvent ({
+    .type = BotEventType::Removed,
+    .entity = index_ + 1,
+    .arg1 = kicked ? 1 : 0,
+  });
 
   // clear the bot name
   conf.ClearUsedName (this);
@@ -2318,11 +2325,27 @@ void Manager::CaptureChatRadio (ystl::StringRef cmd, ystl::StringRef arg, edict_
   }
 
   if (cmd.starts_with ("say")) {
+    const bool team_only = cmd.ends_with ("team");
     const bool alive = game.IsAliveEntity (ent);
+    const auto message = ystl::StringRef (engfuncs.pfnCmd_Args ());
+    const bool has_text = !message.empty ();
+
     auto team = Team::Invalid;
 
-    if (cmd.ends_with ("team")) {
+    if (team_only) {
       team = game.GetRealPlayerTeam (ent);
+    }
+
+    BotEvent event {
+      .type = BotEventType::ChatPre,
+      .entity = game.IndexOfPlayer (ent) + 1,
+      .message = message.chars (),
+      .team_only = team_only,
+      .source = BotChatSource::Human,
+    };
+
+    if (has_text && bots.NotifyEvent (event)) {
+      return;
     }
 
     for (const auto &client : clients) {
@@ -2334,13 +2357,19 @@ void Manager::CaptureChatRadio (ystl::StringRef cmd, ystl::StringRef arg, edict_
       if (target != nullptr) {
         target->say_text_buffer_.entity_index = game.IndexOfPlayer (ent);
 
-        if (ystl::strings.is_empty (engfuncs.pfnCmd_Args ())) {
+        if (!has_text) {
           continue;
         }
-        target->say_text_buffer_.say_text = engfuncs.pfnCmd_Args ();
+        target->say_text_buffer_.say_text = message;
         target->say_text_buffer_.time_next_chat = game.Time () + target->say_text_buffer_.chat_delay;
       }
     }
+
+    if (has_text) {
+      event.type = BotEventType::ChatPost;
+      bots.NotifyEvent (event);
+    }
+    return;
   }
   auto &target = clients[ent];
 

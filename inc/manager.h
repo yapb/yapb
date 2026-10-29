@@ -103,7 +103,7 @@ private:
 
   Bot *bots_by_index_[kGameMaxPlayers] {}; // direct lookup by player index
 
-  BotEventCallback event_callback_ = nullptr; // amxx event sink
+  BotEventSink event_sink_ = nullptr; // amxx notification sink
 
   edict_t *killer_entity_ {}; // killer entity for bots
   ystl::FixedArray<TeamData, ystl::to_underlying (Team::Num)> team_data_ {}; // teams shared data
@@ -134,8 +134,8 @@ public:
   float GetAverageTeamKpd (bool calc_for_bots);
 
   void Frame ();
-  void SetEventCallback (BotEventCallback callback);
-  void NotifyEvent (BotEvent event, int arg1, int arg2 = 0);
+  void SetEventSink (BotEventSink sink);
+  int NotifyEvent (const BotEvent &event);
   void CreateKillerEntity ();
   void DestroyKillerEntity ();
   void TouchKillerEntity (Bot *bot);

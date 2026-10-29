@@ -9,8 +9,15 @@
 
 namespace bot {
 
-void Bot::PushMsgQueue (Msg message) {
+bool Bot::PushMsgQueue (Msg message) {
   // this function put a message into the bot message queue
+
+  if ((message == Msg::Say || message == Msg::SayTeam) && !chat_buffer_.empty ()) {
+    if (!CanSendChat (chat_buffer_, message == Msg::SayTeam, BotChatSource::Bot, false)) {
+      return false;
+    }
+    ++chat_pre_checked_;
+  }
 
   if (message == Msg::Say) {
     // notify other bots of the spoken text otherwise, bots won't respond to other bots (network messages aren't sent from bots)
@@ -27,6 +34,7 @@ void Bot::PushMsgQueue (Msg message) {
     }
   }
   msg_queue_.emplace_last (message);
+  return true;
 }
 
 void Bot::AvoidGrenades () {
@@ -410,6 +418,8 @@ void Bot::CheckMsgQueue () {
 
   // no new message?
   if (msg_queue_.empty ()) {
+    chat_pre_checked_ = 0;
+    ProcessPendingChat ();
     return;
   }
 
@@ -549,12 +559,12 @@ void Bot::CheckMsgQueue () {
 
     // team independent saytext
   case Msg::Say:
-    SendToChat (chat_buffer_, false);
+    SendToChat (chat_buffer_, false, BotChatSource::Bot, false, true);
     break;
 
     // team dependent saytext
   case Msg::SayTeam:
-    SendToChat (chat_buffer_, true);
+    SendToChat (chat_buffer_, true, BotChatSource::Bot, false, true);
     break;
 
   default:
@@ -1768,7 +1778,10 @@ void Bot::SetSimulating (bool state) {
 
 void Bot::Spawned () {
   if (game.IsAliveEntity (Ent ())) {
-    bots.NotifyEvent (BotEvent::Spawned, index_ + 1, 0);
+    bots.NotifyEvent ({
+      .type = BotEventType::Spawned,
+      .entity = index_ + 1,
+    });
   }
 
   if (game.Is (GameFlags::CSDM | GameFlags::ZombieMod)) {
