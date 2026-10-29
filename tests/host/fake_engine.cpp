@@ -483,6 +483,10 @@ void FakeEngine::SetCvar (const char *name, float value) {
   ThunkCVarSetFloat (name, value);
 }
 
+void FakeEngine::DropCvars () {
+  cvars.clear ();
+}
+
 void FakeEngine::SetInfoKey (const char *key, const char *value) {
   if (!key) {
     return;

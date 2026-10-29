@@ -114,6 +114,9 @@ public:
   void SetCvar (const char *name, const char *value);
   void SetCvar (const char *name, float value);
 
+  // simulate Cvar_Shutdown on engine restart: drop every cvar and its strings
+  void DropCvars ();
+
   // server mode: dedicated by default; a listen server unlocks the
   // welcome/bind paths that are gated on !isDedicatedServer()
   void SetDedicatedServer (bool value) {
