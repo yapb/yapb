@@ -203,6 +203,7 @@ public:
 public:
   void Load ();
   void Unload ();
+  void RegisterForwards ();
   void DisableNatives ();
 
 private:

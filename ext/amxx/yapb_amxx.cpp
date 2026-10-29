@@ -1279,6 +1279,10 @@ void YaPBModule::Load () {
     chat_api_ = api_->GetChatAPI ();
   }
 
+  api_->SetEventSink (&YaPBModule::EventSink);
+}
+
+void YaPBModule::RegisterForwards () {
   if (!bot_spawned_forward_.IsValid ()) {
     bot_spawned_forward_.Register ("yb_bot_spawned", kForwardIgnore, kForwardCell);
     bot_killed_forward_.Register ("yb_bot_killed", kForwardIgnore, kForwardCell, kForwardCell);
@@ -1291,8 +1295,6 @@ void YaPBModule::Load () {
     chat_post_forward_.Register ("yb_chat_post", kForwardIgnore,
       kForwardCell, kForwardString, kForwardCell, kForwardCell);
   }
-
-  api_->SetEventSink (&YaPBModule::EventSink);
 }
 
 void YaPBModule::Unload () {
@@ -1342,6 +1344,10 @@ YSTL_EXPORT int AMXX_Attach (PFN_REQ_FNPTR request) {
   yapb.Load ();
 
   return ystl::to_underlying (AmxxStatus::Ok);
+}
+
+YSTL_EXPORT void AMXX_PluginsLoaded () {
+  yapb.RegisterForwards ();
 }
 
 YSTL_EXPORT int AMXX_Detach () {
