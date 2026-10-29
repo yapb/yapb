@@ -37,10 +37,56 @@ struct ChatHook {
   static bool Replying (Bot &bot) {
     return bot.IsReplyingToChat ();
   }
+  static bool ProcessPending (Bot &bot) {
+    return bot.ProcessPendingChat ();
+  }
+  static void CheckQueue (Bot &bot) {
+    bot.CheckMsgQueue ();
+  }
   static ystl::RWrand &Rng (Bot &bot) {
     return bot.rg;
   }
 };
+
+struct ChatProbe {
+  static int pre_count;
+  static int post_count;
+  static bool block;
+  static BotChatSource source;
+  static bool team_only;
+  static ystl::String message;
+
+  static void Reset () {
+    pre_count = post_count = 0;
+    block = false;
+    source = BotChatSource::Bot;
+    team_only = false;
+    message.clear ();
+  }
+
+  static int OnEvent (const BotEvent &event) {
+    const bool post = event.type == BotEventType::ChatPost;
+
+    if (post) {
+      ++post_count;
+    }
+    else {
+      ++pre_count;
+    }
+    source = event.source;
+    team_only = event.team_only;
+    message = event.message ? event.message : "";
+
+    return !post && block ? 1 : 0;
+  }
+};
+
+int ChatProbe::pre_count = 0;
+int ChatProbe::post_count = 0;
+bool ChatProbe::block = false;
+BotChatSource ChatProbe::source = BotChatSource::Bot;
+bool ChatProbe::team_only = false;
+ystl::String ChatProbe::message {};
 
 namespace {
 
@@ -350,6 +396,159 @@ TEST_CASE ("unit/chatlib_bot") {
   bots.Destroy ();
 }
 
+TEST_CASE ("unit/chat_api") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootChat (engine, cs);
+
+  bots.Addbot ("ChatApi", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("ChatApi");
+  HOST_REQUIRE (bot != nullptr);
+
+  edict_t *human = game.CreateFakeClient ("ChatApiHuman");
+  HOST_REQUIRE (!game.IsNullEntity (human));
+  human->v.flags &= ~FL_FAKECLIENT;
+  human->v.health = 100.0f;
+  human->v.deadflag = DEAD_NO;
+  clients.Update ();
+  clients[human].team = Team::Terrorist;
+  clients[human].team2 = Team::Terrorist;
+  clients.Update ();
+
+  cv_chat.Set (1);
+  ChatProbe::Reset ();
+  bots.SetEventSink (&ChatProbe::OnEvent);
+
+  // auto chat passes through pre and post once
+  CHECK (bot->SetChatMode (BotChatMode::Auto));
+  auto commands = engine.ClientCommands ().size ();
+
+  bot->SendToChat ("hello", false);
+  CHECK (ChatProbe::pre_count == 1);
+  CHECK (ChatProbe::post_count == 1);
+  CHECK (ChatProbe::source == BotChatSource::Bot);
+  CHECK (ChatProbe::message == "hello");
+  CHECK (!ChatProbe::team_only);
+
+  // a blocked pre suppresses the send and the post event
+  ChatProbe::Reset ();
+  ChatProbe::block = true;
+  commands = engine.ClientCommands ().size ();
+
+  bot->SendToChat ("blocked", false);
+  CHECK (ChatProbe::pre_count == 1);
+  CHECK (ChatProbe::post_count == 0);
+  CHECK (engine.ClientCommands ().size () == commands);
+
+  // the same guard covers core chat queued by the ai
+  ChatProbe::Reset ();
+  ChatProbe::block = true;
+  ChatHook::ChatBuffer (*bot) = "blocked queue";
+  ChatHook::DrainQueue (*bot);
+  CHECK (!bot->PushMsgQueue (Msg::Say));
+  CHECK (ChatProbe::pre_count == 1);
+  CHECK (ChatHook::MsgQueue (*bot).empty ());
+
+  // a queued say is pre-checked once, then sent without a second pre callback
+  ChatProbe::Reset ();
+  ChatProbe::block = false;
+  ChatHook::DrainQueue (*bot);
+  ChatHook::ChatBuffer (*bot) = "queued once";
+  CHECK (bot->PushMsgQueue (Msg::Say));
+  CHECK (ChatProbe::pre_count == 1);
+
+  ChatHook::CheckQueue (*bot);
+  CHECK (ChatProbe::pre_count == 1);
+  CHECK (ChatProbe::post_count == 1);
+  CHECK (ChatProbe::message == "queued once");
+  CHECK (ChatHook::MsgQueue (*bot).empty ());
+
+  // manual mode silences the ai but lets the plugin send
+  ChatProbe::Reset ();
+  ChatProbe::block = false;
+  CHECK (bot->SetChatMode (BotChatMode::Manual));
+  commands = engine.ClientCommands ().size ();
+
+  bot->SendToChat ("auto", false);
+  CHECK (ChatProbe::pre_count == 0);
+  CHECK (engine.ClientCommands ().size () == commands);
+
+  CHECK (bot->QueueChat ("plugin", false, true));
+  CHECK (ChatHook::ProcessPending (*bot));
+  CHECK (ChatProbe::pre_count == 1);
+  CHECK (ChatProbe::post_count == 1);
+  CHECK (ChatProbe::source == BotChatSource::Plugin);
+  CHECK (ChatProbe::message == "plugin");
+
+  // force bypasses cv_chat and sanitizes a one-line say argument
+  ChatProbe::Reset ();
+  cv_chat.Set (0);
+  CHECK (bot->QueueChat ("a\n\"b\"\r", true, true));
+  CHECK (ChatHook::ProcessPending (*bot));
+  CHECK (ChatProbe::message == "ab");
+  CHECK (ChatProbe::team_only);
+  CHECK (ChatProbe::source == BotChatSource::Plugin);
+  CHECK (ChatProbe::pre_count == 1);
+  CHECK (ChatProbe::post_count == 1);
+  cv_chat.Set (1);
+
+  // off drops both queued and direct messages
+  ChatProbe::Reset ();
+  CHECK (bot->SetChatMode (BotChatMode::Off));
+  commands = engine.ClientCommands ().size ();
+
+  CHECK (!bot->QueueChat ("off", false, true));
+  bot->SendToChat ("off", false);
+  CHECK (ChatProbe::pre_count == 0);
+  CHECK (ChatProbe::post_count == 0);
+  CHECK (engine.ClientCommands ().size () == commands);
+  CHECK (!bot->SetChatMode (BotChatMode::Invalid));
+  CHECK (bot->GetChatMode () == BotChatMode::Off);
+
+  // human say emits a single human event before bot buffers are updated
+  CHECK (bot->SetChatMode (BotChatMode::Auto));
+  ChatProbe::Reset ();
+  bot->is_alive_ = true;
+  bot->team_ = Team::Terrorist;
+  bot->pev->health = 100.0f;
+  bot->pev->deadflag = DEAD_NO;
+  clients[bot->Ent ()].team = Team::Terrorist;
+  clients[bot->Ent ()].team2 = Team::Terrorist;
+  clients.Update ();
+  bot->say_text_buffer_.entity_index = -1;
+  bot->say_text_buffer_.say_text.clear ();
+
+  ystl::Array<ystl::String> args {};
+  args.push ("hello");
+  engine.SetCmdArgs (args);
+  bots.CaptureChatRadio ("say", "", human);
+
+  CHECK (ChatProbe::pre_count == 1);
+  CHECK (ChatProbe::post_count == 1);
+  CHECK (ChatProbe::source == BotChatSource::Human);
+  CHECK (ChatProbe::message == "hello");
+  CHECK (!ChatProbe::team_only);
+  CHECK (bot->say_text_buffer_.say_text == "hello");
+
+  // a human pre block stops the buffer update and the post event
+  ChatProbe::Reset ();
+  ChatProbe::block = true;
+  bot->say_text_buffer_.entity_index = -1;
+  bot->say_text_buffer_.say_text.clear ();
+  bots.CaptureChatRadio ("say", "", human);
+
+  CHECK (ChatProbe::pre_count == 1);
+  CHECK (ChatProbe::post_count == 0);
+  CHECK (bot->say_text_buffer_.entity_index == -1);
+  CHECK (bot->say_text_buffer_.say_text.empty ());
+
+  ChatProbe::block = false;
+  bots.SetEventSink (nullptr);
+  bots.Destroy ();
+}
 TEST_CASE ("unit/chatlib_banks") {
   testhost::FakeEngine engine;
   testhost::FakeCSApi cs {};
