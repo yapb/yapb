@@ -6,9 +6,9 @@
 # SPDX-License-Identifier: Unlicense
 #
 # Generates the amx mod x include (yapb.inc).
-# Natives come from ext/amxx/yapb_amxx.cpp (each carries a doc block plus a
-# "// @native <pawn prototype>;" line), enums are read straight from the
-# bot headers so the two never drift. Run manually before committing.
+# Natives and forwards come from ext/amxx/yapb_amxx.cpp (each carries a doc
+# block plus a "// @native" or "// @forward" line), enums are read straight
+# from the bot headers so the two never drift. Run manually before committing.
 #
 #   python3 tools/gen_amxx_inc.py           # regenerate
 #   python3 tools/gen_amxx_inc.py --check    # fail if out of date
@@ -17,6 +17,7 @@
 import os
 import re
 import sys
+from dataclasses import dataclass
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SOURCE = os.path.join(ROOT, 'ext', 'amxx', 'yapb_amxx.cpp')
@@ -45,8 +46,10 @@ HEADER = '''//
   #pragma loadlib yapb
 #endif
 
-#define INVALID_NODE_INDEX -1
-#define INVALID_ENTITY_INDEX 0
+enum {
+  YB_INVALID_NODE_INDEX = -1,
+  YB_INVALID_ENTITY_INDEX = 0
+};
 '''
 
 API_HELPERS = '''
@@ -68,33 +71,29 @@ stock bool:yb_api_at_least (const major, const minor)
 }
 '''
 
-FORWARDS = '''
-/**
- * Called when a bot is spawned.
- */
-forward yb_bot_spawned (index);
-
-/**
- * Called when a bot is killed.
- */
-forward yb_bot_killed (victim, killer);
-
-/**
- * Called when a bot is removed.
- */
-forward yb_bot_removed (index, bool:kicked);
-'''
-
 NATIVE_RE = re.compile(r'^\s*//\s*@native\s+(.+?)\s*$')
+FORWARD_RE = re.compile(r'^\s*//\s*@forward\s+(.+?)\s*$')
 ARRAY_RE = re.compile(r'\{\s*"(yb_\w+)"')
 
-# pawn enum name -> (header, c++ enum name, names to skip)
-ENUM_SOURCES = (
-    ('NodeFlag', 'inc/graph.h', 'NodeFlag', ('Invalid',)),
-    ('NodeType', 'inc/graph.h', 'PointType', ('Count',)),
-    ('Difficulty', 'inc/constant.h', 'Difficulty', ('Invalid',)),
-    ('Personality', 'inc/constant.h', 'Personality', ('Invalid',)),
-    ('Task', 'inc/tasks.h', 'TaskId', ('Num',)),
+
+# enum names are emitted as CAPS_CASE; prefix adds the public YB_ group
+@dataclass(frozen=True)
+class EnumSpec:
+    pawn: str
+    header: str
+    cpp: str
+    skip: tuple = ()
+    prefix: str = ''
+
+
+ENUM_SPECS = (
+    EnumSpec('YBNodeFlag', 'inc/graph.h', 'NodeFlag', ('Invalid',), 'YB_NODE_FLAG_'),
+    EnumSpec('YBNodeType', 'inc/graph.h', 'PointType', ('Count',), 'YB_NODE_TYPE_'),
+    EnumSpec('YBDifficulty', 'inc/constant.h', 'Difficulty', ('Invalid',), 'YB_DIFFICULTY_'),
+    EnumSpec('YBPersonality', 'inc/constant.h', 'Personality', ('Invalid',), 'YB_PERSONALITY_'),
+    EnumSpec('YBTask', 'inc/tasks.h', 'TaskId', ('Num',), 'YB_TASK_'),
+    EnumSpec('YBChatMode', 'inc/module.h', 'BotChatMode', prefix='YB_CHAT_'),
+    EnumSpec('YBChatSource', 'inc/module.h', 'BotChatSource', prefix='YB_CHAT_'),
 )
 
 
@@ -147,13 +146,18 @@ def parse_cpp_enum(text, name):
     return entries
 
 
-def render_enum(pawn_name, header, cpp_name, skip):
-    entries = [e for e in parse_cpp_enum(read(header), cpp_name) if e[0] not in skip]
-    lines = ['enum %s {' % pawn_name]
+def pawn_case(ident):
+    return re.sub(r'(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])', '_', ident).upper()
+
+
+def render_enum(spec):
+    entries = [e for e in parse_cpp_enum(read(spec.header), spec.cpp) if e[0] not in spec.skip]
+    lines = ['enum %s {' % spec.pawn]
 
     for i, (ident, printable) in enumerate(entries):
         comma = ',' if i + 1 < len(entries) else ''
-        lines.append('  %s = %s%s' % (ident, printable, comma))
+        name = spec.prefix + pawn_case(ident) if spec.prefix else ident
+        lines.append('  %s = %s%s' % (name, printable, comma))
 
     lines.append('}')
     return '\n'.join(lines)
@@ -186,19 +190,27 @@ def pawn_doc(doc):
     return '\n'.join(lines)
 
 
-def parse_natives(lines):
-    natives = []
+def parse_directives(lines, pattern, kind):
+    items = []
     for i, line in enumerate(lines):
-        match = NATIVE_RE.match(line)
+        match = pattern.match(line)
         if not match:
             continue
 
         proto = match.group(1).rstrip(';').strip()
         if proto.count('(') != proto.count(')') or not proto.endswith(')'):
-            raise SystemExit('truncated @native prototype (must be a single line ending in ")"): %s' % proto)
+            raise SystemExit('truncated @%s prototype (must be a single line ending in ")"): %s' % (kind, proto))
         name = re.match(r'(?:\w+\s*:\s*)?(\w+)\s*\(', proto)
-        natives.append((name.group(1) if name else proto, proto, preceding_doc(lines, i)))
-    return natives
+        items.append((name.group(1) if name else proto, proto, preceding_doc(lines, i)))
+    return items
+
+
+def parse_natives(lines):
+    return parse_directives(lines, NATIVE_RE, 'native')
+
+
+def parse_forwards(lines):
+    return parse_directives(lines, FORWARD_RE, 'forward')
 
 
 def collect_table_names(text):
@@ -218,6 +230,7 @@ def generate():
     lines = text.splitlines()
 
     natives = parse_natives(lines)
+    forwards = parse_forwards(lines)
     table = collect_table_names(text)
     declared = set(name for name, _, _ in natives)
 
@@ -228,7 +241,7 @@ def generate():
                          % (sorted(missing), sorted(extra)))
 
     out = [HEADER]
-    out.append('\n\n'.join(render_enum(*spec) for spec in ENUM_SOURCES))
+    out.append('\n\n'.join(render_enum(spec) for spec in ENUM_SPECS))
     out.append('')
 
     for _, proto, doc in natives:
@@ -238,7 +251,12 @@ def generate():
         out.append('')
 
     out.append(API_HELPERS)
-    out.append(FORWARDS)
+
+    for _, proto, doc in forwards:
+        if doc:
+            out.append(pawn_doc(doc))
+        out.append('forward %s;' % proto)
+        out.append('')
 
     return '\n'.join(out).rstrip('\n') + '\n'
 
