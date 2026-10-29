@@ -124,6 +124,10 @@ void Bot::UpdateBodyAngles () {
 }
 
 void Bot::UpdateLookAngles () {
+  if (IsFrozen ()) {
+    return;
+  }
+
   // plugin-set look target wins over the ai one
   if (!ForcedLookAt ().empty ()) {
     look_at_ = ForcedLookAt ();

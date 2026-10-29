@@ -946,9 +946,9 @@ void Bot::TaskCamp () {
 
   if (team_ == Team::CT && game_state.IsBombPlanted () && !IsBombDefusing (game_state.GetBombOrigin ())) {
     const bool bomb_far_away = pev->origin.distance_sq (game_state.GetBombOrigin ()) > ystl::sqrf (kBombHearDistance);
+    const bool last_chance = (num_friends_left_ == 0 || num_enemies_left_ == 0) && !IsOutOfBombTimer ();
 
-    // stop holding the spot if we were defending, or if the bomb is ticking elsewhere and must be searched
-    if (bomb_far_away || (defended_bomb_ && !IsOutOfBombTimer ())) {
+    if (bomb_far_away || (defended_bomb_ && !IsOutOfBombTimer ()) || last_chance) {
       defended_bomb_ = false;
       CompleteTask ();
       return;
