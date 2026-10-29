@@ -82,11 +82,11 @@ enum _:TransferData {
 new g_player[MAX_CLIENTS + 1][PlayerData];
 new g_transfer[MAX_CLIENTS + 1][TransferData];
 
-bool:yt_state (const id, const flags) {
+bool:has_state (const id, const flags) {
   return bool:(g_player[id][pd_flags] & flags);
 }
 
-yt_set_state (const id, const flags, bool:enabled) {
+set_state (const id, const flags, bool:enabled) {
   if (enabled) {
     g_player[id][pd_flags] |= flags;
   }
@@ -95,11 +95,11 @@ yt_set_state (const id, const flags, bool:enabled) {
   }
 }
 
-bool:yt_transfer_flag (const id, const flags) {
+bool:transfer_flag (const id, const flags) {
   return bool:(g_transfer[id][td_flags] & flags);
 }
 
-yt_set_transfer_flag (const id, const flags, bool:enabled) {
+set_transfer_flag (const id, const flags, bool:enabled) {
   if (enabled) {
     g_transfer[id][td_flags] |= flags;
   }
@@ -198,35 +198,35 @@ public plugin_init () {
   g_map_has_vip_zone = bool:get_member_game (m_bMapHasVIPSafetyZone);
   g_hud_sync = CreateHudSyncObj ();
 
-  register_clcmd ("nightvision", "yt_cmd_nightvision");
-  register_message (get_user_msgid ("ScoreAttrib"), "yt_msg_score_attrib");
-  register_message (get_user_msgid ("HealthInfo"), "yt_msg_health_info");
+  register_clcmd ("nightvision", "cmd_nightvision");
+  register_message (get_user_msgid ("ScoreAttrib"), "msg_score_attrib");
+  register_message (get_user_msgid ("HealthInfo"), "msg_health_info");
 
-  RegisterHookChain (RG_CBasePlayer_Observer_Think, "yt_on_observer_think", .post = true);
-  RegisterHookChain (RG_RoundEnd, "yt_on_round_end", .post = true);
-  RegisterHookChain (RG_CSGameRules_RestartRound, "yt_on_restart_pre", .post = false);
-  RegisterHookChain (RG_CSGameRules_RestartRound, "yt_on_restart_post", .post = true);
-  RegisterHookChain (RG_CSGameRules_PlayerKilled, "yt_on_player_killed", .post = false);
-  RegisterHookChain (RG_CBasePlayer_Killed, "yt_on_player_killed_post", .post = true);
+  RegisterHookChain (RG_CBasePlayer_Observer_Think, "on_observer_think", .post = true);
+  RegisterHookChain (RG_RoundEnd, "on_round_end", .post = true);
+  RegisterHookChain (RG_CSGameRules_RestartRound, "on_restart_pre", .post = false);
+  RegisterHookChain (RG_CSGameRules_RestartRound, "on_restart_post", .post = true);
+  RegisterHookChain (RG_CSGameRules_PlayerKilled, "on_player_killed", .post = false);
+  RegisterHookChain (RG_CBasePlayer_Killed, "on_player_killed_post", .post = true);
 
-  g_target_hook = RegisterHookChain (RG_CBasePlayer_Observer_IsValidTarget, "yt_on_observer_target", .post = true);
+  g_target_hook = RegisterHookChain (RG_CBasePlayer_Observer_IsValidTarget, "on_observer_target", .post = true);
 
-  g_spawn_hook = RegisterHookChain (RG_CSGameRules_GetPlayerSpawnSpot, "yt_on_spawn_spot", .post = false);
+  g_spawn_hook = RegisterHookChain (RG_CSGameRules_GetPlayerSpawnSpot, "on_spawn_spot", .post = false);
   DisableHookChain (g_spawn_hook);
 
   if (rg_find_ent_by_class (NULLENT, "player_weaponstrip", true) > 0) {
-    g_strip_hook = RegisterHam (Ham_Use, "player_weaponstrip", "yt_on_weaponstrip", .Post = false);
+    g_strip_hook = RegisterHam (Ham_Use, "player_weaponstrip", "on_weaponstrip", .Post = false);
     DisableHamForward (g_strip_hook);
   }
 }
 
 public plugin_cfg () {
   if (get_cvar_num ("yb_takeover_stop_botfeatures")) {
-    yt_stop_botfeatures ();
+    stop_botfeatures ();
   }
 }
 
-yt_stop_botfeatures () {
+stop_botfeatures () {
   new file[64], name[64];
 
   for (new plugin = 0; plugin < get_pluginsnum (); plugin++) {
@@ -253,25 +253,25 @@ public client_putinserver (id) {
   g_player[id][pd_vip_player] = false;
   g_player[id][pd_vip_owner] = 0;
   g_player[id][pd_bot_model] = 0;
-  yt_clear_transfer_state (id);
-  yt_set_state(id, PF_SIM_OFF, false);
-  yt_set_state(id, PF_SPAWN_PENDING, false);
-  yt_set_state(id, PF_SPAWN_VELOCITY, false);
-  yt_set_state(id, PF_SPAWN_ICON, false);
-  yt_set_state(id, PF_SPAWN_DONE, false);
+  clear_transfer_state (id);
+  set_state(id, PF_SIM_OFF, false);
+  set_state(id, PF_SPAWN_PENDING, false);
+  set_state(id, PF_SPAWN_VELOCITY, false);
+  set_state(id, PF_SPAWN_ICON, false);
+  set_state(id, PF_SPAWN_DONE, false);
 }
 
 public yb_bot_spawned (index) {
-  yt_restore_bot_simulation (index);
+  restore_bot_simulation (index);
 }
 
 public yb_bot_removed (index, bool:kicked) {
-  yt_set_state(index, PF_SIM_OFF, false);
+  set_state(index, PF_SIM_OFF, false);
 
   for (new player = 1; player <= g_max_players; player++) {
     if (is_user_connected (player) && g_player[player][pd_bot] == index) {
-      yt_rollback_vip (player, index);
-      yt_full_reset_player (player, false);
+      rollback_vip (player, index);
+      full_reset_player (player, false);
     }
   }
 }
@@ -281,23 +281,23 @@ public client_disconnected (id) {
 
   new controlled_bot = g_player[id][pd_bot];
 
-  if (yt_transfer_flag(id, TF_ACTIVE) && controlled_bot > 0 && controlled_bot <= g_max_players &&
+  if (transfer_flag(id, TF_ACTIVE) && controlled_bot > 0 && controlled_bot <= g_max_players &&
       is_user_connected (controlled_bot) && yb_is_user_bot (controlled_bot)) {
-    yt_rollback_transfer (id, controlled_bot);
+    rollback_transfer (id, controlled_bot);
   }
 
   if (controlled_bot > 0 && controlled_bot <= g_max_players) {
-    yt_restore_bot_simulation (controlled_bot);
-    yt_rollback_vip (id, controlled_bot);
+    restore_bot_simulation (controlled_bot);
+    rollback_vip (id, controlled_bot);
   }
 
-  if (yb_is_user_bot (id) || yt_state(id, PF_SIM_OFF)) {
-    yt_set_state(id, PF_SIM_OFF, false);
+  if (yb_is_user_bot (id) || has_state(id, PF_SIM_OFF)) {
+    set_state(id, PF_SIM_OFF, false);
 
     for (new player = 1; player <= g_max_players; player++) {
       if (is_user_connected (player) && g_player[player][pd_bot] == id) {
-        yt_rollback_vip (player, id);
-        yt_full_reset_player (player, false);
+        rollback_vip (player, id);
+        full_reset_player (player, false);
       }
     }
   }
@@ -308,15 +308,15 @@ public client_disconnected (id) {
   g_player[id][pd_vip_player] = false;
   g_player[id][pd_vip_owner] = 0;
   g_player[id][pd_bot_model] = 0;
-  yt_clear_transfer_state (id);
-  yt_set_state(id, PF_SIM_OFF, false);
-  yt_set_spawn_pending (id, false);
-  yt_set_state(id, PF_SPAWN_VELOCITY, false);
-  yt_set_state(id, PF_SPAWN_ICON, false);
-  yt_set_state(id, PF_SPAWN_DONE, false);
+  clear_transfer_state (id);
+  set_state(id, PF_SIM_OFF, false);
+  set_spawn_pending (id, false);
+  set_state(id, PF_SPAWN_VELOCITY, false);
+  set_state(id, PF_SPAWN_ICON, false);
+  set_state(id, PF_SPAWN_DONE, false);
 }
 
-public yt_cmd_nightvision (id) {
+public cmd_nightvision (id) {
   if (g_use_key) {
     return PLUGIN_CONTINUE;
   }
@@ -325,33 +325,33 @@ public yt_cmd_nightvision (id) {
     return PLUGIN_CONTINUE;
   }
 
-  new bot = yt_can_takeover (id);
+  new bot = can_takeover (id);
 
   if (!bot) {
     return PLUGIN_CONTINUE;
   }
 
-  yt_takeover (id, bot);
+  takeover (id, bot);
   return PLUGIN_HANDLED;
 }
 
-public yt_on_observer_think (const id) {
+public on_observer_think (const id) {
   if (!g_use_key) {
     return HC_CONTINUE;
   }
 
   if ((get_member (id, m_afButtonPressed) & IN_USE)) {
-    new bot = yt_can_takeover (id);
+    new bot = can_takeover (id);
 
     if (bot) {
-      yt_takeover (id, bot);
+      takeover (id, bot);
     }
   }
 
   return HC_CONTINUE;
 }
 
-public yt_on_observer_target (const id, const target, const bool:same_team) {
+public on_observer_target (const id, const target, const bool:same_team) {
   if (!g_hud || g_round_ended) {
     return;
   }
@@ -363,7 +363,7 @@ public yt_on_observer_target (const id, const target, const bool:same_team) {
 
   new bot = GetHookChainReturn (ATYPE_INTEGER);
 
-  if (bot <= 0 || !yb_is_user_bot (bot) || !yb_is_bot_alive (bot) || yb_is_bot_stale (bot) || !yt_observer_mode_allowed (id)) {
+  if (bot <= 0 || !yb_is_user_bot (bot) || !yb_is_bot_alive (bot) || yb_is_bot_stale (bot) || !observer_mode_allowed (id)) {
     ClearSyncHud (id, g_hud_sync);
     return;
   }
@@ -376,7 +376,7 @@ public yt_on_observer_target (const id, const target, const bool:same_team) {
     return;
   }
 
-  if ((g_team_only && player_team != bot_team) || yt_bot_controller (bot) > 0) {
+  if ((g_team_only && player_team != bot_team) || bot_controller (bot) > 0) {
     ClearSyncHud (id, g_hud_sync);
     return;
   }
@@ -397,12 +397,12 @@ public yt_on_observer_target (const id, const target, const bool:same_team) {
   ShowSyncHudMsg (id, g_hud_sync, "%s", text);
 }
 
-public yt_on_round_end (const WinStatus:status, const ScenarioEventEndRound:event, const Float:delay) {
+public on_round_end (const WinStatus:status, const ScenarioEventEndRound:event, const Float:delay) {
   g_round_ended = true;
   DisableHookChain (g_target_hook);
 }
 
-public yt_on_restart_pre () {
+public on_restart_pre () {
   new players[32], count;
   get_players (players, count, "ch");
 
@@ -411,7 +411,7 @@ public yt_on_restart_pre () {
   DisableHookChain (g_spawn_hook);
 
   for (new slot_player = 1; slot_player <= g_max_players; slot_player++) {
-    yt_set_state(slot_player, PF_SPAWN_PENDING, false);
+    set_state(slot_player, PF_SPAWN_PENDING, false);
   }
 
   new bool:complete = bool:get_member_game (m_bCompleteReset);
@@ -424,16 +424,16 @@ public yt_on_restart_pre () {
 
     if (bot > 0 && is_user_connected (bot) && yb_is_user_bot (bot) && !yb_is_bot_stale (bot)) {
       if (back_items && !complete) {
-        new transferred = yt_transfer_inventory (id, bot, true);
+        new transferred = transfer_inventory (id, bot, true);
 
         if (transferred < 0) {
           back_transfer_failed = true;
-          yt_rollback_transfer (bot, id);
-          yt_clear_transfer_state (bot);
-          yt_log_takeover ("Back transfer failed: player=%d bot=%d", id, bot);
+          rollback_transfer (bot, id);
+          clear_transfer_state (bot);
+          log_takeover ("Back transfer failed: player=%d bot=%d", id, bot);
         }
         else {
-          yt_clear_transfer_state (bot);
+          clear_transfer_state (bot);
 
           if (transferred > 0 && (transferred & USEFUL_SLOTS_BS)) {
             set_member (bot, m_bNotKilled, true);
@@ -445,22 +445,22 @@ public yt_on_restart_pre () {
     }
 
     if (g_player[id][pd_uses] > 0) {
-      yt_full_reset_player (id, !back_transfer_failed);
+      full_reset_player (id, !back_transfer_failed);
     }
   }
 }
 
-public yt_on_restart_post () {
+public on_restart_post () {
   for (new id = 1; id <= g_max_players; id++) {
-    if (!yt_state(id, PF_SIM_OFF)) {
+    if (!has_state(id, PF_SIM_OFF)) {
       continue;
     }
 
-    yt_restore_bot_simulation (id);
+    restore_bot_simulation (id);
   }
 }
 
-public yt_on_player_killed (const victim, const killer, const inflictor) {
+public on_player_killed (const victim, const killer, const inflictor) {
   if (victim < 1 || victim > g_max_players) {
     return HC_CONTINUE;
   }
@@ -494,12 +494,12 @@ public yt_on_player_killed (const victim, const killer, const inflictor) {
   return HC_CONTINUE;
 }
 
-public yt_on_player_killed_post (const victim, const attacker, const gib) {
+public on_player_killed_post (const victim, const attacker, const gib) {
   if (victim < 1 || victim > g_max_players || !g_autoswitch || yb_is_user_bot (victim)) {
     return;
   }
 
-  new bot = yt_random_teammate (get_user_team (victim));
+  new bot = random_teammate (get_user_team (victim));
 
   if (!bot) {
     return;
@@ -515,12 +515,12 @@ public yt_on_player_killed_post (const victim, const attacker, const gib) {
   set_member (victim, m_flNextObserverInput, time + 2.0);
 }
 
-public yt_on_spawn_spot (const id) {
-  if (id < 1 || id > g_max_players || !yt_state(id, PF_SPAWN_PENDING)) {
+public on_spawn_spot (const id) {
+  if (id < 1 || id > g_max_players || !has_state(id, PF_SPAWN_PENDING)) {
     return HC_CONTINUE;
   }
 
-  yt_set_spawn_pending (id, false);
+  set_spawn_pending (id, false);
 
   new bot = g_player[id][pd_bot];
 
@@ -529,12 +529,12 @@ public yt_on_spawn_spot (const id) {
   }
 
   if (!is_user_connected (bot) || !yb_is_user_bot (bot) || yb_is_bot_stale (bot)) {
-    yt_abort_takeover (id, bot);
+    abort_takeover (id, bot);
     return HC_CONTINUE;
   }
 
   if (g_round_ended) {
-    yt_abort_takeover (id, bot);
+    abort_takeover (id, bot);
     return HC_CONTINUE;
   }
 
@@ -542,7 +542,7 @@ public yt_on_spawn_spot (const id) {
   new hull = (get_entvar (bot, var_flags) & FL_DUCKING) ? HULL_HEAD : HULL_HUMAN;
 
   if (!yb_get_bot_origin (bot, origin)) {
-    yt_abort_takeover (id, bot);
+    abort_takeover (id, bot);
     return HC_CONTINUE;
   }
 
@@ -550,29 +550,29 @@ public yt_on_spawn_spot (const id) {
   get_entvar (bot, var_mins, mins);
   get_entvar (bot, var_maxs, maxs);
 
-  if (!yt_set_player_position (id, origin, angles, mins, maxs, hull, bot, g_player[id][pd_velocity])) {
+  if (!set_player_position (id, origin, angles, mins, maxs, hull, bot, g_player[id][pd_velocity])) {
     client_print_color (id, print_team_default, "%L", id, "TAKEOVER_NO_SPACE");
-    yt_abort_takeover (id, bot);
+    abort_takeover (id, bot);
     return HC_CONTINUE;
   }
 
-  if (yt_transfer_inventory (bot, id, false) < 0) {
-    yt_abort_takeover (id, bot);
+  if (transfer_inventory (bot, id, false) < 0) {
+    abort_takeover (id, bot);
     return HC_CONTINUE;
   }
 
-  yt_clear_transfer_state (id);
-  yt_set_state(id, PF_SPAWN_DONE, true);
-  yt_set_state(id, PF_SPAWN_VELOCITY, true);
-  yt_set_state(id, PF_SPAWN_ICON, true);
-  set_task (0.1, "yt_apply_spawn_state", id);
-  yt_kill_bot (bot, origin);
+  clear_transfer_state (id);
+  set_state(id, PF_SPAWN_DONE, true);
+  set_state(id, PF_SPAWN_VELOCITY, true);
+  set_state(id, PF_SPAWN_ICON, true);
+  set_task (0.1, "apply_spawn_state", id);
+  kill_bot (bot, origin);
 
   SetHookChainReturn (ATYPE_INTEGER, id);
   return HC_SUPERCEDE;
 }
 
-public yt_msg_score_attrib (const msg_id, const msg_dest, const msg_ent) {
+public msg_score_attrib (const msg_id, const msg_dest, const msg_ent) {
   if (!g_scoreboard) {
     return PLUGIN_CONTINUE;
   }
@@ -588,14 +588,14 @@ public yt_msg_score_attrib (const msg_id, const msg_dest, const msg_ent) {
     set_msg_arg_int (2, ARG_BYTE, flags | SCORE_STATUS_DEAD);
   }
 
-  if (yb_is_user_bot (player) && (flags & SCORE_STATUS_DEAD) && yt_bot_controller (player) > 0) {
+  if (yb_is_user_bot (player) && (flags & SCORE_STATUS_DEAD) && bot_controller (player) > 0) {
     set_msg_arg_int (2, ARG_BYTE, flags & ~SCORE_STATUS_DEAD);
   }
 
   return PLUGIN_CONTINUE;
 }
 
-public yt_msg_health_info (const msg_id, const msg_dest, const msg_ent) {
+public msg_health_info (const msg_id, const msg_dest, const msg_ent) {
   if (!g_scoreboard) {
     return PLUGIN_CONTINUE;
   }
@@ -606,7 +606,7 @@ public yt_msg_health_info (const msg_id, const msg_dest, const msg_ent) {
     return PLUGIN_CONTINUE;
   }
 
-  new player = yt_bot_controller (bot);
+  new player = bot_controller (bot);
 
   if (player > 0) {
     new health = get_user_health (player);
@@ -619,7 +619,7 @@ public yt_msg_health_info (const msg_id, const msg_dest, const msg_ent) {
   return PLUGIN_CONTINUE;
 }
 
-public yt_on_weaponstrip (const entity, const activator, const caller, const use_type, const Float:value) {
+public on_weaponstrip (const entity, const activator, const caller, const use_type, const Float:value) {
   if (activator < 1 || activator > g_max_players || !is_user_connected (activator) || g_player[activator][pd_bot] <= 0) {
     return HAM_IGNORED;
   }
@@ -628,7 +628,7 @@ public yt_on_weaponstrip (const entity, const activator, const caller, const use
   return HAM_SUPERCEDE;
 }
 
-yt_can_takeover (id) {
+can_takeover (id) {
   if (!g_enabled || g_round_ended || is_user_alive (id)) {
     return 0;
   }
@@ -643,7 +643,7 @@ yt_can_takeover (id) {
     return 0;
   }
 
-  if (!yt_observer_mode_allowed (id)) {
+  if (!observer_mode_allowed (id)) {
     return 0;
   }
 
@@ -658,7 +658,7 @@ yt_can_takeover (id) {
     return 0;
   }
 
-  if (yt_bot_controller (bot) > 0) {
+  if (bot_controller (bot) > 0) {
     client_print_color (id, print_team_default, "%L", id, "TAKEOVER_BUSY");
     return 0;
   }
@@ -677,7 +677,7 @@ yt_can_takeover (id) {
   return bot;
 }
 
-yt_observer_mode_allowed (id) {
+observer_mode_allowed (id) {
   new mode = get_entvar (id, var_iuser1);
 
   if (mode == OBS_IN_EYE) {
@@ -691,10 +691,10 @@ yt_observer_mode_allowed (id) {
   return 0;
 }
 
-yt_bot_controller (bot) {
+bot_controller (bot) {
   for (new player = 1; player <= g_max_players; player++) {
     if (!yb_is_user_bot (player) && is_user_connected (player) && g_player[player][pd_bot] == bot) {
-      if (yt_state(player, PF_SPAWN_PENDING) || is_user_alive (player)) {
+      if (has_state(player, PF_SPAWN_PENDING) || is_user_alive (player)) {
         return player;
       }
     }
@@ -703,8 +703,8 @@ yt_bot_controller (bot) {
   return 0;
 }
 
-yt_clear_transfer_state (player) {
-  yt_set_transfer_flag(player, TF_ACTIVE, false);
+clear_transfer_state (player) {
+  set_transfer_flag(player, TF_ACTIVE, false);
   g_transfer[player][td_count] = 0;
   g_transfer[player][td_source_health] = 0.0;
   g_transfer[player][td_source_armor] = 0;
@@ -714,12 +714,12 @@ yt_clear_transfer_state (player) {
   g_transfer[player][td_armor] = 0;
   g_transfer[player][td_armor_type] = ARMOR_NONE;
   g_transfer[player][td_nvg] = false;
-  yt_set_transfer_flag(player, TF_C4_SOURCE, false);
-  yt_set_transfer_flag(player, TF_C4_TARGET, false);
-  yt_set_transfer_flag(player, TF_DEFUSER_SOURCE, false);
-  yt_set_transfer_flag(player, TF_DEFUSER_TARGET, false);
-  yt_set_transfer_flag(player, TF_SHIELD_SOURCE, false);
-  yt_set_transfer_flag(player, TF_SHIELD_TARGET, false);
+  set_transfer_flag(player, TF_C4_SOURCE, false);
+  set_transfer_flag(player, TF_C4_TARGET, false);
+  set_transfer_flag(player, TF_DEFUSER_SOURCE, false);
+  set_transfer_flag(player, TF_DEFUSER_TARGET, false);
+  set_transfer_flag(player, TF_SHIELD_SOURCE, false);
+  set_transfer_flag(player, TF_SHIELD_TARGET, false);
 
   for (new index = 0; index < MAX_TRANSFER_ITEMS; index++) {
     g_transfer[player][td_items][index] = 0;
@@ -733,19 +733,19 @@ yt_clear_transfer_state (player) {
   }
 }
 
-yt_rollback_transfer (receiver, source) {
+rollback_transfer (receiver, source) {
   if (receiver <= 0 || receiver > g_max_players || source <= 0 || source > g_max_players) {
-    yt_log_takeover ("Rollback invalid indices: receiver=%d source=%d", receiver, source);
+    log_takeover ("Rollback invalid indices: receiver=%d source=%d", receiver, source);
     return;
   }
 
   if (!is_user_connected (receiver) || !is_user_connected (source)) {
-    yt_log_takeover ("Rollback disconnected indices: receiver=%d source=%d", receiver, source);
+    log_takeover ("Rollback disconnected indices: receiver=%d source=%d", receiver, source);
     return;
   }
 
-  if (!yt_transfer_flag(receiver, TF_ACTIVE)) {
-    yt_log_takeover ("Rollback skipped inactive journal: receiver=%d source=%d", receiver, source);
+  if (!transfer_flag(receiver, TF_ACTIVE)) {
+    log_takeover ("Rollback skipped inactive journal: receiver=%d source=%d", receiver, source);
     return;
   }
 
@@ -764,7 +764,7 @@ yt_rollback_transfer (receiver, source) {
     }
 
     if (item <= 0 || is_nullent (item)) {
-      yt_log_takeover ("Rollback item entity unavailable: receiver=%d source=%d state=%d", receiver, source, item_state);
+      log_takeover ("Rollback item entity unavailable: receiver=%d source=%d state=%d", receiver, source, item_state);
       continue;
     }
 
@@ -799,10 +799,10 @@ yt_rollback_transfer (receiver, source) {
     if (!restored) {
       if (ExecuteHam (Ham_AddPlayerItem, receiver, item)) {
         ExecuteHam (Ham_Item_AttachToPlayer, item, receiver);
-        yt_log_takeover ("Rollback retained item on receiver: receiver=%d source=%d item=%d", receiver, source, item);
+        log_takeover ("Rollback retained item on receiver: receiver=%d source=%d item=%d", receiver, source, item);
       }
       else {
-        yt_log_takeover ("Rollback item recovery failed: receiver=%d source=%d item=%d state=%d", receiver, source, item, item_state);
+        log_takeover ("Rollback item recovery failed: receiver=%d source=%d item=%d state=%d", receiver, source, item, item_state);
       }
     }
 
@@ -815,84 +815,84 @@ yt_rollback_transfer (receiver, source) {
   new bool:source_c4 = bool:get_member (source, m_bHasC4);
   new bool:target_c4 = bool:get_member (receiver, m_bHasC4);
 
-  if (yt_transfer_flag(receiver, TF_C4_SOURCE) && !source_c4 && target_c4) {
+  if (transfer_flag(receiver, TF_C4_SOURCE) && !source_c4 && target_c4) {
     rg_transfer_c4 (receiver, source);
   }
-  else if (!yt_transfer_flag(receiver, TF_C4_SOURCE) && source_c4) {
+  else if (!transfer_flag(receiver, TF_C4_SOURCE) && source_c4) {
     rg_remove_item (source, "weapon_c4");
   }
 
   source_c4 = bool:get_member (source, m_bHasC4);
   target_c4 = bool:get_member (receiver, m_bHasC4);
 
-  if (yt_transfer_flag(receiver, TF_C4_TARGET) && !target_c4 && source_c4) {
+  if (transfer_flag(receiver, TF_C4_TARGET) && !target_c4 && source_c4) {
     rg_transfer_c4 (source, receiver);
   }
-  else if (!yt_transfer_flag(receiver, TF_C4_TARGET) && target_c4) {
+  else if (!transfer_flag(receiver, TF_C4_TARGET) && target_c4) {
     rg_remove_item (receiver, "weapon_c4");
   }
 
-  if (bool:get_member (source, m_bHasC4) != yt_transfer_flag(receiver, TF_C4_SOURCE) ||
-      bool:get_member (receiver, m_bHasC4) != yt_transfer_flag(receiver, TF_C4_TARGET)) {
-    yt_log_takeover ("Rollback C4 mismatch: receiver=%d source=%d", receiver, source);
+  if (bool:get_member (source, m_bHasC4) != transfer_flag(receiver, TF_C4_SOURCE) ||
+      bool:get_member (receiver, m_bHasC4) != transfer_flag(receiver, TF_C4_TARGET)) {
+    log_takeover ("Rollback C4 mismatch: receiver=%d source=%d", receiver, source);
   }
 
   new bool:source_defuser = bool:get_member (source, m_bHasDefuser);
   new bool:target_defuser = bool:get_member (receiver, m_bHasDefuser);
 
-  if (yt_transfer_flag(receiver, TF_DEFUSER_SOURCE) && !source_defuser) {
+  if (transfer_flag(receiver, TF_DEFUSER_SOURCE) && !source_defuser) {
     rg_give_defusekit (source);
     source_defuser = bool:get_member (source, m_bHasDefuser);
   }
-  else if (!yt_transfer_flag(receiver, TF_DEFUSER_SOURCE) && source_defuser) {
+  else if (!transfer_flag(receiver, TF_DEFUSER_SOURCE) && source_defuser) {
     rg_remove_item (source, "item_thighpack");
     source_defuser = bool:get_member (source, m_bHasDefuser);
   }
 
-  if (source_defuser && !yt_transfer_flag(receiver, TF_DEFUSER_TARGET) && target_defuser) {
+  if (source_defuser && !transfer_flag(receiver, TF_DEFUSER_TARGET) && target_defuser) {
     rg_remove_item (receiver, "item_thighpack");
   }
-  else if (yt_transfer_flag(receiver, TF_DEFUSER_TARGET) && !target_defuser) {
+  else if (transfer_flag(receiver, TF_DEFUSER_TARGET) && !target_defuser) {
     rg_give_defusekit (receiver);
   }
-  else if (!yt_transfer_flag(receiver, TF_DEFUSER_TARGET) && target_defuser) {
+  else if (!transfer_flag(receiver, TF_DEFUSER_TARGET) && target_defuser) {
     rg_remove_item (receiver, "item_thighpack");
   }
 
   source_defuser = bool:get_member (source, m_bHasDefuser);
   target_defuser = bool:get_member (receiver, m_bHasDefuser);
 
-  if (source_defuser != yt_transfer_flag(receiver, TF_DEFUSER_SOURCE) || target_defuser != yt_transfer_flag(receiver, TF_DEFUSER_TARGET)) {
-    yt_log_takeover ("Rollback defuser mismatch: receiver=%d source=%d", receiver, source);
+  if (source_defuser != transfer_flag(receiver, TF_DEFUSER_SOURCE) || target_defuser != transfer_flag(receiver, TF_DEFUSER_TARGET)) {
+    log_takeover ("Rollback defuser mismatch: receiver=%d source=%d", receiver, source);
   }
 
   new bool:source_shield = bool:get_member (source, m_bOwnsShield);
   new bool:target_shield = bool:get_member (receiver, m_bOwnsShield);
 
-  if (yt_transfer_flag(receiver, TF_SHIELD_SOURCE) && !source_shield) {
+  if (transfer_flag(receiver, TF_SHIELD_SOURCE) && !source_shield) {
     rg_give_shield (source);
     source_shield = bool:get_member (source, m_bOwnsShield);
   }
-  else if (!yt_transfer_flag(receiver, TF_SHIELD_SOURCE) && source_shield) {
+  else if (!transfer_flag(receiver, TF_SHIELD_SOURCE) && source_shield) {
     rg_remove_item (source, "weapon_shield");
     source_shield = bool:get_member (source, m_bOwnsShield);
   }
 
-  if (source_shield && !yt_transfer_flag(receiver, TF_SHIELD_TARGET) && target_shield) {
+  if (source_shield && !transfer_flag(receiver, TF_SHIELD_TARGET) && target_shield) {
     rg_remove_item (receiver, "weapon_shield");
   }
-  else if (yt_transfer_flag(receiver, TF_SHIELD_TARGET) && !target_shield) {
+  else if (transfer_flag(receiver, TF_SHIELD_TARGET) && !target_shield) {
     rg_give_shield (receiver);
   }
-  else if (!yt_transfer_flag(receiver, TF_SHIELD_TARGET) && target_shield) {
+  else if (!transfer_flag(receiver, TF_SHIELD_TARGET) && target_shield) {
     rg_remove_item (receiver, "weapon_shield");
   }
 
   source_shield = bool:get_member (source, m_bOwnsShield);
   target_shield = bool:get_member (receiver, m_bOwnsShield);
 
-  if (source_shield != yt_transfer_flag(receiver, TF_SHIELD_SOURCE) || target_shield != yt_transfer_flag(receiver, TF_SHIELD_TARGET)) {
-    yt_log_takeover ("Rollback shield mismatch: receiver=%d source=%d", receiver, source);
+  if (source_shield != transfer_flag(receiver, TF_SHIELD_SOURCE) || target_shield != transfer_flag(receiver, TF_SHIELD_TARGET)) {
+    log_takeover ("Rollback shield mismatch: receiver=%d source=%d", receiver, source);
   }
 
   if (g_transfer[receiver][td_source_armor] > 0 && g_transfer[receiver][td_source_armor_type] != ARMOR_NONE) {
@@ -918,10 +918,10 @@ yt_rollback_transfer (receiver, source) {
   set_member (source, m_bHasPrimary, get_member (source, m_rgpPlayerItems, PRIMARY_WEAPON_SLOT) > 0);
   set_member (receiver, m_bHasPrimary, get_member (receiver, m_rgpPlayerItems, PRIMARY_WEAPON_SLOT) > 0);
 
-  yt_set_transfer_flag(receiver, TF_ACTIVE, false);
+  set_transfer_flag(receiver, TF_ACTIVE, false);
 }
 
-yt_rollback_vip (id, bot) {
+rollback_vip (id, bot) {
   if (!g_player[id][pd_vip]) {
     return;
   }
@@ -940,13 +940,13 @@ yt_rollback_vip (id, bot) {
   g_player[id][pd_bot_model] = 0;
 }
 
-yt_restore_bot_simulation (bot) {
-  if (bot <= 0 || bot > g_max_players || !yt_state(bot, PF_SIM_OFF)) {
+restore_bot_simulation (bot) {
+  if (bot <= 0 || bot > g_max_players || !has_state(bot, PF_SIM_OFF)) {
     return;
   }
 
   if (!is_user_connected (bot) || !yb_is_user_bot (bot)) {
-    yt_set_state(bot, PF_SIM_OFF, false);
+    set_state(bot, PF_SIM_OFF, false);
     return;
   }
 
@@ -955,17 +955,17 @@ yt_restore_bot_simulation (bot) {
   }
 
   if (yb_set_bot_simulation (bot, true)) {
-    yt_set_state(bot, PF_SIM_OFF, false);
-    yt_log_takeover ("SimulationOn: bot=%d", bot);
+    set_state(bot, PF_SIM_OFF, false);
+    log_takeover ("SimulationOn: bot=%d", bot);
   }
   else {
-    yt_log_takeover ("SimulationOn failed: bot=%d", bot);
+    log_takeover ("SimulationOn failed: bot=%d", bot);
   }
 }
 
-yt_has_pending_spawn () {
+has_pending_spawn () {
   for (new player = 1; player <= g_max_players; player++) {
-    if (yt_state(player, PF_SPAWN_PENDING)) {
+    if (has_state(player, PF_SPAWN_PENDING)) {
       return true;
     }
   }
@@ -973,29 +973,29 @@ yt_has_pending_spawn () {
   return false;
 }
 
-yt_set_spawn_pending (id, bool:pending) {
-  yt_set_state(id, PF_SPAWN_PENDING, pending);
+set_spawn_pending (id, bool:pending) {
+  set_state(id, PF_SPAWN_PENDING, pending);
 
   if (pending) {
     EnableHookChain (g_spawn_hook);
   }
-  else if (!yt_has_pending_spawn ()) {
+  else if (!has_pending_spawn ()) {
     DisableHookChain (g_spawn_hook);
   }
 }
 
-yt_takeover (id, bot) {
-  yt_clear_transfer_state (id);
-  yt_set_state(id, PF_SPAWN_VELOCITY, false);
-  yt_set_state(id, PF_SPAWN_ICON, false);
+takeover (id, bot) {
+  clear_transfer_state (id);
+  set_state(id, PF_SPAWN_VELOCITY, false);
+  set_state(id, PF_SPAWN_ICON, false);
   get_entvar (bot, var_velocity, g_player[id][pd_velocity]);
 
   if (!yb_set_bot_simulation (bot, false)) {
-    yt_log_takeover ("SimulationOff failed: player=%d bot=%d", id, bot);
+    log_takeover ("SimulationOff failed: player=%d bot=%d", id, bot);
     return;
   }
 
-  yt_set_state(bot, PF_SIM_OFF, true);
+  set_state(bot, PF_SIM_OFF, true);
 
   new model = _:get_member (bot, m_iModelName);
 
@@ -1038,21 +1038,21 @@ yt_takeover (id, bot) {
   new Float:origin[3];
   new hull = (get_entvar (bot, var_flags) & FL_DUCKING) ? HULL_HEAD : HULL_HUMAN;
 
-  if (!yb_get_bot_origin (bot, origin) || !yt_is_free_space (origin, hull, bot)) {
-    yt_abort_takeover (id, bot);
+  if (!yb_get_bot_origin (bot, origin) || !is_free_space (origin, hull, bot)) {
+    abort_takeover (id, bot);
     return;
   }
 
   remove_task (id);
-  yt_set_spawn_pending (id, true);
-  yt_set_state(id, PF_SPAWN_DONE, false);
+  set_spawn_pending (id, true);
+  set_state(id, PF_SPAWN_DONE, false);
   rg_round_respawn (id);
-  set_task (1.0, "yt_validate_takeover", id);
+  set_task (1.0, "validate_takeover", id);
 
-  yt_log_takeover ("Takeover: player=%d bot=%d uses=%d", id, bot, g_player[id][pd_uses]);
+  log_takeover ("Takeover: player=%d bot=%d uses=%d", id, bot, g_player[id][pd_uses]);
 
   if (g_chat) {
-    yt_announce_takeover (id, bot);
+    announce_takeover (id, bot);
   }
 
   if (g_bot_chat) {
@@ -1063,57 +1063,57 @@ yt_takeover (id, bot) {
   }
 }
 
-public yt_apply_spawn_state (id) {
+public apply_spawn_state (id) {
   if (!is_user_connected (id)) {
-    yt_set_state(id, PF_SPAWN_VELOCITY, false);
-    yt_set_state(id, PF_SPAWN_ICON, false);
+    set_state(id, PF_SPAWN_VELOCITY, false);
+    set_state(id, PF_SPAWN_ICON, false);
     return;
   }
 
-  if (!yt_state(id, PF_SPAWN_DONE)) {
-    if (yt_state(id, PF_SPAWN_VELOCITY) || yt_state(id, PF_SPAWN_ICON)) {
-      set_task (0.1, "yt_apply_spawn_state", id);
+  if (!has_state(id, PF_SPAWN_DONE)) {
+    if (has_state(id, PF_SPAWN_VELOCITY) || has_state(id, PF_SPAWN_ICON)) {
+      set_task (0.1, "apply_spawn_state", id);
     }
 
     return;
   }
 
-  if (yt_state(id, PF_SPAWN_VELOCITY)) {
+  if (has_state(id, PF_SPAWN_VELOCITY)) {
     set_entvar (id, var_velocity, g_player[id][pd_velocity]);
-    yt_set_state(id, PF_SPAWN_VELOCITY, false);
+    set_state(id, PF_SPAWN_VELOCITY, false);
   }
 
-  if (yt_state(id, PF_SPAWN_ICON)) {
-    yt_send_scenario_icon (id, "hostage1", 1, 150);
-    yt_set_state(id, PF_SPAWN_ICON, false);
+  if (has_state(id, PF_SPAWN_ICON)) {
+    send_scenario_icon (id, "hostage1", 1, 150);
+    set_state(id, PF_SPAWN_ICON, false);
   }
 }
 
-public yt_validate_takeover (id) {
+public validate_takeover (id) {
   if (!is_user_connected (id)) {
     return;
   }
 
   new bot = g_player[id][pd_bot];
 
-  if (bot > 0 && !yt_state(id, PF_SPAWN_DONE)) {
-    yt_abort_takeover (id, bot);
+  if (bot > 0 && !has_state(id, PF_SPAWN_DONE)) {
+    abort_takeover (id, bot);
   }
 }
 
-yt_abort_takeover (id, bot) {
-  yt_set_spawn_pending (id, false);
+abort_takeover (id, bot) {
+  set_spawn_pending (id, false);
 
   if (g_strip_hook > HamHook:0) {
     DisableHamForward (g_strip_hook);
   }
 
-  if (yt_transfer_flag(id, TF_ACTIVE) && bot > 0 && bot <= g_max_players && is_user_connected (bot) && yb_is_user_bot (bot)) {
-    yt_rollback_transfer (id, bot);
+  if (transfer_flag(id, TF_ACTIVE) && bot > 0 && bot <= g_max_players && is_user_connected (bot) && yb_is_user_bot (bot)) {
+    rollback_transfer (id, bot);
   }
 
-  yt_rollback_vip (id, bot);
-  yt_restore_bot_simulation (bot);
+  rollback_vip (id, bot);
+  restore_bot_simulation (bot);
 
   set_member (id, m_bNotKilled, false);
   rg_reset_user_model (id, true);
@@ -1123,16 +1123,16 @@ yt_abort_takeover (id, bot) {
   }
 
   g_player[id][pd_bot] = 0;
-  yt_clear_transfer_state (id);
-  yt_set_state(id, PF_SPAWN_VELOCITY, false);
-  yt_set_state(id, PF_SPAWN_ICON, false);
-  yt_set_state(id, PF_SPAWN_DONE, false);
-  yt_log_takeover ("Takeover aborted: player=%d bot=%d", id, bot);
+  clear_transfer_state (id);
+  set_state(id, PF_SPAWN_VELOCITY, false);
+  set_state(id, PF_SPAWN_ICON, false);
+  set_state(id, PF_SPAWN_DONE, false);
+  log_takeover ("Takeover aborted: player=%d bot=%d", id, bot);
 }
 
-yt_full_reset_player (id, bool:remove_items = true) {
+full_reset_player (id, bool:remove_items = true) {
   remove_task (id);
-  yt_set_spawn_pending (id, false);
+  set_spawn_pending (id, false);
 
   if (g_strip_hook > HamHook:0) {
     DisableHamForward (g_strip_hook);
@@ -1150,13 +1150,13 @@ yt_full_reset_player (id, bool:remove_items = true) {
   g_player[id][pd_vip_player] = false;
   g_player[id][pd_vip_owner] = 0;
   g_player[id][pd_bot_model] = 0;
-  yt_clear_transfer_state (id);
-  yt_set_state(id, PF_SPAWN_VELOCITY, false);
-  yt_set_state(id, PF_SPAWN_ICON, false);
-  yt_set_state(id, PF_SPAWN_DONE, false);
+  clear_transfer_state (id);
+  set_state(id, PF_SPAWN_VELOCITY, false);
+  set_state(id, PF_SPAWN_ICON, false);
+  set_state(id, PF_SPAWN_DONE, false);
 }
 
-yt_transfer_inventory (source, receiver, bool:back) {
+transfer_inventory (source, receiver, bool:back) {
   if (source <= 0 || source > g_max_players || receiver <= 0 || receiver > g_max_players ||
       source == receiver || !is_user_connected (source) || !is_user_connected (receiver)) {
     return -1;
@@ -1166,7 +1166,7 @@ yt_transfer_inventory (source, receiver, bool:back) {
     return 0;
   }
 
-  yt_clear_transfer_state (receiver);
+  clear_transfer_state (receiver);
 
   new ArmorType:source_armor_type, ArmorType:receiver_armor_type;
 
@@ -1178,13 +1178,13 @@ yt_transfer_inventory (source, receiver, bool:back) {
   g_transfer[receiver][td_armor] = rg_get_user_armor (receiver, receiver_armor_type);
   g_transfer[receiver][td_armor_type] = receiver_armor_type;
   g_transfer[receiver][td_nvg] = bool:get_member (receiver, m_bHasNightVision);
-  yt_set_transfer_flag(receiver, TF_C4_SOURCE, bool:get_member (source, m_bHasC4));
-  yt_set_transfer_flag(receiver, TF_C4_TARGET, bool:get_member (receiver, m_bHasC4));
-  yt_set_transfer_flag(receiver, TF_DEFUSER_SOURCE, bool:get_member (source, m_bHasDefuser));
-  yt_set_transfer_flag(receiver, TF_DEFUSER_TARGET, bool:get_member (receiver, m_bHasDefuser));
-  yt_set_transfer_flag(receiver, TF_SHIELD_SOURCE, bool:get_member (source, m_bOwnsShield));
-  yt_set_transfer_flag(receiver, TF_SHIELD_TARGET, bool:get_member (receiver, m_bOwnsShield));
-  yt_set_transfer_flag(receiver, TF_ACTIVE, true);
+  set_transfer_flag(receiver, TF_C4_SOURCE, bool:get_member (source, m_bHasC4));
+  set_transfer_flag(receiver, TF_C4_TARGET, bool:get_member (receiver, m_bHasC4));
+  set_transfer_flag(receiver, TF_DEFUSER_SOURCE, bool:get_member (source, m_bHasDefuser));
+  set_transfer_flag(receiver, TF_DEFUSER_TARGET, bool:get_member (receiver, m_bHasDefuser));
+  set_transfer_flag(receiver, TF_SHIELD_SOURCE, bool:get_member (source, m_bOwnsShield));
+  set_transfer_flag(receiver, TF_SHIELD_TARGET, bool:get_member (receiver, m_bOwnsShield));
+  set_transfer_flag(receiver, TF_ACTIVE, true);
   g_transfer[receiver][td_count] = 0;
 
   new bool:failed;
@@ -1349,11 +1349,11 @@ yt_transfer_inventory (source, receiver, bool:back) {
             }
 
             g_transfer[receiver][td_item_state][journal_index] = TRANSFER_ITEM_NONE;
-            yt_log_takeover ("Transfer rolled back: source=%d receiver=%d item=%d", source, receiver, item);
+            log_takeover ("Transfer rolled back: source=%d receiver=%d item=%d", source, receiver, item);
           }
           else {
             g_transfer[receiver][td_item_state][journal_index] = TRANSFER_ITEM_LOST;
-            yt_log_takeover ("Transfer rollback failed: source=%d receiver=%d item=%d", source, receiver, item);
+            log_takeover ("Transfer rollback failed: source=%d receiver=%d item=%d", source, receiver, item);
           }
         }
       }
@@ -1365,7 +1365,7 @@ yt_transfer_inventory (source, receiver, bool:back) {
 
         g_transfer[receiver][td_item_state][journal_index] = TRANSFER_ITEM_NONE;
         failed = true;
-        yt_log_takeover ("Transfer remove failed: source=%d receiver=%d item=%d", source, receiver, item);
+        log_takeover ("Transfer remove failed: source=%d receiver=%d item=%d", source, receiver, item);
       }
 
       item = next;
@@ -1404,16 +1404,16 @@ yt_transfer_inventory (source, receiver, bool:back) {
   return failed ? -1 : slots;
 }
 
-yt_kill_bot (bot, const Float:origin[3]) {
+kill_bot (bot, const Float:origin[3]) {
   set_member (bot, m_vBlastVector, origin);
   set_member (bot, m_bKilledByBomb, true);
   set_entvar (bot, var_effects, EF_NODRAW);
   dllfunc (DLLFunc_ClientKill, bot);
 
-  yt_log_takeover ("KillBot: bot=%d", bot);
+  log_takeover ("KillBot: bot=%d", bot);
 }
 
-bool:yt_set_player_position (id, Float:origin[3], const Float:angles[3], const Float:mins[3], const Float:maxs[3], hull, skip, const Float:velocity[3]) {
+bool:set_player_position (id, Float:origin[3], const Float:angles[3], const Float:mins[3], const Float:maxs[3], hull, skip, const Float:velocity[3]) {
   new Float:move[4][3] = {
     { 1.0, 1.0, 0.0 },
     { 1.0, -1.0, 0.0 },
@@ -1431,7 +1431,7 @@ bool:yt_set_player_position (id, Float:origin[3], const Float:angles[3], const F
     candidate[1] = base[1] - mins[1] * move[attempt][1];
     candidate[2] = base[2];
 
-    if (yt_is_free_space (candidate, hull, skip)) {
+    if (is_free_space (candidate, hull, skip)) {
       if (hull == HULL_HEAD) {
         set_entvar (id, var_flags, get_entvar (id, var_flags) | FL_DUCKING);
         set_entvar (id, var_button, get_entvar (id, var_button) | IN_DUCK);
@@ -1453,13 +1453,13 @@ bool:yt_set_player_position (id, Float:origin[3], const Float:angles[3], const F
   return false;
 }
 
-bool:yt_is_free_space (const Float:origin[3], hull, skip) {
+bool:is_free_space (const Float:origin[3], hull, skip) {
   engfunc (EngFunc_TraceHull, origin, origin, DONT_IGNORE_MONSTERS, hull, skip, 0);
 
   return bool:(!get_tr2 (0, TR_StartSolid) && !get_tr2 (0, TR_AllSolid) && get_tr2 (0, TR_InOpen));
 }
 
-yt_random_teammate (team) {
+random_teammate (team) {
   new players[32], count;
   new candidates[32], found;
 
@@ -1486,7 +1486,7 @@ yt_random_teammate (team) {
   return candidates[found > 1 ? random (found) : 0];
 }
 
-yt_announce_takeover (id, bot) {
+announce_takeover (id, bot) {
   new players[32], count;
   new name[32], bot_name[32];
 
@@ -1503,7 +1503,7 @@ yt_announce_takeover (id, bot) {
   }
 }
 
-yt_send_scenario_icon (id, const sprite[], status, alpha) {
+send_scenario_icon (id, const sprite[], status, alpha) {
   static msg_id;
 
   if (msg_id <= 0 && (msg_id = get_user_msgid ("Scenario")) <= 0) {
@@ -1517,7 +1517,7 @@ yt_send_scenario_icon (id, const sprite[], status, alpha) {
   message_end ();
 }
 
-yt_log_takeover (const format[], any:...) {
+log_takeover (const format[], any:...) {
   if (!g_log) {
     return;
   }
