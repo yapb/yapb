@@ -94,6 +94,15 @@ TEST_CASE ("unit/module_api") {
   CHECK (GetBotAPI (kBotModuleVersion + 1) == nullptr); // newer minor rejected
   CHECK (GetBotAPI ((IBotModule::ApiMajor (kBotModuleVersion) + 1) << 16) == nullptr); // newer major rejected
 
+  // ...chat is exposed through the same interface object...
+  IBotChatAPI *chat = api->GetChatAPI ();
+  HOST_REQUIRE (chat != nullptr);
+  CHECK (chat->GetBotChatMode (99) == BotChatMode::Invalid);
+  CHECK (chat->GetBotChatMode (0) == BotChatMode::Invalid);
+  CHECK (!chat->SetBotChatMode (99, BotChatMode::Off));
+  CHECK (!chat->SendBotChat (99, "hello", false, false));
+  CHECK (!chat->SendBotChat (1, nullptr, false, false));
+
   // ...no bots, no graph answers beyond the static ones...
   CHECK (!api->IsBotsInGame ());
   CHECK (!api->IsBot (1));
@@ -152,6 +161,15 @@ TEST_CASE ("unit/module_api") {
   CHECK (api->GetBotLastEnemyOrigin (slot) != nullptr);
   CHECK (api->GetBotWeapon (slot) >= 0);
   CHECK (api->GetBotTask (slot) >= 0);
+
+  // ...the chat extension addresses the same bot slots...
+  CHECK (chat->GetBotChatMode (slot) == BotChatMode::Auto);
+  CHECK (chat->SetBotChatMode (slot, BotChatMode::Manual));
+  CHECK (chat->GetBotChatMode (slot) == BotChatMode::Manual);
+  CHECK (!chat->SetBotChatMode (slot, BotChatMode::Invalid));
+  CHECK (chat->SetBotChatMode (slot, BotChatMode::Auto));
+  CHECK (chat->SendBotChat (slot, "module", false, true));
+
   CHECK (api->SetBotDifficulty (slot, static_cast<int> (Difficulty::Hard)));
   CHECK (!api->SetBotDifficulty (slot, 99));
   CHECK (!api->SetBotDifficulty (99, static_cast<int> (Difficulty::Hard)));
