@@ -358,12 +358,15 @@ TEST_CASE ("unit/engine_entities") {
   CHECK (!game.IsBreakableEntity (unseeded, false));
   CHECK (!game.IsBreakableValid (unseeded));
 
-  // ... and the attribute matrix on the seeding path
+  // ... zero health is a valid one-hit breakable, negative is already broken
   edict_t *dead = engine.SpawnEntity ("func_breakable");
   HOST_REQUIRE (dead != nullptr);
   dead->v.health = 0.0f;
   dead->v.takedamage = DAMAGE_YES;
   dead->v.movetype = MOVETYPE_PUSH;
+  CHECK (game.IsBreakableEntity (dead, true));
+
+  dead->v.health = -1.0f;
   CHECK (!game.IsBreakableEntity (dead, true));
 
   edict_t *tanky = engine.SpawnEntity ("func_breakable");

@@ -1603,8 +1603,8 @@ bool BreakableRegistry::IsBreakable (edict_t *ent, bool initial_seed) const {
     return false;
   }
 
-  // not shoot-able
-  if (ent->v.health < 1.0f || ent->v.health >= limit) {
+  // not shoot-able; zero health is a valid one-hit breakable in goldsrc
+  if (ent->v.health < 0.0f || ent->v.health >= limit) {
     return false;
   }
   constexpr auto kFuncBreakable = ystl::StringRef::fnv1a32 ("func_breakable");
