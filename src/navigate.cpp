@@ -655,7 +655,7 @@ void Bot::IgnoreCollision () {
   check_terrain_ = false;
 }
 
-void Bot::DoPlayerAvoidance (const ystl::Vector &normal) {
+void Bot::DoPlayerAvoidance (const ystl::Vector &) {
   avoid_in_narrow_ = false;
 
   if (IsOnLadder () || pev->solid == SOLID_NOT || cv_has_team_semiclip || game.Is (GameFlags::FreeForAll) || HasUninterruptibleTask ()) {
@@ -819,10 +819,20 @@ void Bot::DoPlayerAvoidance (const ystl::Vector &normal) {
       return tr.fraction < 1.0f;
     };
 
-    const bool in_narrow = IsOnFloor () && side_blocked (-right) && side_blocked (right);
+    const bool on_floor = IsOnFloor ();
+    const bool blocked_left = on_floor && side_blocked (-right);
+    const bool blocked_right = on_floor && side_blocked (right);
+    const bool in_narrow = blocked_left && blocked_right;
     const auto to_hindrance = hindrance_->v.origin - pev->origin;
     const bool hindrance_ahead = (to_hindrance.get2d () | forward.get2d ()) > 0.0f || distance_sq <= ystl::sqrf (8.0f);
     avoid_in_narrow_ = in_narrow;
+
+    auto clear_side = [&] () -> float {
+      if (blocked_right) {
+        return blocked_left ? 0.0f : -pev->maxspeed;
+      }
+      return pev->maxspeed;
+    };
 
     if (in_narrow) {
       const bool head_on = (hindrance_->v.velocity.get2d () | forward.get2d ()) < -10.0f;
@@ -848,7 +858,7 @@ void Bot::DoPlayerAvoidance (const ystl::Vector &normal) {
     else {
       // if we already committed to an avoidance direction, keep it until commitment expires
       if (!avoid_commit_timer_.elapsed ()) {
-        SetStrafeSpeed (normal, avoid_strafe_dir_);
+        strafe_speed_ = avoid_strafe_dir_;
       }
       else {
         if (!dir.empty ()) {
@@ -856,20 +866,24 @@ void Bot::DoPlayerAvoidance (const ystl::Vector &normal) {
 
           // dead-zone to prevent direction flipping when hindrance is nearly straight ahead
           if (ystl::abs (dot_right) > 0.1f) {
-            avoid_strafe_dir_ = dot_right > 0.0f ? pev->maxspeed : -pev->maxspeed;
+            float desired = dot_right > 0.0f ? pev->maxspeed : -pev->maxspeed;
+
+            // do not commit into a nearby wall, take the clear side instead
+            if ((desired > 0.0f && blocked_right) || (desired < 0.0f && blocked_left)) {
+              desired = clear_side ();
+            }
+            avoid_strafe_dir_ = desired;
           }
           else if (ystl::fzero (avoid_strafe_dir_)) {
-            avoid_strafe_dir_ = pev->maxspeed;
+            avoid_strafe_dir_ = clear_side ();
           }
         }
-        else {
-          if (ystl::fzero (avoid_strafe_dir_)) {
-            avoid_strafe_dir_ = pev->maxspeed;
-          }
+        else if (ystl::fzero (avoid_strafe_dir_)) {
+          avoid_strafe_dir_ = clear_side ();
         }
 
         avoid_commit_timer_.start (0.4f);
-        SetStrafeSpeed (normal, avoid_strafe_dir_);
+        strafe_speed_ = avoid_strafe_dir_;
       }
 
       // only back off if hindrance is approaching us (closing distance), not just moving
@@ -1226,11 +1240,11 @@ void Bot::ExecuteCollisionResponse () {
     break;
 
   case CollisionState::StrafeLeft:
-    SetStrafeSpeedRaw (-pev->maxspeed);
+    strafe_speed_ = -pev->maxspeed;
     break;
 
   case CollisionState::StrafeRight:
-    SetStrafeSpeedRaw (pev->maxspeed);
+    strafe_speed_ = pev->maxspeed;
     break;
 
   default:
@@ -1283,10 +1297,10 @@ void Bot::CheckTerrain (const ystl::Vector &dir_normal) {
         pev->button |= IN_DUCK;
       }
       else if (state == CollisionState::StrafeLeft) {
-        SetStrafeSpeedRaw (-pev->maxspeed);
+        strafe_speed_ = -pev->maxspeed;
       }
       else if (state == CollisionState::StrafeRight) {
-        SetStrafeSpeedRaw (pev->maxspeed);
+        strafe_speed_ = pev->maxspeed;
       }
     }
     return;
@@ -1315,6 +1329,19 @@ void Bot::CheckTerrain (const ystl::Vector &dir_normal) {
       // extract sorted states (only the 4 collision response states, skipping state machine states)
       for (int j = 0; j < kNumCollisionResponses; ++j) {
         collide_moves_[j] = weights[j].state;
+      }
+
+      // probing both strafe directions in a row makes the bot shake, keep only the better one
+      bool has_strafe = false;
+      for (int j = 0; j < kNumCollisionResponses; ++j) {
+        if (collide_moves_[j] == CollisionState::StrafeLeft || collide_moves_[j] == CollisionState::StrafeRight) {
+          if (!has_strafe) {
+            has_strafe = true;
+          }
+          else {
+            collide_moves_[j] = CollisionState::Undecided;
+          }
+        }
       }
 
       // adaptive probe time based on weight confidence
@@ -4161,7 +4188,7 @@ int Bot::FindAimingNode (const ystl::Vector &to, int &path_length) {
   return ctx.best_index;
 }
 
-void Bot::SetStrafeSpeedRaw (float strafe_speed) {
+void Bot::SetStrafeSpeedRaw (float strafe_speed, bool allow_flip) {
   constexpr float kWallCheckDistance = 64.0f;
 
   if (ystl::fequal (strafe_speed, 0.0f)) {
@@ -4174,7 +4201,7 @@ void Bot::SetStrafeSpeedRaw (float strafe_speed) {
     if (!CheckWallOnRight (kWallCheckDistance)) {
       final_speed = strafe_speed;
     }
-    else if (!CheckWallOnLeft (kWallCheckDistance)) {
+    else if (allow_flip && !CheckWallOnLeft (kWallCheckDistance)) {
       final_speed = -strafe_speed;
     }
   }
@@ -4182,7 +4209,7 @@ void Bot::SetStrafeSpeedRaw (float strafe_speed) {
     if (!CheckWallOnLeft (kWallCheckDistance)) {
       final_speed = strafe_speed;
     }
-    else if (!CheckWallOnRight (kWallCheckDistance)) {
+    else if (allow_flip && !CheckWallOnRight (kWallCheckDistance)) {
       final_speed = -strafe_speed;
     }
   }
@@ -4282,7 +4309,7 @@ bool Bot::IsOccupiedNode (int index, bool need_zero_velocity) {
   return false;
 }
 
-edict_t *Bot::LookupButton (ystl::StringRef target, bool blind_test) {
+edict_t *Bot::LookupButton (ystl::StringRef target, bool blind_test, bool buttons_only) {
   // find nearest button for given target and return its entity
 
   if (target.empty ()) {
