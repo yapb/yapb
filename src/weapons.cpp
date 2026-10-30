@@ -1455,6 +1455,11 @@ bool Bot::ValidateExistingPickup (const ystl::Array<InterestingEntity> &interest
   }
   auto pickup_item = pickup_item_;
 
+  // door and lift triggers open on touch and are not in the interesting sweep
+  if (pickup_type_ == Pickup::Button && pickup_item->v.classname.str ().starts_with ("trigger_")) {
+    return true;
+  }
+
   for (const auto &item : interesting) {
     const auto ent = item.ent;
 

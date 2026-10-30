@@ -898,6 +898,56 @@ bool Bot::DetectStuckStatus (const ystl::Vector &dir_normal) {
     return false;
   }
 
+  // check for ladder path
+  const bool is_on_ladder_path = has_flag (path_flags_, NodeFlag::Ladder) && IsPreviousLadder ();
+  const bool can_probe_blocker = !is_on_ladder_path && !IsOnLadder ();
+  edict_t *blocker = nullptr;
+
+  // test if there's something ahead blocking the way before the generic stuck checks
+  if (can_probe_blocker) {
+    blocker = IsBlockedForward (dir_normal, true);
+
+    // if blocked by a breakable, schedule shooting instead of stuck
+    if (blocker != nullptr && game.IsBreakableEntity (blocker) && IsBreakableAllowed ()) {
+      ForgetIgnoredBreakable (blocker);
+
+      if (breakable_entity_ != blocker) {
+        breakable_shoot_timer_.invalidate ();
+      }
+      breakable_entity_ = blocker;
+      breakable_origin_ = game.GetEntityOrigin (blocker);
+      StartTask (TaskId::ShootBreakable, TaskPri::kShootBreakable, kInvalidNodeIndex, 0.0f, false);
+      first_collide_timer_.invalidate ();
+      return false;
+    }
+
+    // if blocked by a door, use its linked button or toggle it directly
+    if (blocker != nullptr && game.IsDoorEntity (blocker) && button_push_timer_.elapsed ()) {
+      if (!ystl::strings.is_empty (blocker->v.targetname.chars ())) {
+        auto button = LookupButton (blocker->v.targetname.chars (), false, true);
+
+        if (!game.IsNullEntity (button)) {
+          pickup_item_ = button;
+          pickup_type_ = Pickup::Button;
+          nav_timer_.start ();
+
+          first_collide_timer_.invalidate ();
+          return false;
+        }
+      }
+      if (game.Is (GameFlags::Xash3D)) {
+        pev->button |= IN_USE;
+      }
+      else {
+        MDLL_Use (blocker, Ent ());
+      }
+      button_push_timer_.start (1.5f);
+      door_hit_timer_.start (1.5f);
+      first_collide_timer_.invalidate ();
+      return false;
+    }
+  }
+
   // check if moved enough previously
   if (moved_distance_ < kMinMovedDistance && prev_speed_ > 20.0f) {
     prev_timer_.start (0.0f);
@@ -928,25 +978,7 @@ bool Bot::DetectStuckStatus (const ystl::Vector &dir_normal) {
     stuck_accumulated_time_ = 0.0f;
   }
 
-  // check for ladder path
-  bool is_on_ladder_path = has_flag (path_flags_, NodeFlag::Ladder) && IsPreviousLadder ();
-
-  // test if there's something ahead blocking the way
-  if (!is_on_ladder_path && !IsOnLadder ()) {
-    auto blocker = IsBlockedForward (dir_normal);
-    const bool has_visible_enemy = !game.IsNullEntity (enemy_) && has_flag (states_, Sense::SeeingEnemy);
-
-    // if blocked by a breakable, schedule shooting instead of stuck
-    if (blocker != nullptr && !has_visible_enemy && game.IsBreakableEntity (blocker) && IsBreakableAllowed ()) {
-      ForgetIgnoredBreakable (blocker);
-
-      breakable_entity_ = blocker;
-      breakable_origin_ = game.GetEntityOrigin (blocker);
-      StartTask (TaskId::ShootBreakable, TaskPri::kShootBreakable, kInvalidNodeIndex, 0.0f, false);
-      first_collide_timer_.invalidate ();
-      return false;
-    }
-
+  if (can_probe_blocker) {
     if (blocker != nullptr) {
       if (!first_collide_timer_.started ()) {
         first_collide_timer_.start (0.2f);
@@ -1728,7 +1760,7 @@ bool Bot::UpdateNavigation () {
         bool should_use_button = false;
 
         if (!ystl::strings.is_empty (tr.hit->v.targetname.chars ()) && button_push_timer_.elapsed ()) {
-          auto button = LookupButton (tr.hit->v.targetname.chars (), true);
+          auto button = LookupButton (tr.hit->v.targetname.chars (), false, true);
 
           // if button exists and is close enough, use it instead of opening the door directly
           if (!game.IsNullEntity (button)) {
@@ -1744,8 +1776,8 @@ bool Bot::UpdateNavigation () {
           }
         }
 
-        // only 'use' the door directly if there's no nearby button to press
-        if (!should_use_button && button_push_timer_.elapsed () && rg.chance (50)) {
+        // only 'use' the door directly if there's no nearby real button to press
+        if (!should_use_button && button_push_timer_.elapsed ()) {
           // do not use door directly under xash, or we will get failed assert in gamedll code
           if (game.Is (GameFlags::Xash3D)) {
             pev->button |= IN_USE;
@@ -3682,7 +3714,7 @@ void Bot::SetPathOrigin () {
   }
 }
 
-edict_t *Bot::IsBlockedForward (const ystl::Vector &normal) {
+edict_t *Bot::IsBlockedForward (const ystl::Vector &normal, bool include_doors) {
   // checks if bot is blocked in its movement direction (excluding doors and teammates/hostages)
 
   constexpr float kTraceDistance = 24.0f;
@@ -3706,8 +3738,8 @@ edict_t *Bot::IsBlockedForward (const ystl::Vector &normal) {
   }
 
   // check if entity is a real blockage (not door, not hostage)
-  auto is_blocked = [this] (const Trace::Result &result) -> bool {
-    return result.fraction < 1.0f && !(game.MapIs (MapFlags::HasDoors) && game.IsDoorEntity (result.hit)) &&
+  auto is_blocked = [this, include_doors] (const Trace::Result &result) -> bool {
+    return result.fraction < 1.0f && (include_doors || !(game.MapIs (MapFlags::HasDoors) && game.IsDoorEntity (result.hit))) &&
            !(team_ == Team::CT && game.IsHostageEntity (result.hit));
   };
 
@@ -4263,10 +4295,13 @@ edict_t *Bot::LookupButton (ystl::StringRef target, bool blind_test) {
 
   // find the nearest button which can open our target
   game.SearchEntities ("target", target, [&] (edict_t *ent) {
+    if (buttons_only && ent->v.classname.str ().starts_with ("trigger_")) {
+      return EntitySearchResult::Continue;
+    }
     const ystl::Vector pos = game.GetEntityOrigin (ent);
 
     if (!blind_test) {
-      trace.Line (pev->origin, pos, TraceIgnore::Monsters, this->Ent (), &tr);
+      trace.Line (GetEyesPos (), pos, TraceIgnore::Monsters, this->Ent (), &tr);
     }
 
     // check if this place safe

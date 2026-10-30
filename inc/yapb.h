@@ -454,7 +454,7 @@ private:
   bool CanJumpUp (const ystl::Vector &normal);
 
   // check if forward movement is blocked (returns blocking entity or nullptr)
-  edict_t *IsBlockedForward (const ystl::Vector &normal);
+  edict_t *IsBlockedForward (const ystl::Vector &normal, bool include_doors = false);
 
   // check if left strafe movement is possible
   bool CanStrafeLeft (Trace::Result *tr);
@@ -564,7 +564,7 @@ private:
   void IgnoreCollision ();
 
   // set raw strafe speed value
-  void SetStrafeSpeedRaw (float strafe_speed);
+  void SetStrafeSpeedRaw (float strafe_speed, bool allow_flip = true);
 
   // set strafe speed based on normal
   void SetStrafeSpeed (const ystl::Vector &normal, float strafe_speed);
@@ -588,7 +588,7 @@ private:
   void ResetMovement ();
 
   // lookup button entity by target name
-  edict_t *LookupButton (ystl::StringRef target, bool blind_test = false);
+  edict_t *LookupButton (ystl::StringRef target, bool blind_test = false, bool buttons_only = false);
 
   // check if bot is alive in the bot state machine
   bool IsAlive () const {
@@ -1153,7 +1153,8 @@ public:
   void DropWeaponForUser (edict_t *user, bool discard_c4);
 
   // send message to chat
-  void SendToChat (ystl::StringRef message, bool team_only, BotChatSource source = BotChatSource::Bot, bool force = false, bool from_queue = false);
+  void SendToChat (
+    ystl::StringRef message, bool team_only, BotChatSource source = BotChatSource::Bot, bool force = false, bool from_queue = false);
 
   // send legacy chat message
   void SendToChatLegacy (ystl::StringRef message, bool team_only);

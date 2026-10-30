@@ -1882,6 +1882,20 @@ TEST_CASE ("unit/tasks_flame") {
   TasksHook::Execute (*bot);
   CHECK (bot->pickup_item_ == nullptr || bot->GetTaskId () != TaskId::PickupItem);
 
+  // ...touch triggers open doors without +use...
+  edict_t *trigger = engine.SpawnEntity ("trigger_multiple");
+  HOST_REQUIRE (trigger != nullptr);
+  trigger->v.absmin = ystl::Vector (90.0f, -8.0f, -8.0f);
+  trigger->v.absmax = ystl::Vector (120.0f, 8.0f, 8.0f);
+  trigger->v.size = trigger->v.absmax - trigger->v.absmin;
+  bot->pickup_item_ = trigger;
+  bot->pickup_type_ = Pickup::Button;
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::PickupItem, 50.0f, kInvalidNodeIndex, 0.0f, true);
+  TasksHook::Execute (*bot);
+  CHECK (bot->pickup_item_ == nullptr);
+  CHECK (bot->GetTaskId () != TaskId::PickupItem);
+
   bots.Destroy ();
 }
 

@@ -1198,16 +1198,47 @@ TEST_CASE ("unit/navigate_move") {
   CHECK (!NavigateHook::StuckStatus (*bot, forward));
   CHECK (bot->Task ()->id == TaskId::ShootBreakable);
 
-  // a visible enemy outranks a blocked breakable
+  // ...and an accidental bump beats the generic no-progress stuck check
+  bot->ClearTasks ();
+  NavigateHook::SetMoveSpeed (*bot, 100.0f);
+  NavigateHook::SetMovedDistance (*bot, 0.0f);
+  NavigateHook::SetPrevSpeed (*bot, 100.0f);
+  CHECK (!NavigateHook::StuckStatus (*bot, forward));
+  CHECK (bot->GetTaskId () == TaskId::ShootBreakable);
+
+  // a path-blocking breakable still outranks a visible enemy
   bot->ClearTasks ();
   NavigateHook::SetEnemy (*bot, enemy);
   NavigateHook::SetStates (*bot, Sense::SeeingEnemy);
   NavigateHook::SetMoveSpeed (*bot, 0.0f);
   NavigateHook::SetMovedDistance (*bot, 1000.0f);
   CHECK (!NavigateHook::StuckStatus (*bot, forward));
-  CHECK (bot->GetTaskId () != TaskId::ShootBreakable);
+  CHECK (bot->GetTaskId () == TaskId::ShootBreakable);
   NavigateHook::SetEnemy (*bot, nullptr);
   NavigateHook::SetStates (*bot, Sense::Invalid);
+
+  // ...and an accidental door bump toggles the door instead of latching stuck
+  bot->ClearTasks ();
+  engine.SetTraceLineHook ([&] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    out->flFraction = 0.5f;
+    out->pHit = door;
+  });
+  engine.SetTraceHullHook ([&] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    out->flFraction = 0.5f;
+    out->pHit = door;
+  });
+  NavigateHook::SetMoveSpeed (*bot, 100.0f);
+  NavigateHook::SetMovedDistance (*bot, 0.0f);
+  NavigateHook::SetPrevSpeed (*bot, 100.0f);
+  cs.reset ();
+  CHECK (!NavigateHook::StuckStatus (*bot, forward));
+  CHECK (cs.HasCall ("Use"));
 
   engine.SetTraceLineHook (nullptr);
   engine.SetTraceHullHook (nullptr);

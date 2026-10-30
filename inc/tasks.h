@@ -44,6 +44,7 @@ constexpr auto kCamp { 37.0f };
 constexpr auto kSpraypaint { 38.0f };
 constexpr auto kFollowUser { 39.0f };
 constexpr auto kMoveTo { 50.0f };
+constexpr auto kButton { 51.0f };
 constexpr auto kDefuseBomb { 88.0f };
 constexpr auto kPlantBomb { 89.0f };
 constexpr auto kAttack { 90.0f };

@@ -51,7 +51,7 @@ void Bot::FilterTasks () {
     states_ |= Sense::PickupItem;
 
     if (pickup_type_ == Pickup::Button) {
-      pickup.desire = 50.0f; // always pickup button
+      pickup.desire = TaskPri::kButton; // always pickup button, even while moving
     }
     else {
       pickup.desire = ystl::max (50.0f, 500.0f - pev->origin.distance (game.GetEntityOrigin (pickup_item_)) * 0.2f);
@@ -2189,6 +2189,19 @@ void Bot::TaskPickupItem () {
 
       break;
     }
+
+    // triggers open doors and lifts on touch, MDLL_Use does nothing for them
+    if (pickup_item_->v.classname.str ().starts_with ("trigger_")) {
+      if (ystl::Vector::bbox_contains_point2_d (pev->origin, pickup_item_->v.absmin, pickup_item_->v.absmax)) {
+        pickup_item_ = nullptr;
+        pickup_type_ = Pickup::None;
+        button_push_timer_.start (3.0f);
+        door_hit_timer_.start (1.5f); // let the door open before moving
+
+        CompleteTask ();
+      }
+      break;
+    }
     float distance_to_button_sq = ystl::sqrf (90.0f);
 
     // reduce on lifts
@@ -2203,20 +2216,14 @@ void Bot::TaskPickupItem () {
       move_to_goal_ = false;
       check_terrain_ = false;
 
-      // find angles from bot origin to entity
-      const float angle_to_entity = IsInFov (dest - GetEyesPos ());
+      MDLL_Use (pickup_item_, Ent ());
 
-      // facing it directly?
-      if (angle_to_entity <= 10.0f) {
-        MDLL_Use (pickup_item_, Ent ());
+      pickup_item_ = nullptr;
+      pickup_type_ = Pickup::None;
+      button_push_timer_.start (3.0f);
+      door_hit_timer_.start (1.5f); // let the door open before moving
 
-        pickup_item_ = nullptr;
-        pickup_type_ = Pickup::None;
-        button_push_timer_.start (3.0f);
-        door_hit_timer_.start (1.5f); // let the door open before moving
-
-        CompleteTask ();
-      }
+      CompleteTask ();
     }
     break;
   }
