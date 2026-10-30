@@ -213,6 +213,7 @@ public plugin_init () {
 
   g_spawn_hook = RegisterHookChain (RG_CSGameRules_GetPlayerSpawnSpot, "on_spawn_spot", .post = false);
   DisableHookChain (g_spawn_hook);
+  RegisterHam (Ham_Spawn, "player", "on_player_spawn_post", 1);
 
   if (rg_find_ent_by_class (NULLENT, "player_weaponstrip", true) > 0) {
     g_strip_hook = RegisterHam (Ham_Use, "player_weaponstrip", "on_weaponstrip", .Post = false);
@@ -262,7 +263,17 @@ public client_putinserver (id) {
 }
 
 public yb_bot_spawned (index) {
-  restore_bot_simulation (index);
+  if (!has_state(index, PF_SIM_OFF)) {
+    return;
+  }
+  set_task (0.5, "restore_bot_simulation_task", index);
+}
+
+public on_player_spawn_post (index) {
+  if (!has_state(index, PF_SIM_OFF)) {
+    return;
+  }
+  set_task (0.5, "restore_bot_simulation_task", index);
 }
 
 public yb_bot_removed (index, bool:kicked) {
@@ -456,8 +467,12 @@ public on_restart_post () {
       continue;
     }
 
-    restore_bot_simulation (id);
+    set_task (1.0, "restore_bot_simulation_task", id);
   }
+}
+
+public restore_bot_simulation_task (bot) {
+  restore_bot_simulation (bot);
 }
 
 public on_player_killed (const victim, const killer, const inflictor) {
@@ -950,7 +965,8 @@ restore_bot_simulation (bot) {
     return;
   }
 
-  if (yb_is_bot_stale (bot)) {
+  if (!is_user_alive (bot) || Float:get_entvar (bot, var_health) <= 0.0 ||
+      yb_is_bot_stale (bot) || !yb_is_bot_alive (bot)) {
     return;
   }
 
