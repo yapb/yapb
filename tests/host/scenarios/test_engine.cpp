@@ -217,6 +217,13 @@ TEST_CASE ("unit/engine_entities") {
   seeded->v.takedamage = DAMAGE_YES;
   seeded->v.movetype = MOVETYPE_PUSH;
 
+  // material 7 is unbreakable glass, the keyvalue must survive the seed pass
+  edict_t *glass = engine.SpawnEntity ("func_breakable");
+  HOST_REQUIRE (glass != nullptr);
+  glass->v.health = 5.0f;
+  glass->v.takedamage = DAMAGE_YES;
+  glass->v.movetype = MOVETYPE_PUSH;
+
   testhost::FakeCSApi cs {};
   HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
   cs.reset ();
@@ -224,16 +231,30 @@ TEST_CASE ("unit/engine_entities") {
   GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
   HOST_REQUIRE (cs.entered () != 0);
 
+  // the engine places worldspawn first and spawns it before other entities
+  game.OnSpawnEntity (engine.EdictList ());
+
   gamefuncs_t table {};
   HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
 
   game.Precache ();
+
+  KeyValueData kvd {};
+  kvd.szClassName = "func_breakable";
+  kvd.szKeyName = "material";
+  char material[8] = { '7', 0 };
+  kvd.szValue = material;
+  table.pfnKeyValue (glass, &kvd);
+  CHECK (!game.IsBreakableValid (glass));
+
   table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
 
   CHECK (game.MapIs (MapFlags::Demolition));
   CHECK (game.MapIs (MapFlags::Assassination));
   CHECK (game.HasBreakables ());
   CHECK (game.IsBreakableValid (seeded));
+  CHECK (!game.IsBreakableValid (glass));
+  CHECK (!game.IsBreakableEntity (glass, false));
 
   // aliveness: deadflag, health and noclip all disqualify
   edict_t *player = engine.SpawnClient ("Alive");
@@ -366,6 +387,14 @@ TEST_CASE ("unit/engine_entities") {
   walker->v.takedamage = DAMAGE_YES;
   walker->v.movetype = MOVETYPE_WALK;
   CHECK (!game.IsBreakableEntity (walker, true));
+
+  edict_t *nonsolid = engine.SpawnEntity ("func_breakable");
+  HOST_REQUIRE (nonsolid != nullptr);
+  nonsolid->v.health = 50.0f;
+  nonsolid->v.takedamage = DAMAGE_YES;
+  nonsolid->v.movetype = MOVETYPE_PUSH;
+  nonsolid->v.solid = SOLID_NOT;
+  CHECK (!game.IsBreakableEntity (nonsolid, true));
 
   edict_t *wall = engine.SpawnEntity ("func_wall");
   HOST_REQUIRE (wall != nullptr);

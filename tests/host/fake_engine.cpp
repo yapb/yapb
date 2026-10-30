@@ -433,6 +433,14 @@ edict_t *FakeEngine::SpawnEntity (const char *classname, const float *origin) {
   }
   e->v.classname = string_t (AllocString (classname));
 
+  // brush entities are solid in the real engine; traces and breakable tests rely on it
+  if (strcmp (classname, "func_breakable") == 0 || strcmp (classname, "func_wall") == 0) {
+    e->v.solid = SOLID_BSP;
+  }
+  else if (strcmp (classname, "func_pushable") == 0) {
+    e->v.solid = SOLID_BBOX;
+  }
+
   if (origin) {
     e->v.origin.x = origin[0];
     e->v.origin.y = origin[1];

@@ -54,10 +54,8 @@ void Game::LevelInitialize (edict_t *entities, int max) {
   // startup threaded worker
   worker.Startup (cv_threadpool_workers.As<int> ());
 
-  // clear breakable validity before initialization (slots recycle across maps)
-  checked_breakables_.zap ();
-  checked_breakables_.reserve (128);
-  game_state.SetHasBreakables (false);
+  // start a fresh breakable seed pass, keyvalue exclusions stay until consumed
+  breakables.BeginSeed ();
 
   // initialize all config files
   conf.LoadConfigs ();
@@ -143,15 +141,11 @@ void Game::LevelInitialize (edict_t *entities, int max) {
     else if (classname.starts_with ("func_button")) {
       map_flags_ |= MapFlags::HasButtons;
     }
-    else if (IsBreakableEntity (ent, true)) {
-
-      // seed validity, absence means excluded (impulse gate or spawn hook below)
-      if (ent->v.impulse <= 0) {
-        checked_breakables_.insert (IndexOfEntity (ent));
-      }
-      game_state.SetHasBreakables (true);
+    else {
+      breakables.Seed (ent);
     }
   }
+  breakables.EndSeed ();
 
   // next maps doesn't have map-specific entities, so determine it by name
   if (!cv_ignore_map_prefix_game_mode) {
@@ -240,6 +234,9 @@ void Game::LevelShutdown () {
 
   // disable command handling
   ctrl.SetDenyCommands (true);
+
+  // drop breakable state after workers stop, edicts are going away
+  breakables.Reset ();
 
   // reset spawn counts
   ystl::fill (spawn_count_, 0);
@@ -1423,7 +1420,7 @@ edict_t *Game::CreateFakeClient (ystl::StringRef name) {
 }
 
 void Game::MarkBreakableAsInvalid (edict_t *ent) {
-  checked_breakables_.erase (IndexOfEntity (ent));
+  breakables.MarkInvalid (ent);
 }
 
 bool Game::IsDeveloperMode () const {
@@ -1520,16 +1517,91 @@ bool Game::IsHostageEntity (edict_t *ent) const {
 }
 
 bool Game::IsBreakableEntity (edict_t *ent, bool initial_seed) const {
-  if (!initial_seed) {
-    if (!HasBreakables ()) {
-      return false;
-    }
+  return breakables.IsBreakable (ent, initial_seed);
+}
+
+bool Game::HasBreakables () const {
+  return breakables.HasAny ();
+}
+
+bool Game::IsBreakableValid (edict_t *ent) const {
+  return breakables.IsValid (ent);
+}
+
+void BreakableRegistry::Reset () {
+  valid_.clear ();
+  invalid_.clear ();
+  has_any_ = false;
+}
+
+void BreakableRegistry::BeginSeed () {
+  valid_.clear ();
+  valid_.reserve (128);
+  has_any_ = false;
+}
+
+void BreakableRegistry::EndSeed () {
+  invalid_.clear ();
+}
+
+void BreakableRegistry::Seed (edict_t *ent) {
+  if (!IsBreakable (ent, true)) {
+    return;
+  }
+  const auto index = game.IndexOfEntity (ent);
+
+  // keyvalue exclusions are collected before the level seed pass
+  if (invalid_.contains (index)) {
+    return;
+  }
+  valid_.insert (index);
+  has_any_ = true;
+}
+
+void BreakableRegistry::OnKeyValue (edict_t *ent, const KeyValueData *kvd) {
+  if (game.IsNullEntity (ent) || kvd == nullptr || kvd->szKeyName == nullptr || kvd->szValue == nullptr) {
+    return;
+  }
+  if (ystl::StringRef (ent->v.classname.chars ()) != "func_breakable") {
+    return;
   }
 
-  if (IsNullEntity (ent) || ent == GetStartEntity () || (!initial_seed && !game.IsBreakableValid (ent))) {
+  // unbreakable glass and similar materials never become shootable
+  if (ystl::StringRef (kvd->szKeyName) == "material" && atoi (kvd->szValue) == 7) {
+    MarkInvalid (ent);
+  }
+}
+
+void BreakableRegistry::MarkInvalid (edict_t *ent) {
+  if (game.IsNullEntity (ent)) {
+    return;
+  }
+  const auto index = game.IndexOfEntity (ent);
+
+  valid_.erase (index);
+  invalid_.insert (index);
+}
+
+bool BreakableRegistry::IsValid (edict_t *ent) const {
+  if (game.IsNullEntity (ent)) {
+    return false;
+  }
+  return valid_.contains (game.IndexOfEntity (ent));
+}
+
+bool BreakableRegistry::IsBreakable (edict_t *ent, bool initial_seed) const {
+  if (!initial_seed && !HasAny ()) {
+    return false;
+  }
+  if (game.IsNullEntity (ent) || ent == game.GetStartEntity () || (!initial_seed && !IsValid (ent))) {
     return false;
   }
   const auto limit = cv_breakable_health_limit.As<float> ();
+
+  // non-solid brushes neither block movement nor attract fire
+  if (ent->v.solid == SOLID_NOT) {
+    return false;
+  }
 
   // not shoot-able
   if (ent->v.health < 1.0f || ent->v.health >= limit) {
@@ -1547,10 +1619,6 @@ bool Game::IsBreakableEntity (edict_t *ent, bool initial_seed) const {
     }
   }
   return false;
-}
-
-bool Game::HasBreakables () const {
-  return game_state.HasBreakables ();
 }
 
 bool Game::IsFakeClientEntity (edict_t *ent) const {
@@ -2032,7 +2100,8 @@ void GameState::UpdateInterestingEntities () {
     return;
   }
   interesting_entities_.clear (); // clear previously stored entities
-  has_breakables_ = false;
+
+  bool has_breakables = false;
 
   // search the map for interesting entities, kind is fixed here so consumers compare enums
   game.SearchEntities (nullptr, kInfiniteDistance, [&] (edict_t *e) {
@@ -2066,12 +2135,13 @@ void GameState::UpdateInterestingEntities () {
     // and they qualify only when the validity map allows them (seeded at load or spawn hook)
     if (game.IsBreakableEntity (e, true) && game.IsBreakableValid (e)) {
       interesting_entities_.push (InterestingEntity { e, EntityKind::Breakable });
-      has_breakables_ = true;
+      has_breakables = true;
     }
 
     // continue iteration
     return EntitySearchResult::Continue;
   });
+  breakables.SetHasAny (has_breakables);
   interesting_entities_update_time_.start ();
 }
 

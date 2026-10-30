@@ -424,13 +424,7 @@ YSTL_EXPORT int GetEntityAPI (gamefuncs_t *table, int interface_version) {
     // would all have the dull "models/player.mdl" one). The entity for which the keyvalue data
     // pointer is requested is pentKeyvalue, the pointer to the keyvalue data structure pkvd
 
-    if (!bot::game.IsNullEntity (ent) && ystl::StringRef (ent->v.classname.chars ()) == "func_breakable") {
-      if (kvd && kvd->szKeyName && ystl::StringRef (kvd->szKeyName) == "material") {
-        if (kvd->szValue && atoi (kvd->szValue) == 7) {
-          bot::game.MarkBreakableAsInvalid (ent);
-        }
-      }
-    }
+    bot::breakables.OnKeyValue (ent, kvd);
 
     if (bot::game.Is (bot::GameFlags::Metamod)) {
       RETURN_META (MRES_IGNORED);

@@ -183,8 +183,6 @@ private:
   edict_t *start_entity_ {};
   edict_t *local_entity_ {};
 
-  ystl::HashSet<int32_t> checked_breakables_ {};
-
   ystl::SharedLibrary game_lib_ {};
   ystl::SharedLibrary engine_lib_ {};
   EngineWrap engine_wrap_ {};
@@ -469,14 +467,11 @@ public:
     return engine_lib_;
   }
 
-  // check if map has breakables (sweep-maintained flag, see GameState)
+  // check if map has breakables
   bool HasBreakables () const;
 
   // is breakable entity is valid ?
-  bool IsBreakableValid (edict_t *ent) {
-    return checked_breakables_.contains (IndexOfEntity (ent));
-    ;
-  }
+  bool IsBreakableValid (edict_t *ent) const;
 
   // find variable value by variable name
   ystl::StringRef FindCvar (ystl::StringRef name) {
@@ -710,8 +705,6 @@ private:
   // frozen smoke detonation points, folded onto the grenade record each sweep
   ystl::HashMap<edict_t *, ystl::Vector, EdictHash> smoke_detonations_ {};
 
-  bool has_breakables_ {}; // set by the sweep below, breakables change rarely
-
   ystl::IntervalTimer interesting_entities_update_time_ {}; // time to update interesting entities
   ystl::IntervalTimer active_grenades_update_time_ {}; // time to update active grenades
 
@@ -788,14 +781,6 @@ public:
     return !interesting_entities_.empty ();
   }
 
-  bool HasBreakables () const {
-    return has_breakables_;
-  }
-
-  void SetHasBreakables (bool has) {
-    has_breakables_ = has;
-  }
-
 public:
   float GetBombTimeLeft () const;
 
@@ -810,9 +795,54 @@ public:
   bool IsEarlyRound (const float timestamp) const;
 };
 
+// owns breakable entity classification, seeding and keyvalue exclusions
+class BreakableRegistry final : public ystl::Singleton<BreakableRegistry> {
+private:
+  ystl::HashSet<int32_t> valid_ {};
+  ystl::HashSet<int32_t> invalid_ {};
+  bool has_any_ {};
+
+public:
+  BreakableRegistry () = default;
+  ~BreakableRegistry () = default;
+
+public:
+  // clears all state at level shutdown
+  void Reset ();
+
+  // starts a fresh seed pass, invalid entries from keyvalues are kept
+  void BeginSeed ();
+
+  // finishes a seed pass, keyvalue exclusions are no longer needed
+  void EndSeed ();
+
+  // classifies and seeds one entity during level initialization
+  void Seed (edict_t *ent);
+
+  // handles material and other keyvalue exclusions before the seed pass
+  void OnKeyValue (edict_t *ent, const KeyValueData *kvd);
+
+  // marks an entity as excluded for the current map
+  void MarkInvalid (edict_t *ent);
+
+  // refreshes the map-wide "has breakables" flag after an entity sweep
+  void SetHasAny (bool has) {
+    has_any_ = has;
+  }
+
+  bool IsValid (edict_t *ent) const;
+  bool HasAny () const {
+    return has_any_;
+  }
+
+  // checks if the entity can be shot and destroyed
+  bool IsBreakable (edict_t *ent, bool initial_seed = false) const;
+};
+
 // expose globals
 YSTL_EXPOSE_GLOBAL_SINGLETON (Game, game);
 YSTL_EXPOSE_GLOBAL_SINGLETON (GameState, game_state);
+YSTL_EXPOSE_GLOBAL_SINGLETON (BreakableRegistry, breakables);
 YSTL_EXPOSE_GLOBAL_SINGLETON (LightMeasure, illum);
 
 } // namespace bot
