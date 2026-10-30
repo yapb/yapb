@@ -1668,11 +1668,11 @@ bool Bot::UpdateNavigation () {
   if (has_flag (path_flags_, NodeFlag::Ladder)) {
     const auto prev_node_index = previous_nodes_[0];
     const auto ladder_distance_sq = pev->origin.distance_sq (path_origin_);
+    const bool approaching_ladder =
+      graph.Exists (prev_node_index) && !has_flag (graph[prev_node_index].flags, NodeFlag::Ladder) && ladder_distance_sq < ystl::sqrf (64.0f);
 
     // do a precise movement when very near
-    if (graph.Exists (prev_node_index) && !has_flag (graph[prev_node_index].flags, NodeFlag::Ladder) &&
-        ladder_distance_sq < ystl::sqrf (64.0f)) {
-
+    if (approaching_ladder) {
       if (!IsDucking ()) {
         move_speed_ = pev->maxspeed * 0.4f;
       }
@@ -1685,10 +1685,10 @@ bool Bot::UpdateNavigation () {
     }
 
     if (!IsOnLadder () && IsOnFloor () && !IsDucking ()) {
-      if (!IsPreviousLadder ()) {
+      if (!approaching_ladder && !IsPreviousLadder ()) {
         move_speed_ = ystl::sqrtf (ladder_distance_sq);
+        move_speed_ = ystl::clamp (move_speed_, 160.0f, pev->maxspeed);
       }
-      move_speed_ = ystl::clamp (move_speed_, 160.0f, pev->maxspeed);
     }
 
     // press jump button if we need to leave the ladder

@@ -115,6 +115,9 @@ struct NavigateHook {
   static void SetMoveSpeed (Bot &bot, float value) {
     bot.move_speed_ = value;
   }
+  static float MoveSpeed (Bot &bot) {
+    return bot.move_speed_;
+  }
   static void SetDestOrigin (Bot &bot, const ystl::Vector &pos) {
     bot.dest_origin_ = pos;
   }
@@ -4932,6 +4935,7 @@ TEST_CASE ("unit/navigate_pinnacle") {
   NavigateHook::SetChosenGoal (*bot, 1);
   bot->StartTask (TaskId::MoveTo, 50.0f, 1, 0.0f, false);
   CHECK (NavigateHook::UpdateNav (*bot));
+  CHECK (ystl::fequal (NavigateHook::MoveSpeed (*bot), bot->pev->maxspeed * 0.4f));
 
   // ...reach distances adapt to flags, links, velocity and debug goals...
   prep_pin (bot, ystl::Vector (200.0f, 0.0f, 0.0f));
