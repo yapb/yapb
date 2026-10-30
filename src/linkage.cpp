@@ -154,14 +154,7 @@ YSTL_EXPORT int GetEntityAPI (gamefuncs_t *table, int interface_version) {
     // the two entities both have velocities, for example two players colliding, this function
     // is called twice, once for each entity moving
 
-    if (bot::game.HasBreakables () && !bot::game.IsNullEntity (pent_touched) && pent_other != bot::game.GetStartEntity ()) {
-
-      auto bot = bot::bots[pent_touched];
-
-      if (bot && bot::game.IsBreakableEntity (pent_other)) {
-        bot->CheckBreakable (pent_other);
-      }
-    }
+    bot::game.OnTouchEntity (pent_touched, pent_other);
 
     if (bot::game.Is (bot::GameFlags::Metamod)) {
       RETURN_META (MRES_IGNORED);

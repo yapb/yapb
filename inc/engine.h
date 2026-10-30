@@ -209,6 +209,9 @@ public:
   // when entity spawns
   void OnSpawnEntity (edict_t *ent);
 
+  // when two entities touch
+  void OnTouchEntity (edict_t *touched, edict_t *other);
+
   // shutdown levels
   void LevelShutdown ();
 

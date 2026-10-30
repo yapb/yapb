@@ -2794,6 +2794,14 @@ TEST_CASE ("unit/behavior_breakables") {
   BehaviorHook::SetBreakable (*bot, nullptr);
   BehaviorHook::SetCreature (*bot, false);
 
+  // the engine touch hook maps a breakable touched by the bot to the bot
+  bot->ClearTasks ();
+  BehaviorHook::SetBreakable (*bot, nullptr);
+  table.pfnTouch (brk, bot->Ent ());
+  CHECK (bot->GetTaskId () == TaskId::ShootBreakable);
+  CHECK (BehaviorHook::Breakable (*bot) == brk);
+  bot->ClearTasks ();
+
   // ...an aimed trace finds the breakable straight ahead...
   engine.SetTraceLineHook ([brk] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
     (void)no_monsters;
@@ -2859,10 +2867,12 @@ TEST_CASE ("unit/behavior_breakables") {
   clients[foe].team = Team::CT;
 
   BehaviorHook::SetEnemy (*bot, foe);
+  BehaviorHook::SetStates (*bot, Sense::SeeingEnemy);
   BehaviorHook::SetBreakable (*bot, nullptr);
-  BehaviorHook::CheckBreakable (*bot, brk);
+  BehaviorHook::CheckBreakable (*bot, nullptr);
   CHECK (BehaviorHook::Breakable (*bot) == nullptr);
   BehaviorHook::ClearEnemy (*bot);
+  BehaviorHook::SetStates (*bot, Sense::Invalid);
 
   bot->pev->maxspeed = 5.0f;
   BehaviorHook::CheckBreakable (*bot, brk);

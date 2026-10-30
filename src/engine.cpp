@@ -190,6 +190,23 @@ void Game::OnSpawnEntity (edict_t *ent) {
   }
 }
 
+void Game::OnTouchEntity (edict_t *touched, edict_t *other) {
+  if (!breakables.HasAny () || IsNullEntity (touched) || IsNullEntity (other)) {
+    return;
+  }
+
+  // static brush touched by a bot
+  if (auto bot = bots[other]; bot != nullptr && breakables.IsBreakable (touched)) {
+    bot->CheckBreakable (touched);
+    return;
+  }
+
+  // moving bot touched by a breakable
+  if (auto bot = bots[touched]; bot != nullptr && breakables.IsBreakable (other)) {
+    bot->CheckBreakable (other);
+  }
+}
+
 void Game::LevelShutdown () {
   // save collected practice on shutdown
   practice.Save ();

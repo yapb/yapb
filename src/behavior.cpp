@@ -161,7 +161,7 @@ void Bot::CheckBreakable (edict_t *touch) {
   }
   const bool has_enemy = !game.IsNullEntity (enemy_);
 
-  // do n ot track for breakables if has some enemies
+  // do not track breakables while fighting
   if (has_enemy) {
     return;
   }
@@ -182,7 +182,11 @@ void Bot::CheckBreakable (edict_t *touch) {
   if (game.IsNullEntity (touch)) {
     auto breakable = LookupBreakable ();
 
+    if (breakable_entity_ != breakable) {
+      breakable_shoot_timer_.invalidate ();
+    }
     breakable_entity_ = breakable;
+
     if (!game.IsNullEntity (breakable)) {
       breakable_origin_ = game.GetEntityOrigin (breakable);
     }
@@ -194,6 +198,9 @@ void Bot::CheckBreakable (edict_t *touch) {
     // a touched breakable blocks us, retry it even if it was ignored as decor
     ForgetIgnoredBreakable (touch);
 
+    if (breakable_entity_ != touch) {
+      breakable_shoot_timer_.invalidate ();
+    }
     breakable_entity_ = touch;
     breakable_origin_ = game.GetEntityOrigin (touch);
   }
@@ -207,9 +214,10 @@ void Bot::CheckBreakable (edict_t *touch) {
 }
 
 void Bot::CheckBreakablesAround () {
-  if (!buying_finished_ || is_creature_ || GetTaskId () == TaskId::ShootBreakable || !cv_destroy_breakables_around || UsesKnife () || UsesSniper () ||
-      IsOnLadder () || rg.chance (25) || !game.HasBreakables () || see_enemy_timer_.less_than (4.0f) || !game.IsNullEntity (enemy_) ||
-      has_flag (aim_flags_, AimFlags::PredictPath | AimFlags::Danger) || !HasPrimaryWeapon () || !IsBreakableAllowed ()) {
+  if (!buying_finished_ || is_creature_ || GetTaskId () == TaskId::ShootBreakable || !cv_destroy_breakables_around || UsesKnife () ||
+      UsesSniper () || IsOnLadder () || rg.chance (25) || !game.HasBreakables () || see_enemy_timer_.less_than (4.0f) ||
+      !game.IsNullEntity (enemy_) || has_flag (aim_flags_, AimFlags::PredictPath | AimFlags::Danger) || !HasPrimaryWeapon () ||
+      !IsBreakableAllowed ()) {
     return;
   }
   const auto radius = cv_object_destroy_radius.As<float> ();
@@ -262,6 +270,7 @@ void Bot::CheckBreakablesAround () {
 
       breakable_origin_ = origin;
       breakable_entity_ = breakable;
+
       camp_buttons_ = pev->button & IN_DUCK;
 
       StartTask (TaskId::ShootBreakable, TaskPri::kShootBreakable, kInvalidNodeIndex, 0.0f, false);
@@ -1302,8 +1311,8 @@ void Bot::SlowFrame () {
     const auto &bomb_position = game_state.GetBombOrigin ();
     const bool force_bomb = num_friends_left_ == 0 || num_enemies_left_ == 0;
 
-    if (!has_progress_bar_ && GetTaskId () != TaskId::EscapeFromBomb && (force_bomb || pev->origin.distance_sq (bomb_position) < ystl::sqrf (1540.0f)) &&
-        !IsBombDefusing (bomb_position)) {
+    if (!has_progress_bar_ && GetTaskId () != TaskId::EscapeFromBomb &&
+        (force_bomb || pev->origin.distance_sq (bomb_position) < ystl::sqrf (1540.0f)) && !IsBombDefusing (bomb_position)) {
 
       ignored_items_.clear ();
       item_check_timer_.start (0.0f);
