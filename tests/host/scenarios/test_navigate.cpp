@@ -421,6 +421,9 @@ struct NavigateHook {
   static void SetEnemy (Bot &bot, edict_t *ent) {
     bot.enemy_ = ent;
   }
+  static void SetStates (Bot &bot, Sense states) {
+    bot.states_ = states;
+  }
   static void SetLadderDir (Bot &bot, LadderDir dir) {
     bot.ladder_dir_ = dir;
   }
@@ -1012,6 +1015,9 @@ TEST_CASE ("unit/navigate_move") {
   edict_t *wall = engine.SpawnEntity ("func_wall");
   HOST_REQUIRE (wall != nullptr);
 
+  edict_t *enemy = engine.SpawnClient ("VisibleEnemy");
+  HOST_REQUIRE (enemy != nullptr);
+
   testhost::FakeCSApi cs {};
   HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
   cs.reset ();
@@ -1191,6 +1197,18 @@ TEST_CASE ("unit/navigate_move") {
   NavigateHook::SetMovedDistance (*bot, 1000.0f);
   CHECK (!NavigateHook::StuckStatus (*bot, forward));
   CHECK (bot->Task ()->id == TaskId::ShootBreakable);
+
+  // a visible enemy outranks a blocked breakable
+  bot->ClearTasks ();
+  NavigateHook::SetEnemy (*bot, enemy);
+  NavigateHook::SetStates (*bot, Sense::SeeingEnemy);
+  NavigateHook::SetMoveSpeed (*bot, 0.0f);
+  NavigateHook::SetMovedDistance (*bot, 1000.0f);
+  CHECK (!NavigateHook::StuckStatus (*bot, forward));
+  CHECK (bot->GetTaskId () != TaskId::ShootBreakable);
+  NavigateHook::SetEnemy (*bot, nullptr);
+  NavigateHook::SetStates (*bot, Sense::Invalid);
+
   engine.SetTraceLineHook (nullptr);
   engine.SetTraceHullHook (nullptr);
   engine.AdvanceTime (0.2f);

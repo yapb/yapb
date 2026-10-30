@@ -934,9 +934,10 @@ bool Bot::DetectStuckStatus (const ystl::Vector &dir_normal) {
   // test if there's something ahead blocking the way
   if (!is_on_ladder_path && !IsOnLadder ()) {
     auto blocker = IsBlockedForward (dir_normal);
+    const bool has_visible_enemy = !game.IsNullEntity (enemy_) && has_flag (states_, Sense::SeeingEnemy);
 
     // if blocked by a breakable, schedule shooting instead of stuck
-    if (blocker != nullptr && game.IsBreakableEntity (blocker) && IsBreakableAllowed ()) {
+    if (blocker != nullptr && !has_visible_enemy && game.IsBreakableEntity (blocker) && IsBreakableAllowed ()) {
       ForgetIgnoredBreakable (blocker);
 
       breakable_entity_ = blocker;
