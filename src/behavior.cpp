@@ -174,6 +174,11 @@ void Bot::CheckBreakable (edict_t *touch) {
     return;
   }
 
+  // creatures only smash breakables that actually touch them, not decor ahead
+  if (is_creature_ && game.IsNullEntity (touch)) {
+    return;
+  }
+
   if (game.IsNullEntity (touch)) {
     auto breakable = LookupBreakable ();
 
@@ -202,7 +207,7 @@ void Bot::CheckBreakable (edict_t *touch) {
 }
 
 void Bot::CheckBreakablesAround () {
-  if (!buying_finished_ || GetTaskId () == TaskId::ShootBreakable || !cv_destroy_breakables_around || UsesKnife () || UsesSniper () ||
+  if (!buying_finished_ || is_creature_ || GetTaskId () == TaskId::ShootBreakable || !cv_destroy_breakables_around || UsesKnife () || UsesSniper () ||
       IsOnLadder () || rg.chance (25) || !game.HasBreakables () || see_enemy_timer_.less_than (4.0f) || !game.IsNullEntity (enemy_) ||
       has_flag (aim_flags_, AimFlags::PredictPath | AimFlags::Danger) || !HasPrimaryWeapon () || !IsBreakableAllowed ()) {
     return;

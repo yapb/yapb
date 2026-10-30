@@ -2772,6 +2772,28 @@ TEST_CASE ("unit/behavior_breakables") {
   BehaviorHook::Rng (*bot).clear_forced ();
   CHECK (bot->GetTaskId () != TaskId::ShootBreakable);
 
+  // ...creatures never sweep decor and only react to an actual touch...
+  bot->ClearTasks ();
+  BehaviorHook::SetBreakable (*bot, nullptr);
+  BehaviorHook::SetCreature (*bot, true);
+
+  BehaviorHook::Rng (*bot).force_chance (false);
+  BehaviorHook::CheckAround (*bot);
+  BehaviorHook::Rng (*bot).clear_forced ();
+  CHECK (bot->GetTaskId () != TaskId::ShootBreakable);
+
+  BehaviorHook::CheckBreakable (*bot, nullptr);
+  CHECK (BehaviorHook::Breakable (*bot) == nullptr);
+
+  // ...while an actual touch still starts the shooting task...
+  BehaviorHook::CheckBreakable (*bot, brk);
+  CHECK (bot->GetTaskId () == TaskId::ShootBreakable);
+  CHECK (BehaviorHook::Breakable (*bot) == brk);
+
+  bot->ClearTasks ();
+  BehaviorHook::SetBreakable (*bot, nullptr);
+  BehaviorHook::SetCreature (*bot, false);
+
   // ...an aimed trace finds the breakable straight ahead...
   engine.SetTraceLineHook ([brk] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
     (void)no_monsters;
