@@ -169,6 +169,16 @@ void Bot::UpdateLookAngles () {
   // override explicitly drives the view (breakables, blinded spray), never freeze its pitch
   const bool engaging = has_flag (aim_flags_, AimFlags::Enemy | AimFlags::Grenade | AimFlags::Override) || wants_to_fire_;
 
+  // a bot that is not fighting slowly drifts its view, so a standing bot looks alive
+  if (cv_aim_drift && !engaging) {
+    const float scale = UsesSniper () ? 0.25f : 1.0f;
+    const float t = game.Time ();
+    const float phase = static_cast<float> (Entindex ()) * 37.0f; // per-bot offset so bots do not drift in lockstep
+
+    direction.y += scale * kAimDriftYawDeg * ystl::cosf (ystl::deg2rad (kAimDriftYawRate * t + phase));
+    direction.x += scale * kAimDriftPitchDeg * ystl::sinf (ystl::deg2rad (kAimDriftPitchRate * t + phase * 0.5f));
+  }
+
   AimConfig yaw {};
   AimConfig pitch {};
 
