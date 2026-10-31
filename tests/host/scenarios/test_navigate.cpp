@@ -5022,7 +5022,7 @@ TEST_CASE ("unit/navigate_pinnacle") {
   edict_t *button = engine.SpawnEntity ("func_button");
   HOST_REQUIRE (button != nullptr);
   button->v.target = string_t (engine.AllocString ("doorbtn"));
-  const float button_pos[3] = { 210.0f, 0.0f, 0.0f };
+  const float button_pos[3] = { 185.0f, 0.0f, 0.0f };
   engine.Funcs ().pfnSetOrigin (button, button_pos);
   door->v.targetname = string_t (engine.AllocString ("doorbtn"));
 

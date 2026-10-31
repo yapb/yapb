@@ -2914,7 +2914,7 @@ TEST_CASE ("unit/behavior_breakables") {
   HOST_REQUIRE (box != nullptr);
   box->v.origin = ystl::Vector (300.0f, 0.0f, 0.0f);
 
-  brk->v.health = 0.0f; // dead decor stops being a target, stays listed
+  brk->v.health = -1.0f; // destroyed decor stops being a target, stays listed
   BehaviorHook::ClearIgnoredBreakable (*bot);
   BehaviorHook::IgnoreBreakable (*bot, near_ign);
   BehaviorHook::Rng (*bot).force_chance (false);
