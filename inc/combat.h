@@ -82,6 +82,13 @@ protected:
 
 public:
   ystl::CountdownTimer enemy_update_timer_ {}; // time to check for new enemies
+
+  // noticing progress per visible player, meter 1.0 means noticed
+  struct NoticeProgress {
+    float meter {};
+    float seen_time {};
+  };
+  ystl::HashMap<edict_t *, NoticeProgress, EdictHash> notice_progress_ {};
   ystl::CountdownTimer enemy_reachable_timer_ {}; // time to recheck if enemy reachable
   ystl::CountdownTimer enemy_ignore_timer_ {}; // ignore enemy for some time
   ystl::IntervalTimer see_enemy_timer_ {}; // time bot sees enemy

@@ -347,6 +347,75 @@ bool Bot::SeesEnemy (edict_t *player) {
   return false;
 }
 
+float Bot::NoticeRate (edict_t *player) {
+  // an enemy shooting at us is not something to notice, it is already noticed
+  if (player->v.button & (IN_ATTACK | IN_ATTACK2)) {
+    return 100.0f;
+  }
+
+  // a target right in front of the eye registers almost at once, far ones need a beat
+  const float distance = ystl::sqrtf (player->v.origin.distance_sq (pev->origin));
+  float rate = 12.0f / (1.0f + distance / 200.0f);
+
+  // moving targets draw the eye, still and crouched ones hide, but never below a floor
+  const float speed = player->v.velocity.length2d ();
+
+  if (speed > 200.0f) {
+    rate *= 2.5f;
+  }
+  else if (speed > 30.0f) {
+    rate *= 1.5f;
+  }
+  else if (player->v.flags & FL_DUCKING) {
+    rate *= 0.6f;
+  }
+  else {
+    rate *= 0.8f;
+  }
+
+  // cover: how much of the body the last part check saw
+  if (has_flag (enemy_parts_, Visibility::Body)) {
+    rate *= 1.0f;
+  }
+  else if (has_flag (enemy_parts_, Visibility::Head)) {
+    rate *= 0.6f;
+  }
+  else {
+    rate *= 0.4f;
+  }
+
+  // skill scales the whole meter, alertness speeds it up
+  rate *= 0.7f + 0.6f * (static_cast<float> (Skill ()) / 100.0f);
+
+  if (has_flag (states_, Sense::SuspectEnemy)) {
+    rate *= 2.0f;
+  }
+  return rate;
+}
+
+bool Bot::IsEnemyNoticed (edict_t *player) {
+  constexpr float kMaxStep = 0.25f; // a long frame gap counts as this much progress at most
+  constexpr float kForgetAfter = 1.0f; // out of sight this long, the meter starts over
+
+  if (notice_progress_.size () >= 32) {
+    notice_progress_.clear ();
+  }
+  const float now = game.Time ();
+  const bool known = notice_progress_.exists (player);
+  auto &progress = notice_progress_[player];
+
+  if (!known || now - progress.seen_time > kForgetAfter) {
+    progress.meter = 0.0f;
+    progress.seen_time = now;
+    return false;
+  }
+  const float step = ystl::clamp (now - progress.seen_time, 0.0f, kMaxStep);
+  progress.seen_time = now;
+  progress.meter += NoticeRate (player) * step;
+
+  return progress.meter >= 1.0f;
+}
+
 void Bot::TrackEnemies () {
   if (LookupEnemies ()) {
     states_ |= Sense::SeeingEnemy;
@@ -546,6 +615,11 @@ bool Bot::LookupEnemies () {
 
       // see if bot can see the player
       if (SeesEnemy (player)) {
+        // a fresh target has to be noticed first, the current enemy already is
+        if (cv_notice_model && player != enemy_ && !IsEnemyNoticed (player)) {
+          continue;
+        }
+
         if (IsEnemyBehindShield (player)) {
           shield_enemy = player;
           continue;
@@ -784,6 +858,50 @@ ystl::Vector Bot::GetBodyOffsetError (edict_t *target, float distance) {
   return aim_last_error_;
 }
 
+ystl::Vector Bot::GetAimFocusOffset (edict_t *target, float distance) {
+  // per difficulty (noob..expert): half-life of the focus, gain from sweep rate to focus, cap in degrees
+  struct FocusTune {
+    float half_life;
+    float gain;
+    float cap;
+  };
+  static constexpr FocusTune kTune[] = {
+    { 1.6f, 0.35f, 10.0f }, // noob
+    { 1.2f, 0.30f, 8.0f  }, // easy
+    { 0.9f, 0.25f, 6.0f  }, // normal
+    { 0.6f, 0.20f, 4.0f  }, // hard
+    { 0.3f, 0.15f, 2.0f  }, // expert
+  };
+  if (game.IsNullEntity (target)) {
+    return nullptr;
+  }
+  const auto &tune = kTune[ystl::clamp (ystl::to_underlying (difficulty_), 0, 4)];
+  const float now = game.Time ();
+  const float dt = ystl::clamp (now - aim_focus_time_, 0.0f, 0.25f);
+  aim_focus_time_ = now;
+
+  // the focus fades while the target stays still in our view
+  aim_focus_deg_ = ystl::max (0.0f, aim_focus_deg_ * (1.0f - dt / tune.half_life));
+
+  // a target sweeping across our view raises the focus; for small steps the chord between unit vectors is the angle
+  const ystl::Vector dir = (target->v.origin - GetEyesPos ()).normalize ();
+
+  if (!aim_focus_dir_.empty () && dt > 0.0f) {
+    const float sweep_deg = (dir - aim_focus_dir_).length () * 57.2958f / dt;
+    aim_focus_deg_ = ystl::min (tune.cap, ystl::max (aim_focus_deg_, sweep_deg * tune.gain));
+  }
+  aim_focus_dir_ = dir;
+
+  // the error rotates around the view axis, re-rolled on a short timer so it does not look like a fixed offset
+  if (aim_focus_turn_timer_.elapsed ()) {
+    aim_focus_theta_ = rg (0.0f, 6.2831853f);
+    aim_focus_turn_timer_.start (rg (0.4f, 0.8f));
+  }
+  const float radius = distance * ystl::deg2rad (aim_focus_deg_);
+
+  return ystl::Vector (ystl::cosf (aim_focus_theta_) * radius, ystl::sinf (aim_focus_theta_) * radius, 0.0f);
+}
+
 ystl::Vector Bot::GetEnemyBodyOffset () {
   // the purpose of this function, is to make bot aiming not so ideal
 
@@ -905,6 +1023,9 @@ ystl::Vector Bot::GetEnemyBodyOffset () {
   if (difficulty_ < Difficulty::Normal) {
     spot += GetBodyOffsetError (enemy_, distance);
   }
+
+  // every bot's eye lags behind a target that sweeps across its view
+  spot += GetAimFocusOffset (enemy_, distance);
   return spot;
 }
 

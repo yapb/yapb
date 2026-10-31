@@ -132,6 +132,11 @@ protected:
 
   ystl::Vector ideal_angles_ {}; // angle wanted
   ystl::Vector aim_last_error_ {}; // last calculated aim error
+  float aim_focus_deg_ {}; // aim focus error in degrees, rises when the target sweeps across the view and fades when it rests
+  ystl::Vector aim_focus_dir_ {}; // unit direction to the target at the last focus update
+  float aim_focus_theta_ {}; // rotation of the focus error around the view axis
+  float aim_focus_time_ {}; // game time of the last focus update
+  ystl::CountdownTimer aim_focus_turn_timer_ {}; // time to re-roll the focus error rotation
   ystl::Vector look_at_ {}; // vector bot should look at
   ystl::Vector look_at_safe_ {}; // aiming vector when camping
   ystl::Vector look_at_predict_ {}; // aiming vector when predicting
