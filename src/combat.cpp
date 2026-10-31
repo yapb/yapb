@@ -422,8 +422,7 @@ void Bot::TrackEnemies () {
   else {
     states_ &= ~Sense::SeeingEnemy;
 
-    enemy_.current = nullptr;
-    enemy_.aim_lock = nullptr;
+    enemy_.Clear ();
   }
 
   // recover from knife, if has anything to fire at enemy
@@ -758,8 +757,7 @@ bool Bot::LookupEnemies () {
     enemy_.last = new_enemy;
 
     if (!game.IsAliveEntity (new_enemy)) {
-      enemy_.current = nullptr;
-      enemy_.aim_lock = nullptr;
+      enemy_.Clear ();
 
       // shoot at dying players if no new enemy to give some more human-like illusion
       if (see_enemy_timer_.less_than (0.1f)) {

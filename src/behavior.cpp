@@ -2117,7 +2117,7 @@ void Bot::TakeBlind (int alpha) {
   if (blind_.timer.elapsed ()) {
     return;
   }
-  enemy_.current = nullptr;
+  enemy_.Clear ();
 
   if (difficulty_ <= Difficulty::Normal) {
     blind_.move_speed = 0.0f;

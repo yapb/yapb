@@ -63,6 +63,19 @@ struct EnemyState {
     last_origin.clear ();
   }
 
+  // forget any reference to a freed entity, keep memory of unrelated enemies
+  void DropEntity (edict_t *ent) {
+    if (current == ent) {
+      current = nullptr;
+    }
+    if (aim_lock == ent) {
+      aim_lock = nullptr;
+    }
+    if (last == ent) {
+      ForgetLast ();
+    }
+  }
+
   // remember where an enemy was last seen
   void Remember (edict_t *ent, const ystl::Vector &origin) {
     last = ent;
