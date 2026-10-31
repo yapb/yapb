@@ -306,22 +306,22 @@ void MessageDispatch::NetMsgStatusIcon () {
 
   // handle cases
   if (has_flag (cached, StatusIconCache::BuyZone)) {
-    bot_->in_buy_zone_ = (args_[enabled].long_ != 0);
+    bot_->zones_.buy = (args_[enabled].long_ != 0);
 
     // try to equip in buyzone
     bot_->EnteredBuyZone (BuyState::PrimaryWeapon);
   }
   else if (has_flag (cached, StatusIconCache::Escape)) {
-    bot_->in_escape_zone_ = (args_[enabled].long_ != 0);
+    bot_->zones_.escape = (args_[enabled].long_ != 0);
   }
   else if (has_flag (cached, StatusIconCache::Rescue)) {
-    bot_->in_rescue_zone_ = (args_[enabled].long_ != 0);
+    bot_->zones_.rescue = (args_[enabled].long_ != 0);
   }
   else if (has_flag (cached, StatusIconCache::VipSafety)) {
-    bot_->in_vip_zone_ = (args_[enabled].long_ != 0);
+    bot_->zones_.vip = (args_[enabled].long_ != 0);
   }
   else if (has_flag (cached, StatusIconCache::C4)) {
-    bot_->in_bomb_zone_ = (args_[enabled].long_ == 2);
+    bot_->zones_.bomb = (args_[enabled].long_ == 2);
   }
   else if (has_flag (cached, StatusIconCache::Defuser)) {
     bot_->has_defuser_ = (args_[enabled].long_ != 0);

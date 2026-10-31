@@ -225,10 +225,10 @@ void Bot::CheckRadioQueue () {
     if (game.IsNullEntity (target_entity_)) {
       if (game.IsNullEntity (enemy_) && see_enemy_timer_.greater_than (4.0f)) {
         // decrease fear levels to lower probability of bot seeking cover again
-        fear_level_ -= 0.2f;
+        emotion_.fear -= 0.2f;
 
-        if (fear_level_ < 0.0f) {
-          fear_level_ = 0.0f;
+        if (emotion_.fear < 0.0f) {
+          emotion_.fear = 0.0f;
         }
 
         if (rg.chance (radio_percent_) && cv_radio_mode.As<int> () == 2) {
@@ -262,10 +262,10 @@ void Bot::CheckRadioQueue () {
     if (((game.IsNullEntity (enemy_) && SeesEntity (radio_entity_->v.origin)) || distance_sq < ystl::sqrf (2048.0f) || !move_to_c4_) &&
         rg.chance (radio_percent_) && see_enemy_timer_.greater_than (4.0f)) {
 
-      fear_level_ -= 0.1f;
+      emotion_.fear -= 0.1f;
 
-      if (fear_level_ < 0.0f) {
-        fear_level_ = 0.0f;
+      if (emotion_.fear < 0.0f) {
+        emotion_.fear = 0.0f;
       }
 
       if (rg.chance (radio_percent_) && cv_radio_mode.As<int> () == 2) {
@@ -291,20 +291,20 @@ void Bot::CheckRadioQueue () {
       }
 
       target_entity_ = nullptr;
-      fear_level_ -= 0.2f;
+      emotion_.fear -= 0.2f;
 
-      if (fear_level_ < 0.0f) {
-        fear_level_ = 0.0f;
+      if (emotion_.fear < 0.0f) {
+        emotion_.fear = 0.0f;
       }
     }
     else if ((game.IsNullEntity (enemy_) && SeesEntity (radio_entity_->v.origin)) || distance_sq < ystl::sqrf (2048.0f)) {
       const auto tid = GetTaskId ();
 
       if (tid == TaskId::Pause || tid == TaskId::Camp) {
-        fear_level_ -= 0.2f;
+        emotion_.fear -= 0.2f;
 
-        if (fear_level_ < 0.0f) {
-          fear_level_ = 0.0f;
+        if (emotion_.fear < 0.0f) {
+          emotion_.fear = 0.0f;
         }
 
         PushRadioChat (RadioChat::RogerThat);
@@ -372,30 +372,30 @@ void Bot::CheckRadioQueue () {
       ClearSearchNodes ();
       StartTask (TaskId::MoveTo, TaskPri::kMoveTo, kInvalidNodeIndex, 0.0f, true);
 
-      fear_level_ -= 0.3f;
+      emotion_.fear -= 0.3f;
 
-      if (fear_level_ < 0.0f) {
-        fear_level_ = 0.0f;
+      if (emotion_.fear < 0.0f) {
+        emotion_.fear = 0.0f;
       }
-      agression_level_ += 0.3f;
+      emotion_.aggression += 0.3f;
 
-      if (agression_level_ > 1.0f) {
-        agression_level_ = 1.0f;
+      if (emotion_.aggression > 1.0f) {
+        emotion_.aggression = 1.0f;
       }
     }
     break;
 
   case RadioChat::TeamFallback:
     if ((game.IsNullEntity (enemy_) && SeesEntity (radio_entity_->v.origin)) || distance_sq < ystl::sqrf (1024.0f)) {
-      fear_level_ += 0.5f;
+      emotion_.fear += 0.5f;
 
-      if (fear_level_ > 1.0f) {
-        fear_level_ = 1.0f;
+      if (emotion_.fear > 1.0f) {
+        emotion_.fear = 1.0f;
       }
-      agression_level_ -= 0.5f;
+      emotion_.aggression -= 0.5f;
 
-      if (agression_level_ < 0.0f) {
-        agression_level_ = 0.0f;
+      if (emotion_.aggression < 0.0f) {
+        emotion_.aggression = 0.0f;
       }
       if (GetTaskId () == TaskId::Camp) {
         Task ()->time += rg (10.0f, 15.0f);
@@ -476,10 +476,10 @@ void Bot::CheckRadioQueue () {
         if (game_state.IsBombPlanted () && team_ == Team::Terrorist) {
           PushRadioChat (RadioChat::GuardingPlantedC4);
         }
-        else if (in_escape_zone_ && team_ == Team::CT) {
+        else if (zones_.escape && team_ == Team::CT) {
           PushRadioChat (RadioChat::GuardingEscapeZone);
         }
-        else if (in_vip_zone_ && team_ == Team::Terrorist) {
+        else if (zones_.vip && team_ == Team::Terrorist) {
           PushRadioChat (RadioChat::GuardingVIPSafety);
         }
         else {
@@ -644,7 +644,7 @@ void Bot::HandleChatterTaskChange (TaskId tid) {
   }
 
   // announce intent more as teamwork rises (team players keep mates informed)
-  const int announce = 55 + static_cast<int> (teamwork_level_ * 35.0f);
+  const int announce = 55 + static_cast<int> (emotion_.teamwork * 35.0f);
 
   if (rg.chance (announce)) {
     if (tid == TaskId::Blind) {
@@ -660,13 +660,13 @@ void Bot::HandleChatterTaskChange (TaskId tid) {
   }
 
   // holding a zone is the more specific intel: one mate calls it, more often with higher teamwork
-  const bool holds_zone = (team_ == Team::CT && in_escape_zone_) || (team_ == Team::Terrorist && (in_rescue_zone_ || in_vip_zone_));
+  const bool holds_zone = (team_ == Team::CT && zones_.escape) || (team_ == Team::Terrorist && (zones_.rescue || zones_.vip));
 
   if (holds_zone && rg.chance (announce) && bots.TryTeamSpeech (team_, 1.5f, SpeechTopic::Objective, SpeechPriority::Social)) {
     if (team_ == Team::CT) {
       PushRadioChat (RadioChat::GoingToGuardEscapeZone);
     }
-    else if (in_rescue_zone_) {
+    else if (zones_.rescue) {
       PushRadioChat (RadioChat::GoingToGuardRescueZone);
     }
     else {
@@ -699,7 +699,7 @@ void Bot::HandleChatterOnPlayerKill (bool is_team_kill) {
   }
 
   // sharing the enemy count is team play: better teamwork calls out more
-  const int share_chance = 20 + static_cast<int> (teamwork_level_ * 70.0f);
+  const int share_chance = 20 + static_cast<int> (emotion_.teamwork * 70.0f);
 
   if (rg.chance (10)) {
     PushRadioChat (RadioChat::EnemyDown);
@@ -818,7 +818,7 @@ void Bot::ExecuteChatterFrameEvents () {
       }
 
       if (callout != RadioChat::Invalid && !bots.IsTeamCalloutRecent (team_, callout, 4.0f) &&
-          rg.chance (30 + static_cast<int> (teamwork_level_ * 60.0f)) &&
+          rg.chance (30 + static_cast<int> (emotion_.teamwork * 60.0f)) &&
           bots.TryTeamSpeech (team_, 1.2f, SpeechTopic::Enemy,
             (callout == RadioChat::SpotTheBomber || callout == RadioChat::SniperWarning) ? SpeechPriority::Critical : SpeechPriority::Normal)) {
         PushRadioChat (callout);

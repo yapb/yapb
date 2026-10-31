@@ -245,10 +245,10 @@ struct WeaponsHook {
     bot.stab_unaware_enemy_ = value;
   }
   static void StartBlind (Bot &bot, float duration) {
-    bot.blind_timer_.start (duration);
+    bot.blind_.timer.start (duration);
   }
   static void ClearBlind (Bot &bot) {
-    bot.blind_timer_.invalidate ();
+    bot.blind_.timer.invalidate ();
   }
   static void StartShootDead (Bot &bot, float duration) {
     bot.shoot_at_dead_timer_.start (duration);

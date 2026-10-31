@@ -41,7 +41,7 @@ void Bot::AvoidGrenades () {
   // checks if bot 'sees' a grenade, and avoid it
 
   // the flash aim flag follows the hold timer, drops in combat or when blind
-  if (!avoid_flash_timer_.elapsed () && blind_timer_.elapsed () && !has_flag (states_, Sense::SeeingEnemy)) {
+  if (!avoid_flash_timer_.elapsed () && blind_.timer.elapsed () && !has_flag (states_, Sense::SeeingEnemy)) {
     aim_flags_ |= AimFlags::Flash;
   }
   else {
@@ -82,7 +82,7 @@ void Bot::AvoidGrenades () {
     }
 
     // never break the aim while fighting, the enemy is the bigger threat
-    if (grenade.kind == GrenadeKind::Flash && blind_timer_.elapsed () && !has_flag (states_, Sense::SeeingEnemy)) {
+    if (grenade.kind == GrenadeKind::Flash && blind_.timer.elapsed () && !has_flag (states_, Sense::SeeingEnemy)) {
       const float time_left = pent->v.dmgtime - game.Time ();
 
       if (time_left > 0.0f && time_left <= 1.0f && pent->v.origin.distance_sq (pev->origin) < ystl::sqrf (1500.0f)) {
@@ -470,7 +470,7 @@ void Bot::CheckMsgQueue () {
       return;
     }
 
-    if (!in_buy_zone_ || game.Is (GameFlags::CSDM) || is_creature_) {
+    if (!zones_.buy || game.Is (GameFlags::CSDM) || is_creature_) {
       buy_pending_ = true;
       buying_finished_ = true;
 
@@ -504,7 +504,7 @@ void Bot::CheckMsgQueue () {
     }
 
     // prevent terrorists from buying on es maps
-    if (game.MapIs (MapFlags::Escape) && team_ == Team::Terrorist && !in_buy_zone_) {
+    if (game.MapIs (MapFlags::Escape) && team_ == Team::Terrorist && !zones_.buy) {
       buy_state_ = BuyState::Done;
     }
 
@@ -603,38 +603,38 @@ void Bot::CheckMsgQueue () {
 void Bot::UpdateEmotions () {
   constexpr auto kEmotionUpdateStep = 0.05f;
 
-  if (!emotion_update_timer_.elapsed ()) {
+  if (!emotion_.update_timer.elapsed ()) {
     return;
   }
 
   if (see_enemy_timer_.less_than (1.0f)) {
-    agression_level_ = ystl::min (agression_level_ + kEmotionUpdateStep, 1.0f);
+    emotion_.aggression = ystl::min (emotion_.aggression + kEmotionUpdateStep, 1.0f);
   }
   else if (see_enemy_timer_.greater_than (5.0f)) {
     // smoothly return aggression to base level
-    if (agression_level_ > base_agression_level_) {
-      agression_level_ = ystl::max (agression_level_ - kEmotionUpdateStep, base_agression_level_);
+    if (emotion_.aggression > emotion_.base_aggression) {
+      emotion_.aggression = ystl::max (emotion_.aggression - kEmotionUpdateStep, emotion_.base_aggression);
     }
     else {
-      agression_level_ = ystl::min (agression_level_ + kEmotionUpdateStep, base_agression_level_);
+      emotion_.aggression = ystl::min (emotion_.aggression + kEmotionUpdateStep, emotion_.base_aggression);
     }
 
     // smoothly return fear to base level
-    if (fear_level_ > base_fear_level_) {
-      fear_level_ = ystl::max (fear_level_ - kEmotionUpdateStep, base_fear_level_);
+    if (emotion_.fear > emotion_.base_fear) {
+      emotion_.fear = ystl::max (emotion_.fear - kEmotionUpdateStep, emotion_.base_fear);
     }
     else {
-      fear_level_ = ystl::min (fear_level_ + kEmotionUpdateStep, base_fear_level_);
+      emotion_.fear = ystl::min (emotion_.fear + kEmotionUpdateStep, emotion_.base_fear);
     }
   }
-  emotion_update_timer_.start (0.5f);
+  emotion_.update_timer.start (0.5f);
 }
 
 void Bot::UpdateTeamAwareness () {
   // lone, un-engaged bots head for the last enemy contact a teammate shared, so the team converges
 
-  if (!is_alive_ || is_creature_ || game.Is (GameFlags::FreeForAll) || game_state.IsRoundOver () || !team_contact_timer_.elapsed () || has_c4_ ||
-      has_hostage_ || !game.IsNullEntity (enemy_) || !game.IsNullEntity (last_enemy_)) {
+  if (!is_alive_ || is_creature_ || game.Is (GameFlags::FreeForAll) || game_state.IsRoundOver () || !team_cooldowns_.contact.elapsed () ||
+      has_c4_ || has_hostage_ || !game.IsNullEntity (enemy_) || !game.IsNullEntity (last_enemy_)) {
 
     return;
   }
@@ -658,15 +658,15 @@ void Bot::UpdateTeamAwareness () {
   }
 
   // team players react almost always, lone wolves rarely
-  if (!rg.chance (static_cast<int> (teamwork_level_ * 100.0f))) {
-    team_contact_timer_.start (rg (2.0f, 4.0f));
+  if (!rg.chance (static_cast<int> (emotion_.teamwork * 100.0f))) {
+    team_cooldowns_.contact.start (rg (2.0f, 4.0f));
 
     return;
   }
 
   // don't lone-wolf into a group: let teammates gather first
   if (contact_count >= 2 && NumFriendsNear (pev->origin, 512.0f) == 0) {
-    team_contact_timer_.start (rg (2.0f, 4.0f));
+    team_cooldowns_.contact.start (rg (2.0f, 4.0f));
 
     return;
   }
@@ -688,7 +688,7 @@ void Bot::UpdateTeamAwareness () {
     StartTask (TaskId::MoveTo, TaskPri::kMoveTo, kInvalidNodeIndex, 0.0f, true);
   }
 
-  team_contact_timer_.start (rg (3.0f, 6.0f));
+  team_cooldowns_.contact.start (rg (3.0f, 6.0f));
 
   if (cv_radio_mode.As<int> () != 2 && bots.TryTeamSpeech (team_, 2.0f, SpeechTopic::Social, SpeechPriority::Social)) {
     PushRadioChat (RadioChat::OnMyWay);
@@ -698,7 +698,7 @@ void Bot::UpdateTeamAwareness () {
 void Bot::UpdateTeamCohesion () {
   // team players regroup with the nearest living teammate instead of wandering off alone
 
-  if (!is_alive_ || is_creature_ || game.Is (GameFlags::FreeForAll) || game_state.IsRoundOver () || !team_cohesion_timer_.elapsed () ||
+  if (!is_alive_ || is_creature_ || game.Is (GameFlags::FreeForAll) || game_state.IsRoundOver () || !team_cooldowns_.cohesion.elapsed () ||
       has_c4_ || has_hostage_ || !game.IsNullEntity (enemy_) || !game.IsNullEntity (last_enemy_) || GetTaskId () != TaskId::Normal) {
 
     return;
@@ -738,8 +738,8 @@ void Bot::UpdateTeamCohesion () {
   }
 
   // lone wolves rarely bother to regroup
-  if (!rg.chance (static_cast<int> (teamwork_level_ * 100.0f))) {
-    team_cohesion_timer_.start (rg (3.0f, 6.0f));
+  if (!rg.chance (static_cast<int> (emotion_.teamwork * 100.0f))) {
+    team_cooldowns_.cohesion.start (rg (3.0f, 6.0f));
 
     return;
   }
@@ -748,14 +748,14 @@ void Bot::UpdateTeamCohesion () {
   ClearSearchNodes ();
   StartTask (TaskId::MoveTo, TaskPri::kMoveTo, kInvalidNodeIndex, 0.0f, true);
 
-  team_cohesion_timer_.start (rg (4.0f, 8.0f));
+  team_cooldowns_.cohesion.start (rg (4.0f, 8.0f));
 }
 
 void Bot::UpdateBombGuard () {
   // idle bots respond to the planted bomb: CTs cover the defuser, Ts hold it or rush a defuser
 
   if ((team_ != Team::CT && team_ != Team::Terrorist) || !is_alive_ || is_creature_ || !game_state.IsBombPlanted () ||
-      (team_ == Team::CT && !bomb_known_) || !bomb_guard_timer_.elapsed () || !game.IsNullEntity (enemy_) ||
+      (team_ == Team::CT && !bomb_known_) || !team_cooldowns_.bomb_guard.elapsed () || !game.IsNullEntity (enemy_) ||
       has_flag (states_, Sense::SeeingEnemy)) {
 
     return;
@@ -770,7 +770,7 @@ void Bot::UpdateBombGuard () {
       ClearSearchNodes ();
       StartTask (TaskId::MoveTo, TaskPri::kMoveTo, kInvalidNodeIndex, 0.0f, true);
     }
-    bomb_guard_timer_.start (rg (2.0f, 4.0f));
+    team_cooldowns_.bomb_guard.start (rg (2.0f, 4.0f));
 
     return;
   }
@@ -804,18 +804,18 @@ void Bot::UpdateBombGuard () {
   StartTask (TaskId::MoveTo, TaskPri::kMoveTo, index, 0.0f, true);
   SelectCampButtons (index);
 
-  bomb_guard_timer_.start (rg (5.0f, 10.0f));
+  team_cooldowns_.bomb_guard.start (rg (5.0f, 10.0f));
 }
 
 void Bot::UpdateHostageEscort () {
   // a rescued hostage is with us again, allow waiting the next time it trails off
   if (has_hostage_ || hostages_.empty ()) {
-    hostage_wait_giveup_.invalidate ();
+    team_cooldowns_.hostage_giveup.invalidate ();
   }
 
   // hold position for a moment so a rescued hostage that trailed off can catch up
   if (team_ != Team::CT || !game.MapIs (MapFlags::HostageRescue) || has_hostage_ || hostages_.empty () || ShouldRushEndgameTime () ||
-      (hostage_wait_giveup_.started () && hostage_wait_giveup_.elapsed ()) || !game.IsNullEntity (enemy_) ||
+      (team_cooldowns_.hostage_giveup.started () && team_cooldowns_.hostage_giveup.elapsed ()) || !game.IsNullEntity (enemy_) ||
       has_flag (states_, Sense::SeeingEnemy) || GetTaskId () == TaskId::Pause) {
     return;
   }
@@ -830,8 +830,8 @@ void Bot::UpdateHostageEscort () {
       StartTask (TaskId::Pause, TaskPri::kPause, kInvalidNodeIndex, game.Time () + rg (0.5f, 1.0f), false);
 
       // stall for a while, but never forever: give up if the hostage does not catch up
-      if (!hostage_wait_giveup_.started ()) {
-        hostage_wait_giveup_.start (6.0f);
+      if (!team_cooldowns_.hostage_giveup.started ()) {
+        team_cooldowns_.hostage_giveup.start (6.0f);
       }
       return;
     }
@@ -949,7 +949,7 @@ void Bot::OverrideConditions () {
     }
 
     if (see_enemy_timer_.greater_than (2.5f) && has_flag (states_, Sense::SuspectEnemy | Sense::HearingEnemy)) {
-      move_speed_ = fear_level_ > agression_level_ ? 0.0f : GetShiftSpeed ();
+      move_speed_ = emotion_.fear > emotion_.aggression ? 0.0f : GetShiftSpeed ();
       nav_timer_.start ();
     }
   }
@@ -1099,10 +1099,10 @@ void Bot::SetConditions () {
   if (!game.IsNullEntity (last_victim_)) {
     if (game.GetPlayerTeam (last_victim_) != team_) {
       // add some aggression because we just killed somebody
-      agression_level_ += 0.1f;
+      emotion_.aggression += 0.1f;
 
-      if (agression_level_ > 1.0f) {
-        agression_level_ = 1.0f;
+      if (emotion_.aggression > 1.0f) {
+        emotion_.aggression = 1.0f;
       }
     }
     last_victim_ = nullptr;
@@ -1131,7 +1131,7 @@ void Bot::SetConditions () {
     hearing_interval = kHearingFastInterval; // recent sound -> faster updates
   }
   // don't listen if seeing enemy, just checked for sounds or being blinded (because its inhuman)
-  if (sound_update_timer_.elapsed () && blind_timer_.elapsed () && see_enemy_timer_.greater_than (0.5f)) {
+  if (sound_update_timer_.elapsed () && blind_.timer.elapsed () && see_enemy_timer_.greater_than (0.5f)) {
 
     UpdateHearing ();
     sound_update_timer_.start (hearing_interval);
@@ -1640,7 +1640,7 @@ void Bot::Logic () {
     view_distance_ = max_view_distance_;
   }
 
-  if (!blind_timer_.elapsed ()) {
+  if (!blind_.timer.elapsed ()) {
     max_view_distance_ = 4096.0f;
   }
   move_speed_ = pev->maxspeed;
@@ -1744,7 +1744,7 @@ void Bot::Logic () {
   CheckFall ();
 
   // donate a primary to a poor teammate once per round, right after buying
-  if (!donate_done_ && buying_finished_ && in_buy_zone_ && !game_state.IsRoundOver ()) {
+  if (!donate_done_ && buying_finished_ && zones_.buy && !game_state.IsRoundOver ()) {
     DonateToPoorTeammate ();
   }
 
@@ -2063,17 +2063,17 @@ void Bot::TakeDamage (edict_t *inflictor, int damage, int armor, int bits) {
 
       // attacked by an enemy
       if (health_value_ > 60.0f) {
-        agression_level_ += 0.1f;
+        emotion_.aggression += 0.1f;
 
-        if (agression_level_ > 1.0f) {
-          agression_level_ = 1.0f;
+        if (emotion_.aggression > 1.0f) {
+          emotion_.aggression = 1.0f;
         }
       }
       else {
-        fear_level_ += 0.03f;
+        emotion_.fear += 0.03f;
 
-        if (fear_level_ > 1.0f) {
-          fear_level_ = 1.0f;
+        if (emotion_.fear > 1.0f) {
+          emotion_.fear = 1.0f;
         }
       }
       ClearTask (TaskId::Camp);
@@ -2113,40 +2113,40 @@ void Bot::TakeBlind (int alpha) {
   if (game_state.GetRoundStartTime () + 5.0f < game.Time ()) {
     view_distance_ = max_view_distance_;
   }
-  blind_timer_.start (static_cast<float> (alpha - 180) / 16.0f);
+  blind_.timer.start (static_cast<float> (alpha - 180) / 16.0f);
 
-  if (blind_timer_.elapsed ()) {
+  if (blind_.timer.elapsed ()) {
     return;
   }
   enemy_ = nullptr;
 
   if (difficulty_ <= Difficulty::Normal) {
-    blind_move_speed_ = 0.0f;
-    blind_side_move_speed_ = 0.0f;
-    blind_button_ = IN_DUCK;
+    blind_.move_speed = 0.0f;
+    blind_.side_move_speed = 0.0f;
+    blind_.button = IN_DUCK;
 
     return;
   }
-  blind_node_index_ = FindCoverNode (900.0f);
-  blind_move_speed_ = -pev->maxspeed;
-  blind_side_move_speed_ = 0.0f;
+  blind_.node_index = FindCoverNode (900.0f);
+  blind_.move_speed = -pev->maxspeed;
+  blind_.side_move_speed = 0.0f;
 
   if (rg.chance (50)) {
-    blind_side_move_speed_ = pev->maxspeed;
+    blind_.side_move_speed = pev->maxspeed;
   }
   else {
-    blind_side_move_speed_ = -pev->maxspeed;
+    blind_.side_move_speed = -pev->maxspeed;
   }
 
   if (health_value_ < 85.0f) {
-    blind_move_speed_ = -pev->maxspeed;
+    blind_.move_speed = -pev->maxspeed;
   }
   else if (personality_ == Personality::Careful) {
-    blind_move_speed_ = 0.0f;
-    blind_button_ = IN_DUCK;
+    blind_.move_speed = 0.0f;
+    blind_.button = IN_DUCK;
   }
   else {
-    blind_move_speed_ = pev->maxspeed;
+    blind_.move_speed = pev->maxspeed;
   }
 }
 
@@ -2171,7 +2171,7 @@ void Bot::DropWeaponForUser (edict_t *user, bool discard_c4) {
     pickup_type_ = Pickup::None;
     item_check_timer_.start (5.0f);
 
-    if (in_buy_zone_) {
+    if (zones_.buy) {
       ignore_buy_delay_ = true;
       buying_finished_ = false;
       buy_state_ = BuyState::PrimaryWeapon;
@@ -2535,7 +2535,7 @@ void Bot::SelectCampButtons (int index) {
   const auto &path = graph[index];
 
   if (personality_ == Personality::Rusher || pev->health >= 90.0f) {
-    if (path.vis.crouch < path.vis.stand && fear_level_ > agression_level_) {
+    if (path.vis.crouch < path.vis.stand && emotion_.fear > emotion_.aggression) {
       camp_buttons_ |= IN_DUCK;
     }
     else {

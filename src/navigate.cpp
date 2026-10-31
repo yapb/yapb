@@ -19,7 +19,7 @@ bool Bot::ShouldRushEndgameTime () const {
     return false;
   }
   // low-aggression (fear-suppressed) bots don't push the objective either
-  if (agression_level_ < 0.5f) {
+  if (emotion_.aggression < 0.5f) {
     return false;
   }
   switch (personality_) {
@@ -112,8 +112,8 @@ int Bot::FindBestGoal () {
     break;
   }
 
-  offensive = agression_level_ * 100.0f + personality_offensive_mod;
-  defensive = fear_level_ * 100.0f + personality_defensive_mod;
+  offensive = emotion_.aggression * 100.0f + personality_offensive_mod;
+  defensive = emotion_.fear * 100.0f + personality_defensive_mod;
 
   if (game.MapIs (MapFlags::Assassination | MapFlags::HostageRescue)) {
     if (team_ == Team::Terrorist) {
@@ -274,7 +274,7 @@ int Bot::FindBestGoalWhenBombAction () {
     }
 
     // forcing terrorist bot to not move to another bomb spot
-    if (in_bomb_zone_ && !has_progress_bar_ && has_c4_) {
+    if (zones_.bomb && !has_progress_bar_ && has_c4_) {
       return graph.GetNearest (pev->origin, 1024.0f, NodeFlag::Goal);
     }
   }
@@ -3610,17 +3610,17 @@ bool Bot::AdvanceMovement () {
 
         // if damage done higher than one
         if (node_damage > 1.0f && game_state.GetRoundMidTime () > game.Time () && team_damage > 0.0f) {
-          const float task_time = game.Time () + (fear_level_ * (game_state.GetRoundMidTime () - game.Time ()) * 0.5f);
+          const float task_time = game.Time () + (emotion_.fear * (game_state.GetRoundMidTime () - game.Time ()) * 0.5f);
           const int index = FindDefendNode (graph[next_index].origin);
 
-          if (base_agression_level_ < danger && HasPrimaryWeapon ()) {
+          if (emotion_.base_aggression < danger && HasPrimaryWeapon ()) {
             StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, task_time, true);
             StartTask (TaskId::MoveTo, TaskPri::kMoveTo, index, 0.0f, true);
           }
         }
         else if (bots.EnemySpotted () && !IsOnLadder () && !IsInWater () && !jump_ahead && IsOnFloor ()) {
           // danger on the node is comparable with bot's aggression - duck for a while
-          if (danger >= base_agression_level_ * 0.5f) {
+          if (danger >= emotion_.base_aggression * 0.5f) {
             camp_buttons_ |= IN_DUCK;
           }
           else if (rg.chance (Skill ())) {

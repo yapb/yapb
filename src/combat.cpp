@@ -135,14 +135,13 @@ bool Bot::IsEnemyInDarkAreaCached (edict_t *enemy) {
   if (game.IsNullEntity (enemy)) {
     return false;
   }
-  if (dark_area_check_timer_.elapsed () || dark_area_check_enemy_ != enemy ||
-      dark_area_check_origin_.distance_sq (enemy->v.origin) > ystl::sqrf (64.0f)) {
-    dark_area_check_enemy_ = enemy;
-    dark_area_check_origin_ = enemy->v.origin;
-    dark_area_result_ = IsEnemyInDarkArea (enemy);
-    dark_area_check_timer_.start (0.1f);
+  if (dark_area_.timer.elapsed () || dark_area_enemy_ != enemy || dark_area_.origin.distance_sq (enemy->v.origin) > ystl::sqrf (64.0f)) {
+    dark_area_enemy_ = enemy;
+    dark_area_.origin = enemy->v.origin;
+    dark_area_.result = IsEnemyInDarkArea (enemy);
+    dark_area_.timer.start (0.1f);
   }
-  return dark_area_result_;
+  return dark_area_.result;
 }
 
 bool Bot::CheckBodyParts (edict_t *target) {
@@ -444,7 +443,7 @@ void Bot::TrackEnemies () {
 float Bot::EnemyMemorySpan () const {
   // memory grows with skill, aggression and how close the last contact was
   const float skill = static_cast<float> (Skill ()) / 100.0f;
-  const float aggression = ystl::clamp (agression_level_, 0.0f, 1.0f);
+  const float aggression = ystl::clamp (emotion_.aggression, 0.0f, 1.0f);
 
   float closeness = 0.0f;
 
@@ -516,7 +515,7 @@ bool Bot::LookupEnemies () {
   enemy_origin_.clear ();
 
   // do not search for enemies while we're blinded, or shooting disabled by user
-  if (!enemy_ignore_timer_.elapsed () || !blind_timer_.elapsed () || cv_ignore_enemies) {
+  if (!enemy_ignore_timer_.elapsed () || !blind_.timer.elapsed () || cv_ignore_enemies) {
     return false;
   }
   edict_t *player, *new_enemy = nullptr;
@@ -659,9 +658,9 @@ bool Bot::LookupEnemies () {
         }
       }
 
-      if (focus != nullptr && target_switch_timer_.elapsed ()) {
+      if (focus != nullptr && team_cooldowns_.target_switch.elapsed ()) {
         new_enemy = focus;
-        target_switch_timer_.start (1.5f);
+        team_cooldowns_.target_switch.start (1.5f);
       }
     }
     enemy_update_timer_.start (UsesKnife () ? 1.25f : 0.85f);
@@ -764,7 +763,7 @@ bool Bot::LookupEnemies () {
       // shoot at dying players if no new enemy to give some more human-like illusion
       if (see_enemy_timer_.less_than (0.1f)) {
         if (!UsesSniper ()) {
-          shoot_at_dead_timer_.start (ystl::clamp (agression_level_ * 1.25f, 0.15f, 0.25f));
+          shoot_at_dead_timer_.start (ystl::clamp (emotion_.aggression * 1.25f, 0.15f, 0.25f));
           actual_reaction_time_ = 0.0f;
           states_ |= Sense::SuspectEnemy;
 
@@ -877,29 +876,29 @@ ystl::Vector Bot::GetAimFocusOffset (edict_t *target, float distance) {
   }
   const auto &tune = kTune[ystl::clamp (ystl::to_underlying (difficulty_), 0, 4)];
   const float now = game.Time ();
-  const float dt = ystl::clamp (now - aim_focus_time_, 0.0f, 0.25f);
-  aim_focus_time_ = now;
+  const float dt = ystl::clamp (now - aim_focus_.time, 0.0f, 0.25f);
+  aim_focus_.time = now;
 
   // the focus fades while the target stays still in our view
-  aim_focus_deg_ = ystl::max (0.0f, aim_focus_deg_ * (1.0f - dt / tune.half_life));
+  aim_focus_.deg = ystl::max (0.0f, aim_focus_.deg * (1.0f - dt / tune.half_life));
 
   // a target sweeping across our view raises the focus; for small steps the chord between unit vectors is the angle
   const ystl::Vector dir = (target->v.origin - GetEyesPos ()).normalize ();
 
-  if (!aim_focus_dir_.empty () && dt > 0.0f) {
-    const float sweep_deg = (dir - aim_focus_dir_).length () * 57.2958f / dt;
-    aim_focus_deg_ = ystl::min (tune.cap, ystl::max (aim_focus_deg_, sweep_deg * tune.gain));
+  if (!aim_focus_.dir.empty () && dt > 0.0f) {
+    const float sweep_deg = (dir - aim_focus_.dir).length () * 57.2958f / dt;
+    aim_focus_.deg = ystl::min (tune.cap, ystl::max (aim_focus_.deg, sweep_deg * tune.gain));
   }
-  aim_focus_dir_ = dir;
+  aim_focus_.dir = dir;
 
   // the error rotates around the view axis, re-rolled on a short timer so it does not look like a fixed offset
-  if (aim_focus_turn_timer_.elapsed ()) {
-    aim_focus_theta_ = rg (0.0f, 6.2831853f);
-    aim_focus_turn_timer_.start (rg (0.4f, 0.8f));
+  if (aim_focus_.turn_timer.elapsed ()) {
+    aim_focus_.theta = rg (0.0f, 6.2831853f);
+    aim_focus_.turn_timer.start (rg (0.4f, 0.8f));
   }
-  const float radius = distance * ystl::deg2rad (aim_focus_deg_);
+  const float radius = distance * ystl::deg2rad (aim_focus_.deg);
 
-  return ystl::Vector (ystl::cosf (aim_focus_theta_) * radius, ystl::sinf (aim_focus_theta_) * radius, 0.0f);
+  return ystl::Vector (ystl::cosf (aim_focus_.theta) * radius, ystl::sinf (aim_focus_.theta) * radius, 0.0f);
 }
 
 ystl::Vector Bot::GetEnemyBodyOffset () {
@@ -1175,7 +1174,7 @@ void Bot::AttackMovement () {
     approach = 29;
   }
   else {
-    approach = static_cast<int> (health_value_ * agression_level_);
+    approach = static_cast<int> (health_value_ * emotion_.aggression);
 
     // snipers should hold position, not rush
     if (UsesSniper () && approach > 49) {
@@ -1774,7 +1773,7 @@ void Bot::CheckGrenadesThrow () {
     return;
   }
   else if (!is_grenade_mode) {
-    int cancel_prob = agression_level_ > fear_level_ ? 5 : 20;
+    int cancel_prob = emotion_.aggression > emotion_.fear ? 5 : 20;
 
     if (grenade_to_throw == Weapon::Flashbang) {
       // lower cancel chance for higher difficulty (more tactical usage)
@@ -1782,7 +1781,7 @@ void Bot::CheckGrenadesThrow () {
     }
     else if (grenade_to_throw == Weapon::Smoke) {
       // reduce cancel chance in tactical situations
-      if (in_bomb_zone_ || health_value_ < 50.0f || has_flag (last_enemy_->v.weapons, kSniperWeaponMask)) {
+      if (zones_.bomb || health_value_ < 50.0f || has_flag (last_enemy_->v.weapons, kSniperWeaponMask)) {
         cancel_prob = difficulty_ >= Difficulty::Normal ? 15 : 25;
       }
       else {
@@ -1935,7 +1934,7 @@ void Bot::CheckGrenadesThrow () {
         const float distance_to_enemy = last_enemy_->v.origin.distance (pev->origin);
 
         // context-aware smoke placement
-        if (in_bomb_zone_ && (has_c4_ || GetTaskId () == TaskId::PlantBomb)) {
+        if (zones_.bomb && (has_c4_ || GetTaskId () == TaskId::PlantBomb)) {
           // planting: smoke closer to bot for cover (30-40% distance)
           const float smoke_distance = distance_to_enemy * rg (0.3f, 0.4f);
           smoke_target = pev->origin + to_enemy * smoke_distance;
@@ -2074,10 +2073,10 @@ bool Bot::IsEnemyNoticeable (float range) {
   // skill sets the floor, alertness raises the ceiling
   chance += 0.5f + 0.5f * static_cast<float> (Skill ());
 
-  if (agression_level_ > fear_level_) {
+  if (emotion_.aggression > emotion_.fear) {
     chance += 50.0f;
   }
-  chance = ystl::max (0.1f, chance * ystl::abs (agression_level_ - fear_level_));
+  chance = ystl::max (0.1f, chance * ystl::abs (emotion_.aggression - emotion_.fear));
 
   return rg (0.0f, 100.0f) < chance;
 }

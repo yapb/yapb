@@ -311,11 +311,11 @@ TEST_CASE ("unit/tasks_core") {
   clients[foe].team = Team::CT;
 
   // blinded bots shelve everything for the blind task...
-  bot->blind_timer_.start (10.0f);
+  bot->blind_.timer.start (10.0f);
   TasksHook::Filter (*bot);
   CHECK (bot->GetTaskId () == TaskId::Blind);
 
-  bot->blind_timer_.invalidate ();
+  bot->blind_.timer.invalidate ();
   bot->ClearTasks ();
 
   // ...a button at hand outranks idling...
@@ -403,18 +403,18 @@ TEST_CASE ("unit/tasks_basic") {
   // (the cover index defaults out of range, so no navigation kicks in)
   bot->ClearTasks ();
   bot->StartTask (TaskId::Blind, TaskPri::kBlind, kInvalidNodeIndex, game.Time () + 60.0f, true);
-  bot->blind_timer_.start (10.0f);
-  CHECK (bot->blind_node_index_ == kInvalidNodeIndex);
-  bot->blind_move_speed_ = 50.0f;
-  bot->blind_side_move_speed_ = 60.0f;
-  bot->blind_button_ = IN_DUCK;
+  bot->blind_.timer.start (10.0f);
+  CHECK (bot->blind_.node_index == kInvalidNodeIndex);
+  bot->blind_.move_speed = 50.0f;
+  bot->blind_.side_move_speed = 60.0f;
+  bot->blind_.button = IN_DUCK;
   TasksHook::Execute (*bot);
   CHECK (TasksHook::MoveSpeed (*bot) == 50.0f);
   CHECK (TasksHook::StrafeSpeed (*bot) == 60.0f);
   CHECK (!!(bot->pev->button & IN_DUCK));
   CHECK (!!(TasksHook::GetAimFlags (*bot) & static_cast<int> (AimFlags::Override)));
 
-  bot->blind_timer_.invalidate ();
+  bot->blind_.timer.invalidate ();
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () != TaskId::Blind);
 
@@ -513,14 +513,14 @@ TEST_CASE ("unit/tasks_duty") {
   // ...while carrying it in the zone holds attack down on the spot
   bot->ClearTasks ();
   bot->has_c4_ = true;
-  bot->in_bomb_zone_ = true;
+  bot->zones_.bomb = true;
   bot->StartTask (TaskId::PlantBomb, TaskPri::kPlantBomb, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () == TaskId::PlantBomb);
   CHECK (!!(bot->pev->button & IN_ATTACK));
   CHECK (TasksHook::MoveSpeed (*bot) == 0.0f);
   bot->has_c4_ = false;
-  bot->in_bomb_zone_ = false;
+  bot->zones_.bomb = false;
 
   // defusing thin air ends at once...
   bot->ClearTasks ();
@@ -1033,8 +1033,8 @@ TEST_CASE ("unit/tasks_desires") {
 
   // full health zeroes retreat, high aggression prices the hunt at the cap
   bot->health_value_ = 100.0f;
-  bot->fear_level_ = 0.1f;
-  bot->agression_level_ = 1.0f;
+  bot->emotion_.fear = 0.1f;
+  bot->emotion_.aggression = 1.0f;
   bot->num_friends_left_ = 0;
   bot->num_enemies_left_ = 0;
   bot->has_c4_ = false;
@@ -1103,7 +1103,7 @@ TEST_CASE ("unit/tasks_desires") {
   TasksHook::SetStates (*bot, Sense::Invalid);
   bot->health_value_ = 50.0f;
   bot->pev->max_health = 100.0f;
-  bot->fear_level_ = 0.5f;
+  bot->emotion_.fear = 0.5f;
   bot->num_friends_left_ = 2;
   bot->num_enemies_left_ = 2;
   bot->has_c4_ = false;
@@ -1454,7 +1454,7 @@ TEST_CASE ("unit/tasks_shelter") {
   clients[foe].team = Team::CT;
   TasksHook::SetLastEnemy (*bot, foe);
   TasksHook::SetLastEnemyOrigin (*bot, ystl::Vector (400.0f, 0.0f, 0.0f));
-  bot->blind_timer_.start (10.0f);
+  bot->blind_.timer.start (10.0f);
   TasksHook::Rng (*bot).force_chance (true);
   TasksHook::Rng (*bot).force_float (0.0f);
   bot->ClearTasks ();
@@ -1462,20 +1462,20 @@ TEST_CASE ("unit/tasks_shelter") {
   TasksHook::Execute (*bot);
   CHECK (TasksHook::BlindFired (*bot));
   TasksHook::Rng (*bot).clear_forced ();
-  bot->blind_timer_.invalidate ();
+  bot->blind_.timer.invalidate ();
 
   // ...blind walkers follow the node path when one is remembered...
   TasksHook::SetLastEnemy (*bot, foe);
   TasksHook::SetLastEnemyOrigin (*bot, ystl::Vector (400.0f, 0.0f, 0.0f));
-  bot->blind_timer_.start (10.0f);
-  bot->blind_node_index_ = 2;
+  bot->blind_.timer.start (10.0f);
+  bot->blind_.node_index = 2;
   TasksHook::Rng (*bot).force_chance (true);
   bot->ClearTasks ();
   bot->StartTask (TaskId::Blind, TaskPri::kBlind, kInvalidNodeIndex, game.Time () + 60.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () == TaskId::Blind);
   TasksHook::Rng (*bot).clear_forced ();
-  bot->blind_timer_.invalidate ();
+  bot->blind_.timer.invalidate ();
   bot->ClearTasks ();
 
   // escapees draw the knife and head for the far side...
@@ -1673,7 +1673,7 @@ TEST_CASE ("unit/tasks_vault") {
 
   // ...live foes stall the plant...
   bot->has_c4_ = true;
-  bot->in_bomb_zone_ = true;
+  bot->zones_.bomb = true;
   bot->current_weapon_ = Weapon::C4;
   bot->weapon_type_ = WeaponType::Pistol;
   edict_t *foe = game.CreateFakeClient ("VlFoe");
@@ -1701,7 +1701,7 @@ TEST_CASE ("unit/tasks_vault") {
   bot->pev->button = 0;
   bot->pev->flags &= ~FL_DUCKING;
   bot->has_c4_ = false;
-  bot->in_bomb_zone_ = false;
+  bot->zones_.bomb = false;
 
   // hopeless defuses hold the line when the use is held...
   mp_c4timer.Set (35);
@@ -2133,8 +2133,8 @@ TEST_CASE ("unit/tasks_novel") {
   clients.Update ();
   clients[foe].team = Team::CT;
   bot->health_value_ = 50.0f;
-  bot->fear_level_ = 1.0f;
-  bot->agression_level_ = 1.0f;
+  bot->emotion_.fear = 1.0f;
+  bot->emotion_.aggression = 1.0f;
   bot->num_friends_left_ = 2;
   bot->num_enemies_left_ = 1;
   bot->has_c4_ = false;

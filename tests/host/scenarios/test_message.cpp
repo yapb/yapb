@@ -308,12 +308,12 @@ TEST_CASE ("unit/message_items") {
   clients[foe].team2 = Team::Terrorist;
   bot->team_ = Team::CT;
   bot->health_value_ = 100.0f;
-  bot->agression_level_ = 0.0f;
+  bot->emotion_.aggression = 0.0f;
   bot->pev->dmg_inflictor = foe;
 
   SendLongs (bot->Ent (), kDamage, { 5, 20, 0 });
   CHECK (bot->last_damage_type_ == 0);
-  CHECK (bot->agression_level_ == 0.1f);
+  CHECK (bot->emotion_.aggression == 0.1f);
   CHECK (bot->last_enemy_ == foe);
 
   // status icons flip the zone flags, unknown icons are skipped
@@ -322,44 +322,44 @@ TEST_CASE ("unit/message_items") {
   msgs.Collect (int32_t (1));
   msgs.Collect ("buyzone");
   msgs.Stop ();
-  CHECK (bot->in_buy_zone_);
+  CHECK (bot->zones_.buy);
 
   SendLongs (bot->Ent (), kStatusIcon, { 0 });
   msgs.Start (bot->Ent (), kStatusIcon);
   msgs.Collect (int32_t (0));
   msgs.Collect ("buyzone");
   msgs.Stop ();
-  CHECK (!bot->in_buy_zone_);
+  CHECK (!bot->zones_.buy);
 
   msgs.Start (bot->Ent (), kStatusIcon);
   msgs.Collect (int32_t (1));
   msgs.Collect ("escape");
   msgs.Stop ();
-  CHECK (bot->in_escape_zone_);
+  CHECK (bot->zones_.escape);
 
   msgs.Start (bot->Ent (), kStatusIcon);
   msgs.Collect (int32_t (1));
   msgs.Collect ("rescue");
   msgs.Stop ();
-  CHECK (bot->in_rescue_zone_);
+  CHECK (bot->zones_.rescue);
 
   msgs.Start (bot->Ent (), kStatusIcon);
   msgs.Collect (int32_t (1));
   msgs.Collect ("vipsafety");
   msgs.Stop ();
-  CHECK (bot->in_vip_zone_);
+  CHECK (bot->zones_.vip);
 
   msgs.Start (bot->Ent (), kStatusIcon);
   msgs.Collect (int32_t (2));
   msgs.Collect ("c4");
   msgs.Stop ();
-  CHECK (bot->in_bomb_zone_);
+  CHECK (bot->zones_.bomb);
 
   msgs.Start (bot->Ent (), kStatusIcon);
   msgs.Collect (int32_t (1));
   msgs.Collect ("c4");
   msgs.Stop ();
-  CHECK (!bot->in_bomb_zone_);
+  CHECK (!bot->zones_.bomb);
 
   msgs.Start (bot->Ent (), kStatusIcon);
   msgs.Collect (int32_t (1));
@@ -371,16 +371,16 @@ TEST_CASE ("unit/message_items") {
   msgs.Collect (int32_t (1));
   msgs.Collect ("bogus_icon");
   msgs.Stop ();
-  CHECK (!bot->in_buy_zone_); // nothing else flipped
+  CHECK (!bot->zones_.buy); // nothing else flipped
 
   // full-white fade blinds, tinted one does not
   SendLongs (bot->Ent (), kScreenFade, { 0, 0, 0, 255, 255, 255, 200 });
-  CHECK (bot->blind_timer_.started ());
-  bot->blind_timer_.invalidate ();
+  CHECK (bot->blind_.timer.started ());
+  bot->blind_.timer.invalidate ();
   SendLongs (bot->Ent (), kScreenFade, { 0, 0, 0, 255, 0, 0, 200 });
-  CHECK (!bot->blind_timer_.started ());
+  CHECK (!bot->blind_.timer.started ());
   SendLongs (bot->Ent (), kScreenFade, { 0, 0 }); // too short
-  CHECK (!bot->blind_timer_.started ());
+  CHECK (!bot->blind_.timer.started ());
 
   // vgui menus drive team/class selection
   SendLongs (bot->Ent (), kVGUIMenu, { 2 });

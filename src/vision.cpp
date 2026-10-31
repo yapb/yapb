@@ -383,7 +383,7 @@ void Bot::SetAimDirection () {
   else if (has_flag (flags, AimFlags::Enemy)) {
     FocusEnemy ();
   }
-  else if (has_flag (flags, AimFlags::Flash) && blind_timer_.elapsed () && ForcedLookAt ().empty ()) {
+  else if (has_flag (flags, AimFlags::Flash) && blind_.timer.elapsed () && ForcedLookAt ().empty ()) {
     look_at_ = avoid_flash_look_;
   }
   else if (has_flag (flags, AimFlags::Entity)) {
@@ -401,7 +401,7 @@ void Bot::SetAimDirection () {
     look_at_ = last_enemy_origin_;
 
     // did bot just see enemy (or is holding a thru-wall engagement) and is quite aggressive?
-    if (!thru_wall_hold_timer_.elapsed () || see_enemy_timer_.less_than (2.0f - actual_reaction_time_ + base_agression_level_)) {
+    if (!thru_wall_hold_timer_.elapsed () || see_enemy_timer_.less_than (2.0f - actual_reaction_time_ + emotion_.base_aggression)) {
 
       // feel free to fire if shootable
       if (!UsesSniper () && LastEnemyShootable ()) {

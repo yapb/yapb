@@ -1509,20 +1509,20 @@ Bot::Bot (edict_t *bot, Difficulty difficulty, Personality personality, Team tea
   switch (personality) {
   case Personality::Rusher:
     personality_ = Personality::Rusher;
-    base_agression_level_ = rg (0.7f, 1.0f);
-    base_fear_level_ = rg (0.0f, 0.4f);
+    emotion_.base_aggression = rg (0.7f, 1.0f);
+    emotion_.base_fear = rg (0.0f, 0.4f);
     break;
 
   case Personality::Careful:
     personality_ = Personality::Careful;
-    base_agression_level_ = rg (0.2f, 0.5f);
-    base_fear_level_ = rg (0.7f, 1.0f);
+    emotion_.base_aggression = rg (0.2f, 0.5f);
+    emotion_.base_fear = rg (0.7f, 1.0f);
     break;
 
   default:
     personality_ = Personality::Normal;
-    base_agression_level_ = rg (0.4f, 0.7f);
-    base_fear_level_ = rg (0.4f, 0.7f);
+    emotion_.base_aggression = rg (0.4f, 0.7f);
+    emotion_.base_fear = rg (0.4f, 0.7f);
     break;
   }
   ClearAmmoInfo ();
@@ -1533,14 +1533,14 @@ Bot::Bot (edict_t *bot, Difficulty difficulty, Personality personality, Team tea
   voice_pitch_ = rg (85, 115); // assign voice pitch
 
   // copy them over to the temp level variables
-  agression_level_ = base_agression_level_;
-  fear_level_ = base_fear_level_;
-  emotion_update_timer_.start (0.5f);
+  emotion_.aggression = emotion_.base_aggression;
+  emotion_.fear = emotion_.base_fear;
+  emotion_.update_timer.start (0.5f);
 
   // teamwork: smarter bots cooperate more, rushers lean lone-wolf while careful ones stick together
   const float skill_fraction = static_cast<float> (ystl::to_underlying (difficulty)) * 0.18f;
 
-  teamwork_level_ = ystl::clamp (
+  emotion_.teamwork = ystl::clamp (
     0.25f + skill_fraction + (personality_ == Personality::Rusher ? -0.2f : 0.0f) + (personality_ == Personality::Careful ? 0.15f : 0.0f), 0.0f,
     1.0f);
   health_value_ = bot->v.health;
@@ -1874,9 +1874,9 @@ void Bot::NewRound () {
 
   change_view_timer_.start (rg.chance (25) ? mp_freezetime.As<float> () : 0.0f);
   aim_error_timer_.start (0.0f);
-  aim_focus_deg_ = 0.0f;
-  aim_focus_dir_.clear ();
-  aim_focus_time_ = game.Time ();
+  aim_focus_.deg = 0.0f;
+  aim_focus_.dir.clear ();
+  aim_focus_.time = game.Time ();
 
   view_distance_ = Frustum::kMaxViewDistance;
   max_view_distance_ = Frustum::kMaxViewDistance;
@@ -1940,14 +1940,14 @@ void Bot::NewRound () {
   predict_enqueue_timer_.invalidate ();
   thru_wall_hold_timer_.invalidate ();
   thru_wall_reroll_timer_.invalidate ();
-  penetration_check_timer_.invalidate ();
-  penetration_check_origin_.clear ();
-  penetration_result_ = false;
+  penetration_.timer.invalidate ();
+  penetration_.origin.clear ();
+  penetration_.result = false;
 
-  dark_area_check_timer_.invalidate ();
-  dark_area_check_enemy_ = nullptr;
-  dark_area_check_origin_.clear ();
-  dark_area_result_ = false;
+  dark_area_.timer.invalidate ();
+  dark_area_enemy_ = nullptr;
+  dark_area_.origin.clear ();
+  dark_area_.result = false;
 
   avoid_grenade_ = nullptr;
   need_avoid_grenade_ = 0;
@@ -2003,8 +2003,8 @@ void Bot::NewRound () {
   bomb_search_overridden_ = false;
   fire_hurts_friend_ = false;
 
-  blind_button_ = 0;
-  blind_timer_.invalidate ();
+  blind_.button = 0;
+  blind_.timer.invalidate ();
   avoid_flash_timer_.invalidate ();
   avoid_flash_ent_ = nullptr;
   jump_time_ = 0.0f;
@@ -2025,7 +2025,7 @@ void Bot::NewRound () {
   last_equip_timer_.invalidate ();
 
   // setup radio percent each round
-  const auto bad_morale = fear_level_ > agression_level_ ? rg.chance (75) : rg.chance (35);
+  const auto bad_morale = emotion_.fear > emotion_.aggression ? rg.chance (75) : rg.chance (35);
 
   switch (personality_) {
   case Personality::Normal:
@@ -2043,7 +2043,7 @@ void Bot::NewRound () {
   }
 
   // tie radio usage to teamwork instead of pure dice: team players communicate more
-  radio_percent_ = ystl::clamp (radio_percent_ + static_cast<int> ((teamwork_level_ - 0.5f) * 40.0f), 0, 95);
+  radio_percent_ = ystl::clamp (radio_percent_ + static_cast<int> ((emotion_.teamwork - 0.5f) * 40.0f), 0, 95);
 
   // if bot died, clear all weapon stuff and force buying again
   if (!is_alive_) {
@@ -2065,7 +2065,7 @@ void Bot::NewRound () {
   }
 
   buy_pending_ = false;
-  in_bomb_zone_ = false;
+  zones_.bomb = false;
   ignore_buy_delay_ = false;
   has_c4_ = false;
   has_hostage_ = false;
@@ -2132,7 +2132,7 @@ void Bot::NewRound () {
 }
 
 void Bot::ResetPathSearchType () {
-  const auto morale = fear_level_ > agression_level_ ? rg.chance (30) : rg.chance (70);
+  const auto morale = emotion_.fear > emotion_.aggression ? rg.chance (30) : rg.chance (70);
 
   switch (personality_) {
   default:

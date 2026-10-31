@@ -221,10 +221,10 @@ struct CombatHook {
     bot.enemy_ignore_timer_.start (value);
   }
   static void InvalidateBlind (Bot &bot) {
-    bot.blind_timer_.invalidate ();
+    bot.blind_.timer.invalidate ();
   }
   static void StartBlind (Bot &bot, float value) {
-    bot.blind_timer_.start (value);
+    bot.blind_.timer.start (value);
   }
   static void InvalidateEnemyUpdate (Bot &bot) {
     bot.enemy_update_timer_.invalidate ();
@@ -261,7 +261,7 @@ struct CombatHook {
     bot.thru_wall_reroll_timer_.start (value);
   }
   static void InvalidatePenetration (Bot &bot) {
-    bot.penetration_check_timer_.invalidate ();
+    bot.penetration_.timer.invalidate ();
   }
   static void SetSeenThru (Bot &bot, int pct) {
     bot.difficulty_data_->seen_thru_pct = pct;
@@ -295,10 +295,10 @@ struct CombatHook {
     bot.pev->health = value;
   }
   static void SetAggression (Bot &bot, float value) {
-    bot.agression_level_ = value;
+    bot.emotion_.aggression = value;
   }
   static void SetFear (Bot &bot, float value) {
-    bot.fear_level_ = value;
+    bot.emotion_.fear = value;
   }
   static bool CheckZoom (Bot &bot, float distance) {
     return bot.CheckZoom (distance);
@@ -1048,7 +1048,7 @@ TEST_CASE ("unit/combat_attack_move") {
   CombatHook::SetReloading (*bot, false);
   bot->is_vip_ = false;
   bot->health_value_ = 100.0f;
-  bot->agression_level_ = 1.0f;
+  bot->emotion_.aggression = 1.0f;
   CombatHook::SetStates (*bot, Sense::SeeingEnemy);
   CHECK (CombatHook::States (*bot) == Sense::SeeingEnemy);
   CombatHook::AttackMove (*bot);

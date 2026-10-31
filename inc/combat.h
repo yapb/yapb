@@ -32,6 +32,13 @@ enum class Visibility : int8_t {
 };
 YSTL_ENABLE_ENUM_FLAGS (Visibility);
 
+// throttled, cached result of a visibility probe against a world point
+struct ProbeCache {
+  ystl::CountdownTimer timer {}; // throttles the check
+  ystl::Vector origin {}; // last position the check was made against
+  bool result {}; // cached result
+};
+
 // bot combat data mixin
 class CombatData {
   friend class DebugPanel;
@@ -63,15 +70,9 @@ protected:
   ystl::CountdownTimer forget_last_victim_timer_ {}; // time to forget last victim position ?
   ystl::CountdownTimer thru_wall_hold_timer_ {}; // holds thru-wall engagement without re-rolling chance
   ystl::CountdownTimer thru_wall_reroll_timer_ {}; // backoff between discrete thru-wall chance rolls
-  ystl::CountdownTimer penetration_check_timer_ {}; // throttles expensive penetrable-obstacle checks
-
-  bool penetration_result_ {}; // cached result of penetrable-obstacle check
-  ystl::Vector penetration_check_origin_ {}; // last position the penetrability check was made against
-
-  ystl::CountdownTimer dark_area_check_timer_ {}; // throttles dark-area checks
-  bool dark_area_result_ {}; // cached result of dark-area check
-  edict_t *dark_area_check_enemy_ {}; // enemy the dark-area check was made for
-  ystl::Vector dark_area_check_origin_ {}; // last position the dark-area check was made against
+  ProbeCache penetration_ {}; // cached penetrable-obstacle check
+  ProbeCache dark_area_ {}; // cached dark-area check
+  edict_t *dark_area_enemy_ {}; // enemy the dark-area check was made for
 
   edict_t *stab_unaware_enemy_ {}; // enemy the unaware-stab decision was made for
 

@@ -621,7 +621,7 @@ void Bot::EnteredBuyZone (BuyState buy_state) {
   }
 
   // if bot is in buy zone, try to buy ammo for this weapon
-  if (see_enemy_timer_.greater_than (12.0f) && last_equip_timer_.greater_than (30.0f) && in_buy_zone_ &&
+  if (see_enemy_timer_.greater_than (12.0f) && last_equip_timer_.greater_than (30.0f) && zones_.buy &&
       (game_state.GetRoundStartTime () + rg (10.0f, 20.0f) + mp_buytime.As<float> () < game.Time ()) && !game_state.IsBombPlanted () &&
       money_amount_ > conf.GetEconLimit (EcoLimit::PrimaryGreater)) {
 
@@ -644,7 +644,7 @@ void Bot::DonateToPoorTeammate () {
   // the donor pays the weapon price and must still afford to rebuy a primary afterwards
   const int32_t rebuy = conf.GetEconLimit (EcoLimit::PrimaryGreater);
 
-  if (is_creature_ || !in_buy_zone_ || !HasPrimaryWeapon () || money_amount_ <= 2900 + rebuy || game_state.GetTeamDrops (team_) >= 3) {
+  if (is_creature_ || !zones_.buy || !HasPrimaryWeapon () || money_amount_ <= 2900 + rebuy || game_state.GetTeamDrops (team_) >= 3) {
     return;
   }
 

@@ -72,6 +72,15 @@ class TickManager;
 
 namespace bot {
 
+// which special map zone the bot currently stands in
+struct ZoneState {
+  bool bomb {}; // bot in the bomb zone or not
+  bool buy {}; // bot currently in buy zone
+  bool escape {}; // bot currently in escape zone
+  bool rescue {}; // bot currently in rescue zone
+  bool vip {}; // bot in the vip safety zone
+};
+
 // main bot class
 class Bot final : public WeaponsData,
                   public CombatData,
@@ -1015,11 +1024,7 @@ public:
   bool is_alive_ {}; // has the player been killed or has he just respawned
 
   bool not_started_ {}; // team/class not chosen yet
-  bool in_bomb_zone_ {}; // bot in the bomb zone or not
-  bool in_buy_zone_ {}; // bot currently in buy zone
-  bool in_escape_zone_ {}; // bot currently in escape zone
-  bool in_rescue_zone_ {}; // bot currently in rescue zone
-  bool in_vip_zone_ {}; // bot in the vip safety zone
+  ZoneState zones_ {};
   bool has_hostage_ {}; // does bot owns some hostages
   bool has_progress_bar_ {}; // has progress bar on a hud
   bool kicked_by_rotation_ {}; // is bot kicked due to rotation ?

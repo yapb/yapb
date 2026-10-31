@@ -108,8 +108,8 @@ struct NavigateHook {
     bot.last_enemy_origin_ = pos;
   }
   static void SetAggression (Bot &bot, float aggression, float fear) {
-    bot.agression_level_ = aggression;
-    bot.fear_level_ = fear;
+    bot.emotion_.aggression = aggression;
+    bot.emotion_.fear = fear;
   }
 
   static void SetMoveSpeed (Bot &bot, float value) {
@@ -384,7 +384,7 @@ struct NavigateHook {
     return bot.path_origin_;
   }
   static void SetInBombZone (Bot &bot, bool value) {
-    bot.in_bomb_zone_ = value;
+    bot.zones_.bomb = value;
   }
   static void SetProgressBar (Bot &bot, bool value) {
     bot.has_progress_bar_ = value;
@@ -459,7 +459,7 @@ struct NavigateHook {
     bot.lift_travel_pos_ = pos;
   }
   static void SetBaseAggression (Bot &bot, float value) {
-    bot.base_agression_level_ = value;
+    bot.emotion_.base_aggression = value;
   }
   static void ClearHostages (Bot &bot) {
     bot.hostages_.clear ();
@@ -2551,8 +2551,8 @@ TEST_CASE ("unit/navigate_goal_variants") {
   auto bot = CreateNavBot ("GoalXBot", ystl::Vector (0.0f, 0.0f, 0.0f));
   HOST_REQUIRE (bot.get () != nullptr);
   bot->team_ = Team::Terrorist;
-  bot->agression_level_ = 0.5f;
-  bot->fear_level_ = 0.5f;
+  bot->emotion_.aggression = 0.5f;
+  bot->emotion_.fear = 0.5f;
 
   // zombie creatures take the terrorist pool first
   game.AddGameFlag (GameFlags::ZombieMod);

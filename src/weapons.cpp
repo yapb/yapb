@@ -43,12 +43,12 @@ bool Bot::IsPenetrableObstacle (const ystl::Vector &dest) {
 bool Bot::IsPenetrableObstacleCached (const ystl::Vector &dest) {
   // cache wall traces until the timer lapses or the target moves
 
-  if (penetration_check_timer_.elapsed () || penetration_check_origin_.distance_sq (dest) > ystl::sqrf (64.0f)) {
-    penetration_result_ = IsPenetrableObstacle (dest);
-    penetration_check_origin_ = dest;
-    penetration_check_timer_.start (0.25f);
+  if (penetration_.timer.elapsed () || penetration_.origin.distance_sq (dest) > ystl::sqrf (64.0f)) {
+    penetration_.result = IsPenetrableObstacle (dest);
+    penetration_.origin = dest;
+    penetration_.timer.start (0.25f);
   }
-  return penetration_result_;
+  return penetration_.result;
 }
 
 bool Bot::IsPenetrableObstacle1 (const ystl::Vector &dest, int penetrate_power) const {
@@ -560,7 +560,7 @@ void Bot::HandleWeapons (float distance, int, Weapon id, int choosen) {
   const float time_delta = game.Time () - frame_interval_;
 
   // need to care for burst fire?
-  if ((distance < kSprayDistance && !IsRecoilHigh ()) || !blind_timer_.elapsed () || UsesKnife ()) {
+  if ((distance < kSprayDistance && !IsRecoilHigh ()) || !blind_.timer.elapsed () || UsesKnife ()) {
     if (id == Weapon::Knife) {
       const float min_attack_distance = is_creature_ ? 80.0f : 72.0f;
 

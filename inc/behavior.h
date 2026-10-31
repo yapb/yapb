@@ -115,6 +115,34 @@ public:
   }
 };
 
+// blind reaction state while flashed
+struct BlindState {
+  ystl::CountdownTimer timer {}; // time when bot is blinded
+  float move_speed {}; // mad speeds when bot is blind
+  float side_move_speed {}; // mad side move speeds when bot is blind
+  int button {}; // buttons bot press, when blind
+  int node_index { kInvalidNodeIndex }; // node index to cover when blind (invalid until takeBlind assigns cover)
+};
+
+// personality-driven emotion levels that shift during a match
+struct EmotionState {
+  float base_aggression {}; // base aggression level (on initializing)
+  float base_fear {}; // base fear level (on initializing)
+  float aggression {}; // dynamic aggression level (in game)
+  float fear {}; // dynamic fear level (in game)
+  float teamwork {}; // how much the bot plays as a team (0 lone wolf .. 1 team player)
+  ystl::CountdownTimer update_timer {}; // next time to sanitize emotions
+};
+
+// cooldowns that space out team-oriented reactions
+struct TeamCooldowns {
+  ystl::CountdownTimer contact {}; // cooldown before reacting to a shared contact again
+  ystl::CountdownTimer cohesion {}; // cooldown before regrouping with teammates again
+  ystl::CountdownTimer bomb_guard {}; // cooldown before covering the bomb defuser again
+  ystl::CountdownTimer target_switch {}; // cooldown before focusing a teammate's target again
+  ystl::CountdownTimer hostage_giveup {}; // stop waiting for a hostage that never catches up
+};
+
 // bot core behavior data mixin
 class BehaviorData {
   friend class DebugPanel;
@@ -208,29 +236,16 @@ public:
   edict_t *avoid_flash_ent_ {}; // flashbang the reaction was rolled for
   float avoid_flash_dmgtime_ {}; // detonation time of the rolled flashbang
   ystl::Vector avoid_flash_look_ {}; // level point away from the flashbang
-  ystl::CountdownTimer blind_timer_ {}; // time when bot is blinded
-  float blind_move_speed_ {}; // mad speeds when bot is blind
-  float blind_side_move_speed_ {}; // mad side move speeds when bot is blind
+  BlindState blind_ {};
   ystl::CountdownTimer change_view_timer_ {}; // timestamp to change look at while at freezetime
-  float base_agression_level_ {}; // base aggression level (on initializing)
-  float base_fear_level_ {}; // base fear level (on initializing)
-  float agression_level_ {}; // dynamic aggression level (in game)
-  float fear_level_ {}; // dynamic fear level (in game)
-  float teamwork_level_ {}; // how much the bot plays as a team (0 lone wolf .. 1 team player)
-  ystl::CountdownTimer emotion_update_timer_ {}; // next time to sanitize emotions
-  ystl::CountdownTimer team_contact_timer_ {}; // cooldown before reacting to a shared contact again
-  ystl::CountdownTimer team_cohesion_timer_ {}; // cooldown before regrouping with teammates again
-  ystl::CountdownTimer bomb_guard_timer_ {}; // cooldown before covering the bomb defuser again
-  ystl::CountdownTimer target_switch_timer_ {}; // cooldown before focusing a teammate's target again
-  ystl::CountdownTimer hostage_wait_giveup_ {}; // stop waiting for a hostage that never catches up
+  EmotionState emotion_ {};
+  TeamCooldowns team_cooldowns_ {};
 
   BuyState buy_state_ {}; // current count in buying
   BuyContext buy_context_ {}; // context during buying
 
   int last_damage_type_ {}; // stores last damage
   int money_amount_ {}; // amount of money in bot's bank
-  int blind_node_index_ { kInvalidNodeIndex }; // node index to cover when blind (invalid until takeBlind assigns cover)
-  int blind_button_ {}; // buttons bot press, when blind
   int logo_decal_index_ {}; // index for logotype
 
   bool ignore_buy_delay_ {}; // when reaching buyzone in the middle of the round don't do pauses

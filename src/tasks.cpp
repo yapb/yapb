@@ -26,8 +26,8 @@ void Bot::FilterTasks () {
   Candidate hide { TaskId::Hide, 0.0f };
   Candidate blind { TaskId::Blind, 0.0f };
 
-  float temp_fear = fear_level_;
-  float temp_agression = agression_level_;
+  float temp_fear = emotion_.fear;
+  float temp_agression = emotion_.aggression;
 
   // decrease fear if players near
   int friendly_num = 0;
@@ -156,7 +156,7 @@ void Bot::FilterTasks () {
   }
 
   // blinded behavior
-  blinded_desire = !blind_timer_.elapsed () ? TaskPri::kBlind : 0.0f;
+  blinded_desire = !blind_.timer.elapsed () ? TaskPri::kBlind : 0.0f;
 
   // desires are set, now filter all actions against each other
   // most values were tuned by trial and error, so expect roughness
@@ -511,7 +511,7 @@ void Bot::TaskNormal () {
         if (team_ == Team::CT && has_hostage_) {
 
           // and reached a rescue point?
-          if (in_rescue_zone_ && has_flag (path_flags_, NodeFlag::Rescue)) {
+          if (zones_.rescue && has_flag (path_flags_, NodeFlag::Rescue)) {
             hostages_.clear ();
           }
         }
@@ -527,7 +527,7 @@ void Bot::TaskNormal () {
       }
 
       // was elseif here but brokes csde_ scenario
-      if (game.MapIs (MapFlags::Demolition) && has_flag (path_flags_, NodeFlag::Goal) && in_bomb_zone_) {
+      if (game.MapIs (MapFlags::Demolition) && has_flag (path_flags_, NodeFlag::Goal) && zones_.bomb) {
         // is it a terrorist carrying the bomb?
         if (has_c4_) {
           if (has_flag (states_, Sense::SeeingEnemy) && NumFriendsNear (pev->origin, 768.0f) == 0) {
@@ -900,14 +900,14 @@ void Bot::TaskBlind () {
     wants_to_fire_ = true; // and shoot it
   }
 
-  if (graph.Exists (blind_node_index_) && rg.chance (50 + Skill () / 2)) {
+  if (graph.Exists (blind_.node_index) && rg.chance (50 + Skill () / 2)) {
     if (UpdateNavigation ()) {
       prev_goal_index_ = kInvalidNodeIndex;
-      blind_node_index_ = kInvalidNodeIndex;
+      blind_.node_index = kInvalidNodeIndex;
 
-      blind_move_speed_ = 0.0f;
-      blind_side_move_speed_ = 0.0f;
-      blind_button_ = 0;
+      blind_.move_speed = 0.0f;
+      blind_.side_move_speed = 0.0f;
+      blind_.button = 0;
 
       states_ |= Sense::SuspectEnemy;
       CompleteTask ();
@@ -915,21 +915,21 @@ void Bot::TaskBlind () {
     else if (!HasActiveGoal ()) {
       EnsureCurrentNodeIndex ();
 
-      prev_goal_index_ = blind_node_index_;
-      Task ()->data = blind_node_index_;
+      prev_goal_index_ = blind_.node_index;
+      Task ()->data = blind_.node_index;
 
-      FindPath (current_node_index_, blind_node_index_, FindPathType::Fast);
+      FindPath (current_node_index_, blind_.node_index, FindPathType::Fast);
     }
   }
   else {
-    move_speed_ = blind_move_speed_;
-    strafe_speed_ = blind_side_move_speed_;
-    pev->button |= blind_button_;
+    move_speed_ = blind_.move_speed;
+    strafe_speed_ = blind_.side_move_speed;
+    pev->button |= blind_.button;
 
     states_ |= Sense::SuspectEnemy;
   }
 
-  if (blind_timer_.elapsed ()) {
+  if (blind_.timer.elapsed ()) {
     CompleteTask ();
   }
 }
@@ -1058,7 +1058,7 @@ void Bot::TaskHide () {
   }
 
   // if we see an enemy and aren't at a good camping point leave the spot
-  if (has_flag (states_, Sense::SeeingEnemy) || in_bomb_zone_) {
+  if (has_flag (states_, Sense::SeeingEnemy) || zones_.bomb) {
     if (!has_flag (path_flags_, NodeFlag::Camp)) {
       CompleteTask ();
 
@@ -1152,7 +1152,7 @@ void Bot::TaskPlantBomb () {
       SelectWeaponById (Weapon::C4);
     }
 
-    if (game.IsAliveEntity (enemy_) || !in_bomb_zone_) {
+    if (game.IsAliveEntity (enemy_) || !zones_.bomb) {
       if (!has_progress_bar_) {
         CompleteTask ();
       }

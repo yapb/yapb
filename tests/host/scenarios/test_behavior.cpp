@@ -50,7 +50,7 @@ struct BehaviorHook {
     bot.not_started_ = false; // skip the menu join flow, teams are pinned above
   }
   static void StartBlind (Bot &bot, float duration) {
-    bot.blind_timer_.start (duration);
+    bot.blind_.timer.start (duration);
   }
   static bool AvoidFlashFlagged (Bot &bot) {
     return has_flag (bot.aim_flags_, AimFlags::Flash);
@@ -171,7 +171,7 @@ struct BehaviorHook {
     bot.UpdateHostageEscort ();
   }
   static void GiveUpHostageWait (Bot &bot) {
-    bot.hostage_wait_giveup_.start (-1.0f);
+    bot.team_cooldowns_.hostage_giveup.start (-1.0f);
   }
   static bool Targeting (Bot &bot, int node) {
     return bot.IsTeammateTargetingNode (node);
@@ -377,9 +377,9 @@ struct BehaviorHook {
     bot.FindPath (src, dst, FindPathType::Fast);
   }
   static void PinPenetration (Bot &bot, edict_t *ent) {
-    bot.penetration_check_origin_ = ent->v.origin;
-    bot.penetration_result_ = true;
-    bot.penetration_check_timer_.start (0.25f);
+    bot.penetration_.origin = ent->v.origin;
+    bot.penetration_.result = true;
+    bot.penetration_.timer.start (0.25f);
   }
   static void SetJump (Bot &bot, float time) {
     bot.jump_time_ = time;
@@ -517,7 +517,7 @@ TEST_CASE ("unit/behavior_queue") {
   // dry buys resolve to pending without touching the wallet flow
   // (the spawn buy timer always outlives pump, let it lapse first)
   engine.AdvanceTime (3.0f);
-  a->in_buy_zone_ = false;
+  a->zones_.buy = false;
   BehaviorHook::CheckQueue (*a);
   CHECK (a->buy_pending_);
   CHECK (a->buying_finished_);
@@ -600,15 +600,15 @@ TEST_CASE ("unit/behavior_senses") {
   graph.paths_[0].vis.stand = 5;
   graph.paths_[0].vis.crouch = 2;
   bot->personality_ = Personality::Rusher;
-  bot->fear_level_ = 0.9f;
-  bot->agression_level_ = 0.1f;
+  bot->emotion_.fear = 0.9f;
+  bot->emotion_.aggression = 0.1f;
   bot->pev->health = 100.0f;
   BehaviorHook::SetCampButtons (*bot, 0);
   BehaviorHook::SelectCamp (*bot, 0);
   CHECK (!!(BehaviorHook::CampButtons (*bot) & IN_DUCK));
 
-  bot->fear_level_ = 0.1f;
-  bot->agression_level_ = 0.9f;
+  bot->emotion_.fear = 0.1f;
+  bot->emotion_.aggression = 0.9f;
   BehaviorHook::SelectCamp (*bot, 0);
   CHECK (!(BehaviorHook::CampButtons (*bot) & IN_DUCK));
 
@@ -714,7 +714,7 @@ TEST_CASE ("unit/behavior_senses") {
   bot->pev->health = 0.0f;
   bot->pev->deadflag = DEAD_DEAD;
   cond->last_victim_ = human;
-  cond->agression_level_ = 0.0f;
+  cond->emotion_.aggression = 0.0f;
   cond->last_enemy_ = human;
   human->v.health = 0.0f;
   human->v.deadflag = DEAD_DEAD;
@@ -722,41 +722,41 @@ TEST_CASE ("unit/behavior_senses") {
   human2->v.deadflag = DEAD_DEAD;
   clients.Update ();
   BehaviorHook::Conditions (*cond);
-  CHECK (cond->agression_level_ == 0.1f); // enemy-team victim credited
+  CHECK (cond->emotion_.aggression == 0.1f); // enemy-team victim credited
   CHECK (cond->last_victim_ == nullptr);
   CHECK (cond->last_enemy_ == nullptr); // dead and cold, forgotten
   CHECK (cond->num_enemies_left_ == 0);
   CHECK (cond->num_friends_left_ == 0);
 
   // emotions decay toward the base when calm, spike on fresh contact
-  bot->base_agression_level_ = 0.4f;
-  bot->base_fear_level_ = 0.6f;
-  bot->agression_level_ = 0.4f;
-  bot->fear_level_ = 0.6f;
+  bot->emotion_.base_aggression = 0.4f;
+  bot->emotion_.base_fear = 0.6f;
+  bot->emotion_.aggression = 0.4f;
+  bot->emotion_.fear = 0.6f;
   BehaviorHook::Emotions (*bot);
-  CHECK (bot->agression_level_ == 0.4f);
-  CHECK (bot->fear_level_ == 0.6f);
+  CHECK (bot->emotion_.aggression == 0.4f);
+  CHECK (bot->emotion_.fear == 0.6f);
 
   bot->see_enemy_timer_.start ();
-  bot->agression_level_ = 0.4f;
-  bot->emotion_update_timer_.invalidate ();
+  bot->emotion_.aggression = 0.4f;
+  bot->emotion_.update_timer.invalidate ();
   BehaviorHook::Emotions (*bot);
-  CHECK (bot->agression_level_ == Approx (0.45).margin (0.001));
+  CHECK (bot->emotion_.aggression == Approx (0.45).margin (0.001));
 
   engine.AdvanceTime (6.0f);
-  bot->agression_level_ = 0.9f;
-  bot->fear_level_ = 0.9f;
-  bot->emotion_update_timer_.invalidate ();
+  bot->emotion_.aggression = 0.9f;
+  bot->emotion_.fear = 0.9f;
+  bot->emotion_.update_timer.invalidate ();
   BehaviorHook::Emotions (*bot);
-  CHECK (bot->agression_level_ == Approx (0.85).margin (0.001));
-  CHECK (bot->fear_level_ == Approx (0.85).margin (0.001));
+  CHECK (bot->emotion_.aggression == Approx (0.85).margin (0.001));
+  CHECK (bot->emotion_.fear == Approx (0.85).margin (0.001));
 
   // ...fresh kills cap the aggression spike...
-  bot->agression_level_ = 0.95f;
+  bot->emotion_.aggression = 0.95f;
   bot->last_victim_ = human;
   clients[human].team = Team::CT;
   BehaviorHook::Conditions (*bot);
-  CHECK (bot->agression_level_ == 1.0f);
+  CHECK (bot->emotion_.aggression == 1.0f);
   CHECK (bot->last_victim_ == nullptr);
 
   // ...stale trails clear once the world goes quiet...
@@ -947,14 +947,14 @@ TEST_CASE ("unit/behavior_damage") {
   BehaviorHook::SetCreature (*bot, false);
 
   // enemy fire feeds aggression, clears camp and remembers the shooter...
-  bot->agression_level_ = 0.0f;
-  bot->fear_level_ = 0.5f;
+  bot->emotion_.aggression = 0.0f;
+  bot->emotion_.fear = 0.5f;
   BehaviorHook::SetCurrent (*bot, 1);
   bot->StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, 0.0f, true);
   HOST_REQUIRE (bot->GetTaskId () == TaskId::Camp);
   BehaviorHook::Damage (*bot, foe, 50, 0, 4);
-  CHECK (bot->agression_level_ == 0.1f);
-  CHECK (bot->fear_level_ == 0.5f);
+  CHECK (bot->emotion_.aggression == 0.1f);
+  CHECK (bot->emotion_.fear == 0.5f);
   CHECK (bot->GetTaskId () != TaskId::Camp);
   CHECK (bot->last_enemy_ == foe);
   CHECK (bot->last_enemy_origin_ == foe->v.origin);
@@ -966,22 +966,22 @@ TEST_CASE ("unit/behavior_damage") {
 
   // low health scares instead of angering
   bot->health_value_ = 40.0f;
-  bot->agression_level_ = 0.5f;
-  bot->fear_level_ = 0.0f;
+  bot->emotion_.aggression = 0.5f;
+  bot->emotion_.fear = 0.0f;
   BehaviorHook::Damage (*bot, foe, 10, 0, 4);
-  CHECK (bot->agression_level_ == 0.5f);
-  CHECK (bot->fear_level_ == 0.03f);
+  CHECK (bot->emotion_.aggression == 0.5f);
+  CHECK (bot->emotion_.fear == 0.03f);
 
   // ...hot streaks cap out on both ends...
   bot->health_value_ = 100.0f;
-  bot->agression_level_ = 0.95f;
+  bot->emotion_.aggression = 0.95f;
   BehaviorHook::Damage (*bot, foe, 10, 0, 4);
-  CHECK (bot->agression_level_ == 1.0f);
+  CHECK (bot->emotion_.aggression == 1.0f);
 
   bot->health_value_ = 40.0f;
-  bot->fear_level_ = 0.99f;
+  bot->emotion_.fear = 0.99f;
   BehaviorHook::Damage (*bot, foe, 10, 0, 4);
-  CHECK (bot->fear_level_ == 1.0f);
+  CHECK (bot->emotion_.fear == 1.0f);
   bot->health_value_ = 100.0f;
 
   // team kills mark the killer as the enemy on the spot
@@ -2059,7 +2059,7 @@ TEST_CASE ("unit/behavior_dispatch") {
 
   // ...a stocked buy zone runs the weapon flow...
   mp_freezetime.Set (6.0f);
-  a->in_buy_zone_ = true;
+  a->zones_.buy = true;
   BehaviorHook::BuyTimer (*a, 0.0f);
   engine.AdvanceTime (0.1f); // let the rearmed timer lapse
   BehaviorHook::SetBuyState (*a, BuyState::PrimaryWeapon);
@@ -2084,7 +2084,7 @@ TEST_CASE ("unit/behavior_dispatch") {
   auto dry_buy = [&] (const char *name) {
     Bot *bot = testhost::FindBot (name);
     HOST_REQUIRE (bot != nullptr);
-    bot->in_buy_zone_ = true;
+    bot->zones_.buy = true;
     bot->buying_finished_ = false;
     BehaviorHook::BuyTimer (*bot, 0.0f);
     engine.AdvanceTime (0.1f); // let the rearmed timer lapse
@@ -2113,7 +2113,7 @@ TEST_CASE ("unit/behavior_dispatch") {
 
   Bot *done = testhost::FindBot ("DisD");
   HOST_REQUIRE (done != nullptr);
-  done->in_buy_zone_ = true;
+  done->zones_.buy = true;
   done->buying_finished_ = false;
   BehaviorHook::BuyTimer (*done, 0.0f);
   engine.AdvanceTime (0.1f); // let the rearmed timer lapse
@@ -2167,11 +2167,11 @@ TEST_CASE ("unit/behavior_trauma") {
   monster->v.health = 100.0f;
   monster->v.origin = ystl::Vector (400.0f, 0.0f, 0.0f);
   monster->v.flags |= FL_MONSTER;
-  bot->agression_level_ = 0.0f;
+  bot->emotion_.aggression = 0.0f;
   cv_attack_monsters.Set (1);
   BehaviorHook::Damage (*bot, monster, 10, 0, 4);
   cv_attack_monsters.Set (0);
-  CHECK (bot->agression_level_ == 0.1f);
+  CHECK (bot->emotion_.aggression == 0.1f);
 
   // ...unusual damage only stamps the intake...
   BehaviorHook::Damage (*bot, nullptr, 10, 0, 0);
@@ -2241,13 +2241,13 @@ TEST_CASE ("unit/behavior_trauma") {
   CHECK (BehaviorHook::ItemTimerStarted (*bot));
 
   bot->has_c4_ = true;
-  bot->in_buy_zone_ = true;
+  bot->zones_.buy = true;
   BehaviorHook::DropWeapon (*bot, user, true);
   CHECK (BehaviorHook::ItemTimerStarted (*bot));
   CHECK (!bot->buying_finished_);
   CHECK (BehaviorHook::Queue (*bot).size () == 1);
   bot->has_c4_ = false;
-  bot->in_buy_zone_ = false;
+  bot->zones_.buy = false;
 
   bot->ClearTasks ();
   user->v.deadflag = DEAD_DEAD;
@@ -2707,8 +2707,8 @@ TEST_CASE ("unit/behavior_override") {
   BehaviorHook::SetStates (*bot, Sense::SuspectEnemy);
   bot->see_enemy_timer_.start ();
   engine.AdvanceTime (3.0f);
-  bot->fear_level_ = 0.9f;
-  bot->agression_level_ = 0.1f;
+  bot->emotion_.fear = 0.9f;
+  bot->emotion_.aggression = 0.1f;
   BehaviorHook::Override (*bot);
   CHECK (BehaviorHook::Move (*bot) == 0.0f);
 
@@ -2718,8 +2718,8 @@ TEST_CASE ("unit/behavior_override") {
   CHECK (BehaviorHook::Move (*bot) == 0.0f);
   BehaviorHook::SetReload (*bot, true);
 
-  bot->fear_level_ = 0.1f;
-  bot->agression_level_ = 0.9f;
+  bot->emotion_.fear = 0.1f;
+  bot->emotion_.aggression = 0.9f;
   bot->num_enemies_left_ = 5;
   BehaviorHook::ClearEnemy (*bot);
   BehaviorHook::Override (*bot);
@@ -2987,7 +2987,7 @@ TEST_CASE ("unit/behavior_breakables") {
 
   // ...terrorists skip the buy line on escape maps...
   bot->ClearTasks ();
-  bot->in_buy_zone_ = false;
+  bot->zones_.buy = false;
   BehaviorHook::BuyTimer (*bot, 0.0f);
   engine.AdvanceTime (0.1f); // let the rearmed timer lapse
   BehaviorHook::SetBuyState (*bot, BuyState::PrimaryWeapon);
@@ -3157,7 +3157,7 @@ TEST_CASE ("unit/behavior_teleport") {
   bot->pev->origin = ystl::Vector (1100.0f, 0.0f, 0.0f); // inside straggler range, past follow range
   bot->has_hostage_ = false;
   bot->enemy_ = nullptr;
-  bot->agression_level_ = 0.0f; // keep the endgame-rush path out of the way
+  bot->emotion_.aggression = 0.0f; // keep the endgame-rush path out of the way
   BehaviorHook::SetStates (*bot, Sense::Invalid);
   bot->ClearTasks ();
   BehaviorHook::HostageEscort (*bot);
@@ -3482,7 +3482,7 @@ TEST_CASE ("unit/behavior_team_awareness") {
 
   a->team_ = Team::Terrorist;
   a->is_alive_ = true;
-  a->teamwork_level_ = 1.0f; // always react when the contact is valid
+  a->emotion_.teamwork = 1.0f; // always react when the contact is valid
   a->pev->origin = ystl::Vector (0.0f, 0.0f, 0.0f);
   a->enemy_ = nullptr;
   a->last_enemy_ = nullptr;
@@ -3496,7 +3496,7 @@ TEST_CASE ("unit/behavior_team_awareness") {
 
   a->ClearTasks ();
   a->StartTask (TaskId::Normal, TaskPri::kNormal, kInvalidNodeIndex, 0.0f, true);
-  a->team_contact_timer_.invalidate ();
+  a->team_cooldowns_.contact.invalidate ();
 
   // a live contact is investigated
   bots.ReportTeamContact (Team::Terrorist, foe, foe->v.origin, 1);
@@ -3510,7 +3510,7 @@ TEST_CASE ("unit/behavior_team_awareness") {
   a->last_enemy_ = nullptr;
   a->ClearTasks ();
   a->StartTask (TaskId::Normal, TaskPri::kNormal, kInvalidNodeIndex, 0.0f, true);
-  a->team_contact_timer_.invalidate ();
+  a->team_cooldowns_.contact.invalidate ();
 
   bots.ReportTeamContact (Team::Terrorist, foe, foe->v.origin, 1);
   BehaviorHook::TeamAwareness (*a);

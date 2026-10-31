@@ -525,7 +525,7 @@ TEST_CASE ("unit/buying_loaded") {
 
   // ...a live buy zone arms the delay-free machine...
   engine.AdvanceTime (25.0f); // past the round-start buy delay for any roll
-  bot->in_buy_zone_ = true;
+  bot->zones_.buy = true;
   const size_t zone_queue = BuyHook::QueueLength (*bot);
   BuyHook::EnterZone (*bot, BuyState::PrimaryWeapon);
   CHECK (bot->ignore_buy_delay_);

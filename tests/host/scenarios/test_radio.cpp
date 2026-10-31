@@ -272,11 +272,11 @@ TEST_CASE ("unit/radio_orders") {
 
   // taking fire steadies fear and calls for help...
   bot->ClearTasks ();
-  bot->fear_level_ = 0.5f;
+  bot->emotion_.fear = 0.5f;
   bot->radio_order_ = RadioChat::TakingFireNeedAssistance;
   bot->radio_entity_ = human;
   RadioHook::CheckQueue (*bot);
-  CHECK (bot->fear_level_ == Approx (0.3).margin (0.001));
+  CHECK (bot->emotion_.fear == Approx (0.3).margin (0.001));
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::OnMyWay);
   CHECK (bot->GetTaskId () == TaskId::Normal);
 
@@ -289,22 +289,22 @@ TEST_CASE ("unit/radio_orders") {
   bot->enemy_ = nullptr;
 
   // spotted enemies trim fear the same way
-  bot->fear_level_ = 0.5f;
+  bot->emotion_.fear = 0.5f;
   bot->radio_order_ = RadioChat::EnemySpotted;
   bot->radio_entity_ = human;
   RadioHook::CheckQueue (*bot);
-  CHECK (bot->fear_level_ == Approx (0.4).margin (0.001));
+  CHECK (bot->emotion_.fear == Approx (0.4).margin (0.001));
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::OnMyWay);
 
   // matched go-orders stand down with a roger, paused ones move out
   RadioHook::SetTargetEntity (*bot, human);
-  bot->fear_level_ = 0.5f;
+  bot->emotion_.fear = 0.5f;
   bot->radio_order_ = RadioChat::GoGoGo;
   bot->radio_entity_ = human;
   const size_t go_base = RadioHook::QueueLength (*bot);
   RadioHook::CheckQueue (*bot);
   CHECK (RadioHook::TargetEntity (*bot) == nullptr);
-  CHECK (bot->fear_level_ == Approx (0.3).margin (0.001));
+  CHECK (bot->emotion_.fear == Approx (0.3).margin (0.001));
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::RogerThat);
   CHECK (RadioHook::QueueLength (*bot) == go_base + 1);
 
@@ -349,23 +349,23 @@ TEST_CASE ("unit/radio_orders") {
 
   // ...storming emboldens, fallback frightens, both deterministically
   bot->ClearTasks ();
-  bot->fear_level_ = 0.5f;
-  bot->agression_level_ = 0.4f;
+  bot->emotion_.fear = 0.5f;
+  bot->emotion_.aggression = 0.4f;
   bot->radio_order_ = RadioChat::StormTheFront;
   bot->radio_entity_ = human;
   RadioHook::CheckQueue (*bot);
-  CHECK (bot->fear_level_ == Approx (0.2).margin (0.001));
-  CHECK (bot->agression_level_ == Approx (0.7).margin (0.001));
+  CHECK (bot->emotion_.fear == Approx (0.2).margin (0.001));
+  CHECK (bot->emotion_.aggression == Approx (0.7).margin (0.001));
   CHECK (bot->GetTaskId () == TaskId::MoveTo);
 
   bot->ClearTasks ();
-  bot->fear_level_ = 0.4f;
-  bot->agression_level_ = 0.4f;
+  bot->emotion_.fear = 0.4f;
+  bot->emotion_.aggression = 0.4f;
   bot->radio_order_ = RadioChat::TeamFallback;
   bot->radio_entity_ = human;
   RadioHook::CheckQueue (*bot);
-  CHECK (bot->fear_level_ == Approx (0.9).margin (0.001));
-  CHECK (bot->agression_level_ == 0.0f);
+  CHECK (bot->emotion_.fear == Approx (0.9).margin (0.001));
+  CHECK (bot->emotion_.aggression == 0.0f);
 
   // reports route by current business, move alongs stay quiet
   bot->ClearTasks ();
@@ -590,9 +590,9 @@ TEST_CASE ("unit/radio_chatter") {
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::PlantingBomb);
 
   // camp rolls route by zone and team
-  bot->in_escape_zone_ = false;
-  bot->in_rescue_zone_ = false;
-  bot->in_vip_zone_ = false;
+  bot->zones_.escape = false;
+  bot->zones_.rescue = false;
+  bot->zones_.vip = false;
 
   rng.force_chance (true);
   RadioHook::TaskChange (*bot, TaskId::Camp);
@@ -600,34 +600,34 @@ TEST_CASE ("unit/radio_chatter") {
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::GoingToCamp);
 
   bot->team_ = Team::CT;
-  bot->in_escape_zone_ = true;
+  bot->zones_.escape = true;
   engine.AdvanceTime (2.0f); // let the team-speech floor clear between callouts
   rng.force_chance (true);
   RadioHook::TaskChange (*bot, TaskId::Camp);
   rng.clear_forced ();
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::GoingToGuardEscapeZone);
-  bot->in_escape_zone_ = false;
+  bot->zones_.escape = false;
 
   bot->team_ = Team::Terrorist;
-  bot->in_rescue_zone_ = true;
+  bot->zones_.rescue = true;
   engine.AdvanceTime (2.0f);
   rng.force_chance (true);
   RadioHook::TaskChange (*bot, TaskId::Camp);
   rng.clear_forced ();
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::GoingToGuardRescueZone);
-  bot->in_rescue_zone_ = false;
+  bot->zones_.rescue = false;
 
-  bot->in_vip_zone_ = true;
+  bot->zones_.vip = true;
   engine.AdvanceTime (2.0f);
   rng.force_chance (true);
   RadioHook::TaskChange (*bot, TaskId::Camp);
   rng.clear_forced ();
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::GoingToGuardVIPSafety);
-  bot->in_vip_zone_ = false;
+  bot->zones_.vip = false;
 
   // steer player-kill rolls: kill/enemy-down fail, the headcount passes
   // (headcount chance is teamwork-scaled now, pin max teamwork so it clears the hook)
-  bot->teamwork_level_ = 1.0f;
+  bot->emotion_.teamwork = 1.0f;
   rng.set_chance_hook ([] (int32_t percent) {
     return percent >= 80;
   });
@@ -854,12 +854,12 @@ TEST_CASE ("unit/radio_odds") {
 
   // ...matched go-orders stand down with a roger, paused ones move out...
   RadioHook::SetTargetEntity (*bot, human);
-  bot->fear_level_ = 0.5f;
+  bot->emotion_.fear = 0.5f;
   bot->radio_order_ = RadioChat::GoGoGo;
   bot->radio_entity_ = human;
   RadioHook::CheckQueue (*bot);
   CHECK (RadioHook::TargetEntity (*bot) == nullptr);
-  CHECK (bot->fear_level_ == Approx (0.3).margin (0.001));
+  CHECK (bot->emotion_.fear == Approx (0.3).margin (0.001));
 
   bot->StartTask (TaskId::Pause, TaskPri::kPause, kInvalidNodeIndex, 0.0f, true);
   bot->radio_order_ = RadioChat::GoGoGo;
@@ -914,13 +914,13 @@ TEST_CASE ("unit/radio_odds") {
 
   // ...fallback from a camp banks time, from the field scans enemies...
   bot->StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, 0.0f, true);
-  bot->fear_level_ = 0.1f;
-  bot->agression_level_ = 0.9f;
+  bot->emotion_.fear = 0.1f;
+  bot->emotion_.aggression = 0.9f;
   bot->radio_order_ = RadioChat::TeamFallback;
   bot->radio_entity_ = human;
   RadioHook::CheckQueue (*bot);
-  CHECK (bot->fear_level_ == Approx (0.6).margin (0.001));
-  CHECK (bot->agression_level_ == Approx (0.4).margin (0.001));
+  CHECK (bot->emotion_.fear == Approx (0.6).margin (0.001));
+  CHECK (bot->emotion_.aggression == Approx (0.4).margin (0.001));
 
   bot->ClearTasks ();
   bot->radio_order_ = RadioChat::TeamFallback;
@@ -1050,7 +1050,7 @@ TEST_CASE ("unit/radio_report") {
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::GuardingPlantedC4);
   game_state.SetBombPlanted (false);
 
-  bot->in_escape_zone_ = true;
+  bot->zones_.escape = true;
   bot->radio_order_ = RadioChat::ReportInTeam;
   bot->radio_entity_ = human;
   bot->ClearTasks ();
@@ -1058,17 +1058,17 @@ TEST_CASE ("unit/radio_report") {
   bot->team_ = Team::CT;
   RadioHook::CheckQueue (*bot);
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::GuardingEscapeZone);
-  bot->in_escape_zone_ = false;
+  bot->zones_.escape = false;
   bot->team_ = Team::Terrorist;
 
-  bot->in_vip_zone_ = true;
+  bot->zones_.vip = true;
   bot->radio_order_ = RadioChat::ReportInTeam;
   bot->radio_entity_ = human;
   bot->ClearTasks ();
   bot->StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, 0.0f, true);
   RadioHook::CheckQueue (*bot);
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::GuardingVIPSafety);
-  bot->in_vip_zone_ = false;
+  bot->zones_.vip = false;
 
   bot->radio_order_ = RadioChat::ReportInTeam;
   bot->radio_entity_ = human;
@@ -1261,31 +1261,31 @@ TEST_CASE ("unit/radio_kill") {
   RadioHook::Rng (*bot).clear_forced ();
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::GoingToCamp);
 
-  bot->in_escape_zone_ = true;
+  bot->zones_.escape = true;
   bot->team_ = Team::CT;
   engine.AdvanceTime (2.0f); // let the team-speech floor clear between callouts
   RadioHook::Rng (*bot).force_chance (true);
   RadioHook::TaskChange (*bot, TaskId::Camp);
   RadioHook::Rng (*bot).clear_forced ();
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::GoingToGuardEscapeZone);
-  bot->in_escape_zone_ = false;
+  bot->zones_.escape = false;
   bot->team_ = Team::Terrorist;
 
-  bot->in_rescue_zone_ = true;
+  bot->zones_.rescue = true;
   engine.AdvanceTime (2.0f);
   RadioHook::Rng (*bot).force_chance (true);
   RadioHook::TaskChange (*bot, TaskId::Camp);
   RadioHook::Rng (*bot).clear_forced ();
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::GoingToGuardRescueZone);
-  bot->in_rescue_zone_ = false;
+  bot->zones_.rescue = false;
 
-  bot->in_vip_zone_ = true;
+  bot->zones_.vip = true;
   engine.AdvanceTime (2.0f);
   RadioHook::Rng (*bot).force_chance (true);
   RadioHook::TaskChange (*bot, TaskId::Camp);
   RadioHook::Rng (*bot).clear_forced ();
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::GoingToGuardVIPSafety);
-  bot->in_vip_zone_ = false;
+  bot->zones_.vip = false;
   bot->ClearTasks ();
 
   // ...team kills apologize, clean kills tune the radio...
@@ -1304,7 +1304,7 @@ TEST_CASE ("unit/radio_kill") {
 
   // ...sniped victims call out the sniper...
   // headcount chance is teamwork-scaled now, pin max teamwork so it clears the hook
-  bot->teamwork_level_ = 1.0f;
+  bot->emotion_.teamwork = 1.0f;
   bot->last_victim_ = f1;
   f1->v.weapons = ystl::to_underlying (kSniperWeaponMask);
   CHECK (bot->last_victim_ == f1);
@@ -1699,17 +1699,17 @@ TEST_CASE ("unit/radio_followups") {
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::YouHeardTheMan);
 
   // taking fire with no target calls for backup
-  bot->fear_level_ = 0.5f;
+  bot->emotion_.fear = 0.5f;
   bot->radio_order_ = RadioChat::TakingFireNeedAssistance;
   RadioHook::CheckQueue (*bot);
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::OnMyWay);
-  CHECK (bot->fear_level_ == 0.3f);
+  CHECK (bot->emotion_.fear == 0.3f);
 
   // spotted enemies with a close caller do the same
   bot->radio_order_ = RadioChat::EnemySpotted;
   RadioHook::CheckQueue (*bot);
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::OnMyWay);
-  CHECK (bot->fear_level_ < 0.3f && bot->fear_level_ > 0.1f);
+  CHECK (bot->emotion_.fear < 0.3f && bot->emotion_.fear > 0.1f);
 
   // a leader takes the point when asked
   RadioHook::SetLeader (*bot, true);

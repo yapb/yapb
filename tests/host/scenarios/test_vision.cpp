@@ -46,7 +46,7 @@ struct VisionHook {
     bot.current_node_index_ = index;
   }
   static void SetAggression (Bot &bot, float value) {
-    bot.agression_level_ = value;
+    bot.emotion_.aggression = value;
   }
   static void SetEnemyOrigin (Bot &bot, const ystl::Vector &pos) {
     bot.last_enemy_origin_ = pos;
