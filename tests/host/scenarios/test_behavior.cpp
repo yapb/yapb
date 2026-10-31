@@ -1090,7 +1090,7 @@ TEST_CASE ("unit/behavior_logic") {
   editor->v.iuser2 = bot->Entindex ();
   graph.SetEditor (editor);
 
-  const int messages_before = engine.Messages ().size ();
+  const size_t messages_before = engine.Messages ().size ();
   BehaviorHook::ShowOverlay (*bot);
   CHECK (engine.Messages ().size () > messages_before);
 
@@ -1171,7 +1171,7 @@ TEST_CASE ("unit/behavior_logic") {
 
   int prints_before = 0;
 
-  for (int i = 0; i < engine.Calls ().size (); ++i) {
+  for (size_t i = 0; i < engine.Calls ().size (); ++i) {
     if (engine.Calls ()[i].name == "ServerPrint") {
       ++prints_before;
     }
@@ -1180,7 +1180,7 @@ TEST_CASE ("unit/behavior_logic") {
 
   int prints_after = 0;
 
-  for (int i = 0; i < engine.Calls ().size (); ++i) {
+  for (size_t i = 0; i < engine.Calls ().size (); ++i) {
     if (engine.Calls ()[i].name == "ServerPrint") {
       ++prints_after;
     }
@@ -2490,7 +2490,7 @@ TEST_CASE ("unit/behavior_lifecycle") {
   cv_debug.Set (3);
   int prints_before = 0;
 
-  for (int i = 0; i < engine.Calls ().size (); ++i) {
+  for (size_t i = 0; i < engine.Calls ().size (); ++i) {
     if (engine.Calls ()[i].name == "ServerPrint") {
       ++prints_before;
     }
@@ -2499,7 +2499,7 @@ TEST_CASE ("unit/behavior_lifecycle") {
 
   int prints_after = 0;
 
-  for (int i = 0; i < engine.Calls ().size (); ++i) {
+  for (size_t i = 0; i < engine.Calls ().size (); ++i) {
     if (engine.Calls ()[i].name == "ServerPrint") {
       ++prints_after;
     }
@@ -2512,7 +2512,7 @@ TEST_CASE ("unit/behavior_lifecycle") {
 
   int prints_quiet = 0;
 
-  for (int i = 0; i < engine.Calls ().size (); ++i) {
+  for (size_t i = 0; i < engine.Calls ().size (); ++i) {
     if (engine.Calls ()[i].name == "ServerPrint") {
       ++prints_quiet;
     }

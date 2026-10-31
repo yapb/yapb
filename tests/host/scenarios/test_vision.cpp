@@ -363,6 +363,7 @@ TEST_CASE ("unit/vision_aim") {
 
   Bot *bot = testhost::FindBot ("VisM");
   HOST_REQUIRE (bot != nullptr);
+  cv_aim_drift.Set (0); // exact bead angles, the idle drift has its own test
   bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
   bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
   bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
@@ -459,6 +460,52 @@ TEST_CASE ("unit/vision_aim") {
   CHECK (low == Approx (3.0f).margin (0.01f));
   CHECK (high == Approx (8.0f).margin (0.01f));
   CHECK (high > low);
+
+  cv_aim_drift.Revert ();
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/vision_drift") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootVision (engine, cs);
+
+  bots.Addbot ("VisD", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("VisD");
+  HOST_REQUIRE (bot != nullptr);
+  bot->pev->origin = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+
+  // a standing, idle bot wanders a little instead of freezing on the spot
+  cv_aim_drift.Set (1);
+  VisionHook::SetAimFlags (*bot, AimFlags::Invalid);
+  VisionHook::SetWantsFire (*bot, false);
+  VisionHook::SetLookAt (*bot, ystl::Vector (600.0f, 0.0f, 28.0f));
+
+  float lo = 0.0f, hi = 0.0f;
+
+  for (int i = 0; i < 80; ++i) {
+    engine.AdvanceTime (0.1f);
+    VisionHook::LookAngles (*bot);
+    const float yaw = bot->pev->v_angle.y;
+    lo = i == 0 ? yaw : ystl::min (lo, yaw);
+    hi = i == 0 ? yaw : ystl::max (hi, yaw);
+  }
+  CHECK (hi - lo > 0.5f); // idle drift shows up
+  CHECK (hi - lo < 4.5f); // but stays a small wobble, near the 2 degree amplitude
+
+  // with the drift off, the same idle bot holds the exact bead
+  cv_aim_drift.Set (0);
+  VisionHook::SetLookAt (*bot, ystl::Vector (600.0f, 0.0f, 28.0f));
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  engine.AdvanceTime (0.1f);
+  VisionHook::LookAngles (*bot);
+  CHECK (ystl::abs (bot->pev->v_angle.y) < 0.01f);
+  cv_aim_drift.Revert ();
 
   bots.Destroy ();
 }

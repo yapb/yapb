@@ -126,7 +126,7 @@ struct NavigateHook {
   }
   static void SetTerrainStrafe (Bot &bot, float dir, float hold_time) {
     bot.terrain_strafe_dir_ = dir;
-    bot.avoid_strafe_change_timer_.start (hold_time);
+    bot.avoid_.strafe_change_timer.start (hold_time);
   }
   static void SetFrameInterval (Bot &bot, float value) {
     bot.frame_interval_ = value;
@@ -147,7 +147,26 @@ struct NavigateHook {
     bot.prev_speed_ = value;
   }
   static void SetStuckAccum (Bot &bot, float value) {
-    bot.stuck_accumulated_time_ = value;
+    bot.stuck_.accumulated = value;
+  }
+  static bool FirstCollideStarted (Bot &bot) {
+    return bot.first_collide_timer_.started ();
+  }
+  static bool StalledUnderAvoid (Bot &bot) {
+    return bot.avoid_.stalled;
+  }
+  static int CopyRepaths (Bot &bot) {
+    return bot.avoid_.goal_copy_repaths;
+  }
+  static void StartQueue (Bot &bot) {
+    bot.avoid_.queue_timer.start (kAvoidQueueTimeout);
+  }
+  static void ClearStuckLatch (Bot &bot) {
+    bot.stuck_.latch.invalidate ();
+  }
+  static void ClearAvoidPin (Bot &bot) {
+    bot.avoid_.stalled = false;
+    bot.avoid_.stall_timer.invalidate ();
   }
   static void SetCurrentRaw (Bot &bot, int index) {
     bot.current_node_index_ = index;
@@ -296,7 +315,7 @@ struct NavigateHook {
     bot.DoPlayerAvoidance (normal);
   }
   static edict_t *Hindrance (Bot &bot) {
-    return bot.hindrance_;
+    return bot.avoid_.hindrance;
   }
   static void CheckTerr (Bot &bot, const ystl::Vector &normal) {
     bot.CheckTerrain (normal);
@@ -404,7 +423,7 @@ struct NavigateHook {
     bot.target_entity_ = ent;
   }
   static void SetHindranceEnt (Bot &bot, edict_t *ent) {
-    bot.hindrance_ = ent;
+    bot.avoid_.hindrance = ent;
   }
   static void SetPathOriginVec (Bot &bot, const ystl::Vector &value) {
     bot.path_origin_ = value;
@@ -446,7 +465,7 @@ struct NavigateHook {
     bot.hostages_.clear ();
   }
   static void HoldAvoidCommit (Bot &bot, float hold_time) {
-    bot.avoid_commit_timer_.start (hold_time);
+    bot.avoid_.commit.start (hold_time);
   }
   static edict_t *Pickup (Bot &bot) {
     return bot.pickup_item_;
@@ -589,6 +608,216 @@ ystl::UniquePtr<Bot> CreateNavBot (const char *name, const ystl::Vector &pos) {
 }
 
 } // namespace
+
+TEST_CASE ("unit/navigate_avoid_pin") {
+  testhost::FakeEngine engine;
+  engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
+
+  testhost::FakeCSApi cs {};
+  HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
+  cs.reset ();
+
+  GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
+  HOST_REQUIRE (cs.entered () != 0);
+
+  gamefuncs_t table {};
+  HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
+
+  game.Precache ();
+  table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
+
+  if (analyzer.IsAnalyzing ()) {
+    analyzer.Suspend ();
+  }
+  BuildNavGraph ();
+  planner.Init ();
+
+  bots.InitQuota ();
+  cv_quota.Set (10);
+
+  bots.Addbot ("PinA", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
+  bots.Addbot ("PinB", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
+  bots.Addbot ("PinC", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
+
+  Bot *bot = nullptr, *mate = nullptr, *far_mate = nullptr;
+
+  for (int i = 0; i < 40 && (bot == nullptr || mate == nullptr || far_mate == nullptr); ++i) {
+    engine.AdvanceTime (0.2f);
+    bots.MaintainQuota ();
+
+    bots.ForEach ([&] (Bot *candidate) {
+      const ystl::StringRef name (candidate->pev->netname.chars ());
+
+      if (name == "PinA") {
+        bot = candidate;
+      }
+      else if (name == "PinB") {
+        mate = candidate;
+      }
+      else if (name == "PinC") {
+        far_mate = candidate;
+      }
+      return false;
+    });
+  }
+  HOST_REQUIRE (bot != nullptr && mate != nullptr && far_mate != nullptr);
+
+  bots.ForEach ([&] (Bot *candidate) {
+    if (candidate != bot && candidate != mate && candidate != far_mate) {
+      candidate->pev->origin = ystl::Vector (5000.0f, 0.0f, 0.0f);
+    }
+    return false;
+  });
+
+  // managed bots spawn non-solid with no top speed and no health, avoidance and terrain need all three
+  for (Bot *member : { bot, mate, far_mate }) {
+    member->team_ = Team::CT;
+    member->pev->deadflag = DEAD_NO;
+    member->pev->health = 100.0f;
+    member->pev->takedamage = DAMAGE_YES;
+    member->pev->solid = SOLID_BBOX;
+    member->pev->maxspeed = 270.0f;
+    member->is_alive_ = true;
+    clients[member->Ent ()].team = Team::CT;
+  }
+  clients.Update ();
+  far_mate->pev->origin = ystl::Vector (5000.0f, 0.0f, 0.0f);
+
+  // the avoider must rank below the teammate it steers around, priority is entindex based
+  if (bots.GetPlayerPriority (bot->Ent ()) > bots.GetPlayerPriority (mate->Ent ())) {
+    std::swap (bot, mate);
+  }
+
+  const ystl::Vector forward (1.0f, 0.0f, 0.0f);
+  const float wall_fraction = 0.5f;
+
+  // a solid wall ahead of the bot and beside it, so both sides of its hull are blocked
+  auto wall_everywhere = [&] (edict_t *wall) {
+    engine.SetTraceLineHook ([&, wall] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+      (void)v2;
+      (void)no_monsters;
+      (void)skip;
+      testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+      out->flFraction = wall_fraction;
+      out->pHit = wall;
+    });
+    engine.SetTraceHullHook ([&, wall] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+      (void)v2;
+      (void)no_monsters;
+      (void)skip;
+      testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+      out->flFraction = wall_fraction;
+      out->pHit = wall;
+    });
+  };
+  auto clear_hooks = [&] {
+    engine.SetTraceLineHook (nullptr);
+    engine.SetTraceHullHook (nullptr);
+  };
+  edict_t *wall = engine.SpawnEntity ("func_wall");
+  HOST_REQUIRE (wall != nullptr);
+
+  // 1) pinned under avoidance by a wall: the commitment must not blind terrain forever
+  bot->pev->origin = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->pev->flags |= FL_ONGROUND;
+  mate->pev->origin = ystl::Vector (40.0f, 0.0f, 0.0f);
+  clients.Update ();
+  wall_everywhere (wall);
+  NavigateHook::SetMoveSpeed (*bot, 100.0f);
+  bot->pev->velocity = ystl::Vector (0.0f, 0.0f, 0.0f);
+  NavigateHook::SetHindranceEnt (*bot, mate->Ent ());
+
+  for (int i = 0; i < 30 && NavigateHook::CollState (*bot) != CollisionState::Probing; ++i) {
+    if (!NavigateHook::StalledUnderAvoid (*bot)) {
+      NavigateHook::HoldAvoidCommit (*bot, 10.0f);
+    }
+    NavigateHook::CheckTerr (*bot, forward);
+    engine.AdvanceTime (0.1f);
+  }
+  CHECK (NavigateHook::StalledUnderAvoid (*bot));
+  CHECK (NavigateHook::CollState (*bot) == CollisionState::Probing);
+
+  // in the real tick order avoidance runs before terrain, it must not reset the probes while pinned
+  NavigateHook::Avoid (*bot, forward);
+  CHECK (NavigateHook::CollState (*bot) == CollisionState::Probing);
+
+  NavigateHook::ClearAvoidPin (*bot);
+  NavigateHook::SetHindranceEnt (*bot, nullptr);
+  clear_hooks ();
+  engine.AdvanceTime (0.2f);
+
+  // 2) a blocker that stays put keeps latching while the bot is steering around a teammate
+  bot->pev->origin = ystl::Vector (0.0f, 0.0f, 0.0f);
+  mate->pev->origin = ystl::Vector (40.0f, 0.0f, 0.0f);
+  clients.Update ();
+  wall_everywhere (wall);
+  NavigateHook::SetMoveAngles (*bot, ystl::Vector (0.0f, 0.0f, 0.0f));
+  // only the blocker path may start the latch here, the instant and accumulate paths must stay quiet
+  NavigateHook::SetMoveSpeed (*bot, 0.0f);
+  NavigateHook::SetPrevSpeed (*bot, 0.0f);
+  NavigateHook::SetMovedDistance (*bot, 100.0f);
+  NavigateHook::StuckStatus (*bot, forward);
+  CHECK (NavigateHook::FirstCollideStarted (*bot));
+  // steering alone must keep the blocker latch; a stuck bot would also repath, which legitimately ends the episode
+  NavigateHook::ClearStuckLatch (*bot);
+  CHECK (bots.GetPlayerPriority (bot->Ent ()) < bots.GetPlayerPriority (mate->Ent ()));
+  NavigateHook::Avoid (*bot, forward);
+  CHECK (NavigateHook::Hindrance (*bot) == mate->Ent ());
+  CHECK (NavigateHook::FirstCollideStarted (*bot));
+  clear_hooks ();
+
+  // 3) queued behind a teammate in a one-lane choke: wait, then back out once the timeout runs out
+  bot->pev->origin = ystl::Vector (0.0f, 0.0f, 0.0f);
+  mate->pev->origin = ystl::Vector (40.0f, 0.0f, 0.0f);
+  mate->pev->velocity = ystl::Vector (0.0f, 0.0f, 0.0f);
+  clients.Update ();
+  wall_everywhere (wall);
+  NavigateHook::SetMoveAngles (*bot, ystl::Vector (0.0f, 0.0f, 0.0f));
+  NavigateHook::StartQueue (*mate); // the teammate in front is queued too, so the timeout yield is reachable
+  NavigateHook::Avoid (*bot, forward);
+  CHECK (NavigateHook::Hindrance (*bot) == mate->Ent ());
+  CHECK (NavigateHook::MoveSpeed (*bot) == 0.0f);
+
+  // queued bots gain yield priority, the queue bonus sits on top of the entindex rank
+  CHECK (bot->IsAvoidQueued ());
+  CHECK (bots.GetPlayerPriority (bot->Ent ()) >= 1024);
+
+  engine.AdvanceTime (2.1f);
+  NavigateHook::Avoid (*bot, forward);
+  CHECK (NavigateHook::MoveSpeed (*bot) < 0.0f);
+
+  engine.AdvanceTime (0.1f);
+  NavigateHook::Avoid (*bot, forward);
+  CHECK (NavigateHook::MoveSpeed (*bot) < 0.0f);
+
+  engine.AdvanceTime (0.6f);
+  NavigateHook::Avoid (*bot, forward);
+  CHECK (NavigateHook::MoveSpeed (*bot) == 0.0f);
+  clear_hooks ();
+
+  // 4) stuck with a teammate: the goal copy repaths at most once per window, not once per frame
+  mate->ClearTasks ();
+  mate->StartTask (TaskId::MoveTo, TaskPri::kMoveTo, 3, 0.0f, true);
+  bot->ClearTasks ();
+  bot->pev->origin = ystl::Vector (0.0f, 0.0f, 0.0f);
+  mate->pev->origin = ystl::Vector (40.0f, 0.0f, 0.0f);
+  clients.Update ();
+  NavigateHook::SetMoveSpeed (*bot, 100.0f);
+  NavigateHook::SetHindranceEnt (*bot, mate->Ent ());
+  bot->pev->velocity = ystl::Vector (0.0f, 0.0f, 0.0f);
+
+  for (int i = 0; i < 20; ++i) {
+    NavigateHook::StuckStatus (*bot, forward);
+    NavigateHook::Avoid (*bot, forward);
+    engine.AdvanceTime (0.1f);
+  }
+  CHECK (NavigateHook::CopyRepaths (*bot) <= 3);
+
+  NavigateHook::SetHindranceEnt (*bot, nullptr);
+  bots.Destroy ();
+  table.pfnServerDeactivate ();
+  testhost::CloseFakeCs (cs);
+}
 
 TEST_CASE ("unit/navigate_path") {
   testhost::FakeEngine engine;
@@ -1176,11 +1405,20 @@ TEST_CASE ("unit/navigate_move") {
   NavigateHook::SetMovedDistance (*bot, 0.0f);
   NavigateHook::SetPrevSpeed (*bot, 0.0f);
   NavigateHook::SetStuckAccum (*bot, 0.0f);
+  bot->pev->velocity = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->pev->origin = ystl::Vector (0.0f, 0.0f, 0.0f);
   bool ever_stuck = false;
   for (int i = 0; i < 10; ++i) {
     ever_stuck = NavigateHook::StuckStatus (*bot, forward) || ever_stuck;
   }
   CHECK (ever_stuck);
+  CHECK (NavigateHook::Stuck (*bot));
+
+  // ...and the stuck state clears once the bot crawls 75 units clear of the spot
+  bot->pev->origin = ystl::Vector (80.0f, 0.0f, 0.0f);
+  CHECK (!NavigateHook::StuckStatus (*bot, forward));
+  CHECK (!NavigateHook::Stuck (*bot));
+  bot->pev->origin = ystl::Vector (0.0f, 0.0f, 0.0f);
 
   // breakable ahead schedules shooting instead of stuck
   // (past the post-spawn decor grace period, moving at full speed)

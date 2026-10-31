@@ -139,6 +139,9 @@ struct CombatHook {
   static ystl::Vector BodyError (Bot &bot, edict_t *target, float distance) {
     return bot.GetBodyOffsetError (target, distance);
   }
+  static ystl::Vector Focus (Bot &bot, edict_t *target, float distance) {
+    return bot.GetAimFocusOffset (target, distance);
+  }
   static ystl::Vector EnemyOffset (Bot &bot) {
     return bot.GetEnemyBodyOffset ();
   }
@@ -1442,6 +1445,8 @@ TEST_CASE ("unit/combat_lurk") {
   CombatHook::SetViewDistance (*bot, 4096.0f);
 
   // shielded foes stash aside until no real target remains
+  // (noticing has its own coverage, here the foe must be adopted on sight)
+  cv_notice_model.Set (0);
   cv_use_engine_pvs_check.Set (0);
   foe->v.weaponanim = 6;
   foe->v.viewmodel = string_t (engine.AllocString ("xxxxxxxxxxxxxxv_shield_usp.mdl"));
@@ -1457,6 +1462,195 @@ TEST_CASE ("unit/combat_lurk") {
   foe->v.weaponanim = 0;
   foe->v.viewmodel = string_t (0);
   cv_use_engine_pvs_check.Revert ();
+  cv_notice_model.Revert ();
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/combat_notice") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootCombat (engine, cs);
+
+  bots.Addbot ("NtcB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("NtcB");
+  HOST_REQUIRE (bot != nullptr);
+
+  edict_t *foe = MakeFoe ("NtcFoe", ystl::Vector (300.0f, 0.0f, 0.0f));
+  HOST_REQUIRE (foe != nullptr);
+  bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->pev->fov = 90.0f;
+  bot->pev->flags |= FL_ONGROUND;
+  clients.Update ();
+
+  clients[foe].team = Team::CT;
+  bot->team_ = Team::Terrorist;
+  CombatHook::BodyAngles (*bot);
+
+  // a fresh foe is not adopted on the first sighting
+  cv_notice_model.Set (1);
+  bot->enemy_ = nullptr;
+  bot->last_enemy_ = nullptr;
+  CombatHook::SetAimFlags (*bot, AimFlags::Invalid);
+  CombatHook::SetStates (*bot, Sense::Invalid);
+  CombatHook::InvalidateEnemyUpdate (*bot);
+  CHECK (!CombatHook::Lookup (*bot));
+  CHECK (bot->enemy_ == nullptr);
+
+  // steady sight fills the meter, adoption follows once it is full
+  int steps = 0;
+
+  while (steps < 60 && !CombatHook::Lookup (*bot)) {
+    engine.AdvanceTime (0.1f);
+    CombatHook::InvalidateEnemyUpdate (*bot);
+    ++steps;
+  }
+  CHECK (steps > 1);
+  CHECK (steps < 60);
+  CHECK (bot->enemy_ == foe);
+
+  // with the model off a visible foe is adopted on sight again
+  cv_notice_model.Set (0);
+  bot->enemy_ = nullptr;
+  CombatHook::InvalidateEnemyUpdate (*bot);
+  CHECK (CombatHook::Lookup (*bot));
+  cv_notice_model.Revert ();
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/combat_pointblank") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootCombat (engine, cs);
+
+  bots.Addbot ("NtcC", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("NtcC");
+  HOST_REQUIRE (bot != nullptr);
+
+  edict_t *foe = MakeFoe ("NtcClose", ystl::Vector (80.0f, 0.0f, 0.0f));
+  HOST_REQUIRE (foe != nullptr);
+  bot->pev->origin = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->pev->fov = 90.0f;
+  bot->pev->flags |= FL_ONGROUND;
+  clients.Update ();
+
+  clients[foe].team = Team::CT;
+  bot->team_ = Team::Terrorist;
+  CombatHook::BodyAngles (*bot);
+
+  auto reset_search = [&] {
+    bot->enemy_ = nullptr;
+    bot->last_enemy_ = nullptr;
+    CombatHook::SetAimFlags (*bot, AimFlags::Invalid);
+    CombatHook::SetStates (*bot, Sense::Invalid);
+    CombatHook::InvalidateEnemyUpdate (*bot);
+  };
+
+  // a standing foe in the face is noticed within a beat, not after a second
+  cv_notice_model.Set (1);
+  reset_search ();
+
+  int close_steps = 0;
+
+  while (close_steps < 10 && !CombatHook::Lookup (*bot)) {
+    engine.AdvanceTime (0.1f);
+    CombatHook::InvalidateEnemyUpdate (*bot);
+    ++close_steps;
+  }
+  CHECK (bot->enemy_ == foe);
+  CHECK (close_steps <= 3);
+
+  // a foe that is shooting at us is noticed at once, even far away
+  foe->v.origin = ystl::Vector (1500.0f, 0.0f, 0.0f);
+  foe->v.button = IN_ATTACK;
+  clients.Update ();
+  reset_search ();
+
+  int fire_steps = 0;
+
+  while (fire_steps < 10 && !CombatHook::Lookup (*bot)) {
+    engine.AdvanceTime (0.1f);
+    CombatHook::InvalidateEnemyUpdate (*bot);
+    ++fire_steps;
+  }
+  CHECK (bot->enemy_ == foe);
+  CHECK (fire_steps <= 1);
+  foe->v.button = 0;
+
+  cv_notice_model.Revert ();
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/combat_sweep") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootCombat (engine, cs);
+
+  bots.Addbot ("FcsB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("FcsB");
+  HOST_REQUIRE (bot != nullptr);
+
+  edict_t *foe = MakeFoe ("FcsFoe", ystl::Vector (300.0f, 0.0f, 0.0f));
+  HOST_REQUIRE (foe != nullptr);
+  bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->pev->fov = 90.0f;
+  bot->pev->flags |= FL_ONGROUND;
+  clients.Update ();
+
+  clients[foe].team = Team::CT;
+  bot->team_ = Team::Terrorist;
+  CombatHook::BodyAngles (*bot);
+
+  // a resting target leaves no focus error
+  bot->SetNewDifficulty (Difficulty::Noob);
+  CHECK (CombatHook::Focus (*bot, foe, 300.0f).length () < 0.01f);
+
+  // a target sweeping across the view raises the focus, noob caps at 10 degrees (about 52 units at 300)
+  float noob_sweep = 0.0f;
+
+  for (int i = 1; i <= 5; ++i) {
+    engine.AdvanceTime (0.1f);
+    foe->v.origin = ystl::Vector (300.0f, 40.0f * static_cast<float> (i), 0.0f);
+    noob_sweep = CombatHook::Focus (*bot, foe, 300.0f).length ();
+  }
+  CHECK (noob_sweep > 10.0f);
+
+  // resting again fades the focus away
+  for (int i = 0; i < 40; ++i) {
+    engine.AdvanceTime (0.25f);
+    CombatHook::Focus (*bot, foe, 300.0f);
+  }
+  CHECK (CombatHook::Focus (*bot, foe, 300.0f).length () < 1.0f);
+
+  // the same sweep at expert stays inside a tighter cap
+  bot->SetNewDifficulty (Difficulty::Expert);
+  foe->v.origin = ystl::Vector (300.0f, 0.0f, 0.0f);
+  CombatHook::Focus (*bot, foe, 300.0f);
+  float expert_sweep = 0.0f;
+
+  for (int i = 1; i <= 5; ++i) {
+    engine.AdvanceTime (0.1f);
+    foe->v.origin = ystl::Vector (300.0f, 40.0f * static_cast<float> (i), 0.0f);
+    expert_sweep = CombatHook::Focus (*bot, foe, 300.0f).length ();
+  }
+  CHECK (expert_sweep > 0.0f);
+  CHECK (expert_sweep < noob_sweep);
 
   bots.Destroy ();
 }
