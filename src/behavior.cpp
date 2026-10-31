@@ -85,14 +85,28 @@ void Bot::AvoidGrenades () {
     if (grenade.kind == GrenadeKind::Flash && blind_timer_.elapsed () && !has_flag (states_, Sense::SeeingEnemy)) {
       const float time_left = pent->v.dmgtime - game.Time ();
 
-      if (time_left > 0.0f) {
-        const float window = cv_whose_your_daddy ? 1.0f : 0.2f + 0.45f * (static_cast<float> (Skill ()) / 100.0f);
+      if (time_left > 0.0f && time_left <= 1.0f && pent->v.origin.distance_sq (pev->origin) < ystl::sqrf (1500.0f)) {
+        const bool fresh = pent != avoid_flash_ent_ || !ystl::fequal (pent->v.dmgtime, avoid_flash_dmgtime_);
 
-        if (time_left <= window && pent->v.origin.distance_sq (pev->origin) < ystl::sqrf (1500.0f)) {
-          const bool fresh = pent != avoid_flash_ent_ || !ystl::fequal (pent->v.dmgtime, avoid_flash_dmgtime_);
+        if (fresh) {
+          // dodge odds follow the time to detonation: too late is rare, comfortable is almost always
+          const float ms_left = time_left * 1000.0f;
+          int dodge = 95;
 
-          // even the best never react every time, the cap keeps a human miss rate
-          if (fresh && (cv_whose_your_daddy || rg.chance (40 + Skill () / 2))) {
+          if (ms_left <= 150.0f) {
+            dodge = 5;
+          }
+          else if (ms_left <= 250.0f) {
+            dodge = 20;
+          }
+          else if (ms_left <= 400.0f) {
+            dodge = 50;
+          }
+          else if (ms_left <= 600.0f) {
+            dodge = 90;
+          }
+
+          if (cv_whose_your_daddy || rg.chance (dodge)) {
             avoid_flash_timer_.start (time_left + 0.3f);
 
             // face directly away from the grenade, level pitch, the aim spring turns smoothly
@@ -101,9 +115,9 @@ void Bot::AvoidGrenades () {
             avoid_flash_look_ = GetEyesPos () + away * 500.0f;
             aim_flags_ |= AimFlags::Flash;
           }
-          avoid_flash_ent_ = pent;
-          avoid_flash_dmgtime_ = pent->v.dmgtime;
         }
+        avoid_flash_ent_ = pent;
+        avoid_flash_dmgtime_ = pent->v.dmgtime;
       }
     }
     else if (game.IsNullEntity (avoid_grenade_) && grenade.kind == GrenadeKind::Explosive) {
@@ -1291,7 +1305,7 @@ bool Bot::TryTeleportToSealedBomb () {
   ChangeNodeIndex (graph.GetNearest (dest)); // node with path context, no-op when far from graph
   prev_origin_ = dest;
   dest_origin_ = dest;
-  stuck_timer_.invalidate ();
+  stuck_.latch.invalidate ();
   nav_timer_.reset ();
 
   // force repath to the bomb on next think instead of keeping the outside fallback goal
@@ -1597,6 +1611,14 @@ void Bot::Logic () {
 
   ResetMovement ();
 
+  // detect the ladder exit edge to hand movement back to the engine briefly
+  const bool on_ladder = IsOnLadder ();
+
+  if (was_on_ladder_ && !on_ladder) {
+    ladder_handover_.start (0.35f);
+  }
+  was_on_ladder_ = on_ladder;
+
   // broken origin from the outside (nan from bad teleport math upstream):
   // hold still instead of pushing it into traces and engine calls
   if (!::isfinite (pev->origin.x + pev->origin.y + pev->origin.z)) {
@@ -1629,7 +1651,7 @@ void Bot::Logic () {
     if (prev_origin_.distance_sq (pev->origin) > ystl::sqrf (512.0f)) {
       ClearSearchNodes ();
 
-      stuck_timer_.invalidate ();
+      stuck_.latch.invalidate ();
       nav_timer_.reset ();
 
       // refreshes node with path context, no-op when far from graph
@@ -1720,6 +1742,26 @@ void Bot::Logic () {
 
   // if we have fallen from the place of move, the nearest point is allowed
   CheckFall ();
+
+  // donate a primary to a poor teammate once per round, right after buying
+  if (!donate_done_ && buying_finished_ && in_buy_zone_ && !game_state.IsRoundOver ()) {
+    DonateToPoorTeammate ();
+  }
+
+  // a bot creeping nowhere while idle for a while re-picks its path
+  if (pev->velocity.length2d () < 5.0f && GetTaskId () != TaskId::Attack && GetTaskId () != TaskId::DefuseBomb &&
+      GetTaskId () != TaskId::PlantBomb && !has_flag (aim_flags_, AimFlags::Enemy)) {
+    if (!stuck_.idle_repath.started ()) {
+      stuck_.idle_repath.start (5.0f);
+    }
+    else if (stuck_.idle_repath.elapsed ()) {
+      stuck_.idle_repath.invalidate ();
+      nav_timer_.start ();
+    }
+  }
+  else {
+    stuck_.idle_repath.invalidate ();
+  }
 
   // check the darkness
   if (!is_creature_ && cv_check_darkness) {

@@ -2014,6 +2014,7 @@ void GameState::SetBombOrigin (bool reset, const ystl::Vector &pos) {
 void GameState::RoundStart () {
   round_over_ = false;
   time_bomb_planted_ = 0.0f;
+  ystl::fill (team_drops_, 0);
 
   // tell the bots
   bots.InitRound ();

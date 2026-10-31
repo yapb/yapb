@@ -236,6 +236,7 @@ public:
   bool ignore_buy_delay_ {}; // when reaching buyzone in the middle of the round don't do pauses
   bool buying_finished_ {}; // done with buying
   bool buy_pending_ {}; // bot buy is pending
+  bool donate_done_ {}; // already tried donating to a poor teammate this round
 
   ystl::Vector position_ {}; // position to move to in move to position task
 };

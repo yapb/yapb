@@ -693,6 +693,7 @@ private:
   bool bomb_planted_ {}; // is bomb planted ?
   bool round_over_ {}; // well, round is over>
   bool reset_hud_ {}; // reset hud is called for some one
+  int team_drops_[2] {}; // weapon drops to poor teammates this round, per team
 
   float time_bomb_planted_ {}; // time the bomb were planted
   float time_round_start_ {}; // time round has started
@@ -746,6 +747,18 @@ public:
 
   float GetRoundTimeLeft () const {
     return time_round_end_ - Game::instance ().Time ();
+  }
+
+  int GetTeamDrops (Team team) const {
+    const int idx = ystl::to_underlying (team);
+    return idx >= 0 && idx < 2 ? team_drops_[idx] : 0;
+  }
+
+  void IncTeamDrops (Team team) {
+    const int idx = ystl::to_underlying (team);
+    if (idx >= 0 && idx < 2) {
+      ++team_drops_[idx];
+    }
   }
 
   bool IsRoundTimeLow (const float threshold = 30.0f) const {

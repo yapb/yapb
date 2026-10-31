@@ -637,4 +637,42 @@ void Bot::EnteredBuyZone (BuyState buy_state) {
   }
 }
 
+void Bot::DonateToPoorTeammate () {
+  // only a rich bot with a primary gives, and only a limited number of drops per team
+  donate_done_ = true;
+
+  // the donor pays the weapon price and must still afford to rebuy a primary afterwards
+  const int32_t rebuy = conf.GetEconLimit (EcoLimit::PrimaryGreater);
+
+  if (is_creature_ || !in_buy_zone_ || !HasPrimaryWeapon () || money_amount_ <= 2900 + rebuy || game_state.GetTeamDrops (team_) >= 3) {
+    return;
+  }
+
+  Bot *poor = nullptr;
+
+  for (const auto &client : clients) {
+    if (!client.IsTeammate (team_, Ent ())) {
+      continue;
+    }
+    auto *other = bots[client.ent];
+
+    if (!other || !other->is_alive_ || other->HasPrimaryWeapon () || other->money_amount_ >= 2800) {
+      continue;
+    }
+    if (client.ent->v.origin.distance_sq (pev->origin) > ystl::sqrf (450.0f)) {
+      continue;
+    }
+    poor = other;
+    break;
+  }
+
+  if (poor == nullptr) {
+    return;
+  }
+
+  DropWeaponForUser (poor->Ent (), false);
+  money_amount_ -= 2900;
+  game_state.IncTeamDrops (team_);
+}
+
 } // namespace bot
