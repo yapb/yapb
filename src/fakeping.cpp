@@ -193,6 +193,12 @@ void FakePingManager::Emit (edict_t *ent) {
   payload_.Send (ent);
 }
 
+void FakePingManager::OnClientPutInServer (edict_t *ent) {
+  if (HasFeature () && !game.IsFakeClientEntity (ent)) {
+    Emit (ent);
+  }
+}
+
 void FakePingManager::Broadcast () {
   if (!HasFeature () || bots.GetBotCount () == 0) {
     return;

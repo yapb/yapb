@@ -104,6 +104,7 @@ private:
   Bot *bots_by_index_[kGameMaxPlayers] {}; // direct lookup by player index
 
   BotEventSink event_sink_ = nullptr; // amxx notification sink
+  ystl::String auth_id_buffer_ {}; // return buffer for pfnGetPlayerAuthId, consumed synchronously
 
   edict_t *killer_entity_ {}; // killer entity for bots
   ystl::FixedArray<TeamData, ystl::to_underlying (Team::Num)> team_data_ {}; // teams shared data
@@ -167,6 +168,12 @@ public:
   void ExecGameEntity (edict_t *ent);
   void ForEach (ForEachBot handler);
   void DisconnectBot (Bot *bot);
+  void OnClientDisconnect (edict_t *ent);
+  void OnClientInfoChanged (edict_t *ent, char *infobuffer);
+  void OnChangeLevel ();
+  void OnFreeEntPrivateData (edict_t *ent);
+  const char *GetBotAuthId (edict_t *ent);
+  void SetBotMaxspeed (edict_t *ent, float maxspeed);
   void HandleDeath (edict_t *killer, edict_t *victim);
   void SetLastWinner (Team winner);
   void CheckBotModel (edict_t *ent, char *infobuffer);

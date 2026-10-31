@@ -3147,6 +3147,30 @@ bool Control::HandleMenuCommands (edict_t *ent) {
   return HandleClientSideCommandsWrapper (ent, true);
 }
 
+bool Control::HandleClientCommand (edict_t *ent) {
+  if (HandleClientCommands (ent)) {
+    return true;
+  }
+
+  if (HandleMenuCommands (ent)) {
+    return true;
+  }
+
+  // bots have no client dll; block commands that can crash the gamedll
+  if (!game.IsNullEntity (ent) && (bots[ent] != nullptr || game.IsFakeClientEntity (ent))) {
+    const char *cmd = engfuncs.pfnCmd_Argv (0);
+
+    if (cmd != nullptr && conf.IsClientCommandBlocked (cmd)) {
+      return true;
+    }
+  }
+
+  // record stuff about radio and chat
+  bots.CaptureChatRadio (engfuncs.pfnCmd_Argv (0), engfuncs.pfnCmd_Argv (1), ent);
+
+  return false;
+}
+
 void Control::EnableDrawModels (bool enable) {
   constexpr ystl::FixedArray<ystl::StringRef, 3> entities { "info_player_start", "info_player_deathmatch", "info_vip_start" };
 

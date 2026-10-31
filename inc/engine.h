@@ -394,8 +394,34 @@ public:
   // executes stuff every 1 second
   void SlowFrame ();
 
-  // runs full per-frame orchestration (startframe hook body)
+  // runs engine-side per-frame updates, no dllapi/metamod forwarding
+  void UpdateFrame ();
+
+  // runs bot ai and client/fakeping refresh (post startframe body)
+  void FrameBots ();
+
+  // convenience wrapper for tests: UpdateFrame + FrameBots
   void Frame ();
+
+  // game session init (gamemod init hook body)
+  void OnGameInit ();
+
+  // entity spawn and transparent glass fix
+  void OnSpawn (edict_t *ent);
+  void FixSpawnFlags (edict_t *ent);
+
+  // client lifecycle helpers
+  void OnClientConnect (edict_t *ent, const char *addr);
+  void OnCreateNamedEntity ();
+  bool IsBotCommandTarget (edict_t *ent);
+
+  // legacy engine lookup and movement hooks
+  void OnLegacyLookup (const char *value);
+  void OnPlayerMove (playermove_t *pm);
+  void AdjustCmdSeed (edict_t *player, unsigned int &seed);
+
+  // metamod detach body
+  void Shutdown ();
 
   // search entities by variable field
   void SearchEntities (ystl::StringRef field, ystl::StringRef value, EntitySearch functor);

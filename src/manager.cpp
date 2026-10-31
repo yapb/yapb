@@ -1717,6 +1717,77 @@ void Manager::DisconnectBot (Bot *bot) {
   });
 }
 
+void Manager::OnClientDisconnect (edict_t *ent) {
+  Bot *disconnected = nullptr;
+
+  // stop iterating before the owner destroys the bot
+  for (auto &bot : bots_) {
+    if (bot.pev == &ent->v) {
+      disconnected = &bot;
+      break;
+    }
+  }
+
+  if (disconnected != nullptr) {
+    DisconnectBot (disconnected);
+  }
+
+  // refresh clients immediately
+  clients.Update ();
+
+  // clear the graph editor upon disconnect
+  if (ent == graph.GetEditor ()) {
+    graph.SetEditor (nullptr);
+  }
+
+  // clear issuer for the menus and commands
+  if (ent == ctrl.GetIssuer ()) {
+    ctrl.SetIssuer (nullptr);
+  }
+}
+
+void Manager::OnClientInfoChanged (edict_t *ent, char *infobuffer) {
+  ctrl.AssignAdminRights (ent, infobuffer);
+  CheckBotModel (ent, infobuffer);
+}
+
+void Manager::OnChangeLevel () {
+  // kick off all the bots, needed for legacy engine versions
+  KickEveryone (true, false);
+
+  // save the practice data
+  practice.Save ();
+}
+
+void Manager::OnFreeEntPrivateData (edict_t *ent) {
+  for (auto &bot : bots_) {
+    // drop only the references to the freed entity, keep memory of other enemies
+    bot.enemy_.DropEntity (ent);
+
+    if (bot.Ent () == ent) {
+      bot.MarkStale ();
+    }
+  }
+}
+
+const char *Manager::GetBotAuthId (edict_t *ent) {
+  if (bots[ent] == nullptr) {
+    return nullptr;
+  }
+
+  // the engine consumes the auth id synchronously, so a shared return buffer is enough
+  auth_id_buffer_.assign (util.GetFakeSteamId (ent));
+  return auth_id_buffer_.chars ();
+}
+
+void Manager::SetBotMaxspeed (edict_t *ent, float maxspeed) {
+  auto bot = bots[ent];
+
+  if (bot != nullptr) {
+    bot->pev->maxspeed = maxspeed;
+  }
+}
+
 void Manager::HandleDeath (edict_t *killer, edict_t *victim) {
   const auto killer_team = game.GetRealPlayerTeam (killer);
   const auto victim_team = game.GetRealPlayerTeam (victim);

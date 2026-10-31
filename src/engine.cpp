@@ -1320,7 +1320,7 @@ void Game::SlowFrame () {
   one_second_timer_.start (next_update);
 }
 
-void Game::Frame () {
+void Game::UpdateFrame () {
   // update lightstyle animations
   illum.AnimateLight ();
 
@@ -1353,14 +1353,9 @@ void Game::Frame () {
 
   // flush print queue to users
   ctrl.FlushPrintQueue ();
+}
 
-  // on metamod skip the game dll call, it runs through the metamod chain instead,
-  // and the bot ai below runs in the post hook (GetEntityApiPost)
-  if (Is (GameFlags::Metamod)) {
-    RETURN_META (MRES_IGNORED);
-  }
-  ::dllapi.pfnStartFrame ();
-
+void Game::FrameBots () {
   // run the bot ai
   bots.Frame ();
 
@@ -1369,6 +1364,99 @@ void Game::Frame () {
 
   // send fake pings to scoreboard holders
   fakeping.Broadcast ();
+}
+
+void Game::Frame () {
+  UpdateFrame ();
+  FrameBots ();
+}
+
+void Game::OnGameInit () {
+  // execute main config
+  conf.LoadMainConfig (true);
+  conf.AdjustWeaponPrices ();
+
+  // print info about dll
+  PrintBotVersion ();
+}
+
+void Game::OnSpawn (edict_t *ent) {
+  // precache everything
+  Precache ();
+
+  // notify about entity spawn
+  OnSpawnEntity (ent);
+}
+
+void Game::FixSpawnFlags (edict_t *ent) {
+  // solves the bots unable to see through certain types of glass bug
+  if (ent->v.rendermode == kRenderTransTexture) {
+    ent->v.flags &= ~FL_WORLDBRUSH;
+  }
+}
+
+void Game::OnClientConnect (edict_t *ent, const char *addr) {
+  // check if this client is the listen server client
+  if (ystl::StringRef (addr) == "loopback") {
+    SetLocalEntity (ent);
+
+    // if not dedicated set the default editor for the graph
+    if (!IsDedicatedServer ()) {
+      graph.SetEditor (ent);
+    }
+  }
+
+  // refresh clients immediately
+  clients.Update ();
+}
+
+void Game::OnCreateNamedEntity () {
+  if (entlink.IsPaused ()) {
+    entlink.Enable ();
+    entlink.SetPaused (false);
+  }
+}
+
+bool Game::IsBotCommandTarget (edict_t *ent) {
+  if (IsNullEntity (ent)) {
+    return false;
+  }
+  return bots[ent] || IsFakeClientEntity (ent) || (ent->v.flags & FL_DORMANT);
+}
+
+void Game::OnLegacyLookup (const char *value) {
+  // round starts in counter-strike 1.5
+  if (ystl::StringRef (value) == "info_map_parameters") {
+    game_state.RoundStart ();
+  }
+}
+
+void Game::OnPlayerMove (playermove_t *pm) {
+  illum.SetWorldModel (pm->physents[0].model);
+}
+
+void Game::AdjustCmdSeed (edict_t *player, unsigned int &seed) {
+  // some mods don't feel like doing like everybody else, and randomizing the seed affects bot accuracy
+  if (cv_enable_bullet_spread && bots[player]) {
+    seed = static_cast<uint32_t> (ystl::rg (0, 0x7fffffff));
+  }
+}
+
+void Game::Shutdown () {
+  // stop the worker
+  worker.Shutdown ();
+
+  // kick all bots off this server
+  bots.KickEveryone (true);
+
+  // save collected practice on shutdown
+  practice.Save ();
+
+  // disable hooks
+  fakequeries.Disable ();
+
+  // make sure all stuff cleared
+  bots.Destroy ();
 }
 
 void Game::SearchEntities (ystl::StringRef field, ystl::StringRef value, EntitySearch functor) {

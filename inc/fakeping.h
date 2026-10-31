@@ -85,6 +85,9 @@ public:
   // send pings to a connecting client
   void Emit (edict_t *ent);
 
+  // emit pings to a freshly connected human client
+  void OnClientPutInServer (edict_t *ent);
+
   // send pings to scoreboard holders
   void Broadcast ();
 

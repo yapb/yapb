@@ -349,6 +349,9 @@ public:
 
   // for the client menu commands
   bool HandleMenuCommands (edict_t *ent);
+
+  // full client command handling: menus, blocked commands and chat capture
+  bool HandleClientCommand (edict_t *ent);
 };
 
 // global helper for sending message to correct channel

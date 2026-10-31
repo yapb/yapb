@@ -47,13 +47,11 @@ YSTL_FORCE_STACK_ALIGN void HandlerEngClientCommand (edict_t *ent, char const *f
   // sometimes actually by their side, that's why we strongly recommend to check it here too. In
   // case it's a bot asking for a client command, we handle it like we do for bot commands
 
-  if (!bot::game.IsNullEntity (ent)) {
-    if (bot::bots[ent] || bot::game.IsFakeClientEntity (ent) || (ent->v.flags & FL_DORMANT)) {
-      if (bot::game.Is (bot::GameFlags::Metamod)) {
-        RETURN_META (MRES_SUPERCEDE); // prevent bot::bots to be forced to issue client commands
-      }
-      return;
+  if (bot::game.IsBotCommandTarget (ent)) {
+    if (bot::game.Is (bot::GameFlags::Metamod)) {
+      RETURN_META (MRES_SUPERCEDE); // prevent bots to be forced to issue client commands
     }
+    return;
   }
 
   if (bot::game.Is (bot::GameFlags::Metamod)) {
@@ -106,12 +104,8 @@ YSTL_EXPORT int GetEntityAPI (gamefuncs_t *table, int interface_version) {
     // server is enabled. Here is a good place to do our own bot::game session initialization, and
     // to register by the engine side the server commands we need to administrate our bot::bots
 
-    // execute main config
-    bot::conf.LoadMainConfig (true);
-    bot::conf.AdjustWeaponPrices ();
-
-    // print info about dll
-    bot::game.PrintBotVersion ();
+    // execute main config and print dll info
+    bot::game.OnGameInit ();
 
     if (bot::game.Is (bot::GameFlags::Metamod)) {
       RETURN_META (MRES_IGNORED);
@@ -125,20 +119,15 @@ YSTL_EXPORT int GetEntityAPI (gamefuncs_t *table, int interface_version) {
     // Spawn() function is one of the functions any entity is supposed to have in the bot::game DLL,
     // and any MOD is supposed to implement one for each of its entities
 
-    // precache everything
-    bot::game.Precache ();
-
-    // notify about entity spawn
-    bot::game.OnSpawnEntity (ent);
+    // precache and notify about entity spawn
+    bot::game.OnSpawn (ent);
 
     if (bot::game.Is (bot::GameFlags::Metamod)) {
       RETURN_META_VALUE (MRES_IGNORED, 0);
     }
     int result = dllapi.pfnSpawn (ent); // get result
 
-    if (ent->v.rendermode == kRenderTransTexture) {
-      ent->v.flags &= ~FL_WORLDBRUSH; // clear the FL_WORLDBRUSH flag out of transparent ents
-    }
+    bot::game.FixSpawnFlags (ent);
     return result;
   };
 
@@ -183,18 +172,7 @@ YSTL_EXPORT int GetEntityAPI (gamefuncs_t *table, int interface_version) {
     // tell the bot manager to check the bot population, in order to always have one free slot on
     // the server for incoming bot::clients
 
-    // check if this client is the listen server client
-    if (ystl::StringRef (addr) == "loopback") {
-      bot::game.SetLocalEntity (ent); // save the edict of the listen server client
-
-      // if not dedicated set the default editor for bot::graph
-      if (!bot::game.IsDedicatedServer ()) {
-        bot::graph.SetEditor (ent);
-      }
-    }
-
-    // refresh bot::clients immediately
-    bot::clients.Update ();
+    bot::game.OnClientConnect (ent, addr);
 
     if (bot::game.Is (bot::GameFlags::Metamod)) {
       RETURN_META_VALUE (MRES_IGNORED, 0);
@@ -214,26 +192,7 @@ YSTL_EXPORT int GetEntityAPI (gamefuncs_t *table, int interface_version) {
     // to reset his entity pointer for safety. There are still a few server frames to go once a
     // listen server client disconnects, and we don't want to send him any sort of message then
 
-    for (auto &bot : bot::bots) {
-      if (bot.pev == &ent->v) {
-        bot::bots.DisconnectBot (&bot); // remove the bot from bot::bots array
-
-        break;
-      }
-    }
-
-    // refresh bot::clients immediately
-    bot::clients.Update ();
-
-    // clear the bot::graph editor upon disconnect
-    if (ent == bot::graph.GetEditor ()) {
-      bot::graph.SetEditor (nullptr);
-    }
-
-    // clear issuer for the menus and commands
-    if (ent == bot::ctrl.GetIssuer ()) {
-      bot::ctrl.SetIssuer (nullptr);
-    }
+    bot::bots.OnClientDisconnect (ent);
 
     if (bot::game.Is (bot::GameFlags::Metamod)) {
       RETURN_META (MRES_IGNORED);
@@ -252,9 +211,7 @@ YSTL_EXPORT int GetEntityAPI (gamefuncs_t *table, int interface_version) {
     // is connecting, we also have to awake its brain(s) by reading them from the disk
 
     // refresh pings when client connetcs
-    if (bot::fakeping.HasFeature () && !bot::game.IsFakeClientEntity (ent)) {
-      bot::fakeping.Emit (ent);
-    }
+    bot::fakeping.OnClientPutInServer (ent);
 
     if (bot::game.Is (bot::GameFlags::Metamod)) {
       RETURN_META (MRES_IGNORED);
@@ -268,8 +225,7 @@ YSTL_EXPORT int GetEntityAPI (gamefuncs_t *table, int interface_version) {
     // change their player model). But most commonly, this function is in charge of handling
     // team changes, recounting the teams population, etc
 
-    bot::ctrl.AssignAdminRights (ent, infobuffer);
-    bot::bots.CheckBotModel (ent, infobuffer);
+    bot::bots.OnClientInfoChanged (ent, infobuffer);
 
     if (bot::game.Is (bot::GameFlags::Metamod)) {
       RETURN_META (MRES_IGNORED);
@@ -291,34 +247,12 @@ YSTL_EXPORT int GetEntityAPI (gamefuncs_t *table, int interface_version) {
     // so as this is just a bot DLL, not a MOD. The purpose is not to add functionality to
     // bot::clients. Hence it can lack of commenting a bit, since this code is very subject to change
 
-    if (bot::ctrl.HandleClientCommands (ent)) {
+    if (bot::ctrl.HandleClientCommand (ent)) {
       if (bot::game.Is (bot::GameFlags::Metamod)) {
         RETURN_META (MRES_SUPERCEDE);
       }
       return;
     }
-
-    else if (bot::ctrl.HandleMenuCommands (ent)) {
-      if (bot::game.Is (bot::GameFlags::Metamod)) {
-        RETURN_META (MRES_SUPERCEDE);
-      }
-      return;
-    }
-
-    // bots have no client dll; block commands that can crash the gamedll
-    if (!bot::game.IsNullEntity (ent) && (bot::bots[ent] != nullptr || bot::game.IsFakeClientEntity (ent))) {
-      const char *cmd = engfuncs.pfnCmd_Argv (0);
-
-      if (cmd != nullptr && bot::conf.IsClientCommandBlocked (cmd)) {
-        if (bot::game.Is (bot::GameFlags::Metamod)) {
-          RETURN_META (MRES_SUPERCEDE);
-        }
-        return;
-      }
-    }
-
-    // record stuff about radio and chat
-    bot::bots.CaptureChatRadio (engfuncs.pfnCmd_Argv (0), engfuncs.pfnCmd_Argv (1), ent);
 
     if (bot::game.Is (bot::GameFlags::Metamod)) {
       RETURN_META (MRES_IGNORED);
@@ -372,8 +306,14 @@ YSTL_EXPORT int GetEntityAPI (gamefuncs_t *table, int interface_version) {
     // for example if a new player joins the server, we should disconnect a bot, and if the
     // player population decreases, we should fill the server with other bot::bots
 
-    // full per-frame orchestration lives in game.Frame
-    bot::game.Frame ();
+    bot::game.UpdateFrame ();
+
+    if (bot::game.Is (bot::GameFlags::Metamod)) {
+      RETURN_META (MRES_IGNORED);
+    }
+    dllapi.pfnStartFrame ();
+
+    bot::game.FrameBots ();
   };
 
   // add some bullet spread on games, where w're runnung without metamod, but only if
@@ -387,9 +327,7 @@ YSTL_EXPORT int GetEntityAPI (gamefuncs_t *table, int interface_version) {
       // It has been adapted for usage to HLTV spectators, who don't send ClientCommands, but send
       // all their update information to the server using usercmd's instead, it seems
 
-      if (bot::cv_enable_bullet_spread && bot::bots[const_cast<edict_t *> (player)]) {
-        random_seed = static_cast<uint32_t> (ystl::rg (0, 0x7fffffff));
-      }
+      bot::game.AdjustCmdSeed (const_cast<edict_t *> (player), random_seed);
       dllapi.pfnCmdStart (player, cmd, random_seed);
     };
   }
@@ -400,7 +338,7 @@ YSTL_EXPORT int GetEntityAPI (gamefuncs_t *table, int interface_version) {
     // moving players. There is normally no distinction between them, else client-side prediction
     // wouldn't work properly (and it doesn't work that well, already...)
 
-    bot::illum.SetWorldModel (pm->physents[0].model);
+    bot::game.OnPlayerMove (pm);
 
     if (bot::game.Is (bot::GameFlags::Metamod)) {
       RETURN_META (MRES_IGNORED);
@@ -447,10 +385,7 @@ YSTL_C_LINKAGE int GetEntityApiPost (gamefuncs_t *table, int) {
     // and any MOD is supposed to implement one for each of its entities. Post version called
     // only by metamod
 
-    // solves the bot::bots unable to see through certain types of glass bug
-    if (ent->v.rendermode == kRenderTransTexture) {
-      ent->v.flags &= ~FL_WORLDBRUSH; // clear the FL_WORLDBRUSH flag out of transparent ents
-    }
+    bot::game.FixSpawnFlags (ent);
     RETURN_META_VALUE (MRES_HANDLED, 0);
   };
 
@@ -461,14 +396,7 @@ YSTL_C_LINKAGE int GetEntityApiPost (gamefuncs_t *table, int) {
     // during the bot::game, for example making the bot::bots think (yes, because no Think() function exists
     // for the bot::bots by the MOD side, remember).  Post version called only by metamod
 
-    // run the bot ai
-    bot::bots.Frame ();
-
-    // refresh bot::clients after bot ai, so bot input is fresh for the noise simulation
-    bot::clients.Update ();
-
-    // send fake pings to scoreboard holders
-    bot::fakeping.Broadcast ();
+    bot::game.FrameBots ();
 
     RETURN_META (MRES_IGNORED);
   };
@@ -498,10 +426,7 @@ YSTL_C_LINKAGE int GetEngineFunctions (enginefuncs_t *table, int *) {
 
   if (bot::entlink.NeedsBypass () && !bot::game.Is (bot::GameFlags::Metamod)) {
     table->pfnCreateNamedEntity = [] (string_t classname) YSTL_FORCE_STACK_ALIGN {
-      if (bot::entlink.IsPaused ()) {
-        bot::entlink.Enable ();
-        bot::entlink.SetPaused (false);
-      }
+      bot::game.OnCreateNamedEntity ();
       return engfuncs.pfnCreateNamedEntity (classname);
     };
   }
@@ -509,9 +434,7 @@ YSTL_C_LINKAGE int GetEngineFunctions (enginefuncs_t *table, int *) {
   if (bot::game.Is (bot::GameFlags::Legacy)) {
     table->pfnFindEntityByString = [] (edict_t *edict_start_search_after, const char *field, const char *value) YSTL_FORCE_STACK_ALIGN {
       // round starts in counter-strike 1.5
-      if (ystl::StringRef (value) == "info_map_parameters") {
-        bot::game_state.RoundStart ();
-      }
+      bot::game.OnLegacyLookup (value);
 
       if (bot::game.Is (bot::GameFlags::Metamod)) {
         RETURN_META_VALUE (MRES_IGNORED, static_cast<edict_t *> (nullptr));
@@ -521,12 +444,7 @@ YSTL_C_LINKAGE int GetEngineFunctions (enginefuncs_t *table, int *) {
 
     table->pfnChangeLevel = [] (char *s1, char *s2) YSTL_FORCE_STACK_ALIGN {
       // this function gets called when server is changing a level
-
-      // kick off all the bot::bots, needed for legacy engine versions
-      bot::bots.KickEveryone (true, false);
-
-      // save the bot::practice data
-      bot::practice.Save ();
+      bot::bots.OnChangeLevel ();
 
       if (bot::game.Is (bot::GameFlags::Metamod)) {
         RETURN_META (MRES_IGNORED);
@@ -548,13 +466,13 @@ YSTL_C_LINKAGE int GetEngineFunctions (enginefuncs_t *table, int *) {
     };
 
     table->pfnGetPlayerAuthId = [] (edict_t *e) YSTL_FORCE_STACK_ALIGN {
-      if (bot::bots[e]) {
-        auto authid = bot::util.GetFakeSteamId (e);
+      auto authid = bot::bots.GetBotAuthId (e);
 
+      if (authid != nullptr) {
         if (bot::game.Is (bot::GameFlags::Metamod)) {
-          RETURN_META_VALUE (MRES_SUPERCEDE, authid.chars ());
+          RETURN_META_VALUE (MRES_SUPERCEDE, authid);
         }
-        return authid.chars ();
+        return authid;
       }
 
       if (bot::game.Is (bot::GameFlags::Metamod)) {
@@ -792,12 +710,7 @@ YSTL_C_LINKAGE int GetEngineFunctions (enginefuncs_t *table, int *) {
   };
 
   table->pfnSetClientMaxspeed = [] (const edict_t *ent, float new_maxspeed) YSTL_FORCE_STACK_ALIGN {
-    auto bot = bot::bots[const_cast<edict_t *> (ent)];
-
-    // check wether it's not a bot
-    if (bot != nullptr) {
-      bot->pev->maxspeed = new_maxspeed;
-    }
+    bot::bots.SetBotMaxspeed (const_cast<edict_t *> (ent), new_maxspeed);
 
     if (bot::game.Is (bot::GameFlags::Metamod)) {
       RETURN_META (MRES_IGNORED);
@@ -831,14 +744,7 @@ YSTL_EXPORT int GetNewDLLFunctions (newgamefuncs_t *table, int *interface_versio
 
   if (!bot::game.Is (bot::GameFlags::Legacy)) {
     table->pfnOnFreeEntPrivateData = [] (edict_t *ent) YSTL_FORCE_STACK_ALIGN {
-      for (auto &bot : bot::bots) {
-        // drop only the references to the freed entity, keep memory of other enemies
-        bot.enemy_.DropEntity (ent);
-
-        if (bot.Ent () == ent) {
-          bot.MarkStale ();
-        }
-      }
+      bot::bots.OnFreeEntPrivateData (ent);
 
       if (bot::game.Is (bot::GameFlags::Metamod)) {
         RETURN_META (MRES_IGNORED);
@@ -950,20 +856,7 @@ YSTL_EXPORT int Meta_Detach (PLUG_LOADTIME now, PL_UNLOAD_REASON reason) {
     gpMetaUtilFuncs->pfnLogError (PLID, "%s: plugin NOT detaching (can't unload plugin right now)", Plugin_info.name);
     return HLFalse; // returning FALSE prevents metamod from unloading this plugin
   }
-  // stop the bot::worker
-  bot::worker.Shutdown ();
-
-  // kick all bot::bots off this server
-  bot::bots.KickEveryone (true);
-
-  // save collected bot::practice on shutdown
-  bot::practice.Save ();
-
-  // disable hooks
-  bot::fakequeries.Disable ();
-
-  // make sure all stuff cleared
-  bot::bots.Destroy ();
+  bot::game.Shutdown ();
 
   return HLTrue;
 }
