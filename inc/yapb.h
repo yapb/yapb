@@ -92,6 +92,7 @@ class Bot final : public WeaponsData,
                   public BehaviorData,
                   public ystl::InlineListNode<Bot> {
 public:
+  friend class InputButtons;
   friend class Manager;
   friend class TickManager;
   friend class Practice;

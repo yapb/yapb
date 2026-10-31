@@ -980,7 +980,7 @@ bool Bot::DetectStuckStatus (const ystl::Vector &dir_normal) {
         }
       }
       if (game.Is (GameFlags::Xash3D)) {
-        pev->button |= IN_USE;
+        buttons_.PressUse ();
       }
       else {
         MDLL_Use (blocker, Ent ());
@@ -1290,14 +1290,14 @@ void Bot::ExecuteCollisionResponse () {
     if ((IsOnFloor () || IsInWater ()) && !IsOnLadder () && jump_time_ + 0.75f < game.Time ()) {
       if (IsInWater () || !is_creature_ || last_damage_timestamp_ < game.Time () || has_flag (current_travel_flags_, PathFlag::Jump) ||
           IsStuckState ()) {
-        pev->button |= IN_JUMP;
+        buttons_.PressJump ();
       }
     }
     break;
 
   case CollisionState::Duck:
     if (IsOnFloor () || IsInWater ()) {
-      pev->button |= IN_DUCK;
+      buttons_.PressDuck ();
     }
     break;
 
@@ -1381,7 +1381,7 @@ void Bot::CheckTerrain (const ystl::Vector &dir_normal) {
       const auto state = collide_moves_[coll_state_index_];
 
       if (state == CollisionState::Duck && (IsOnFloor () || IsInWater ())) {
-        pev->button |= IN_DUCK;
+        buttons_.PressDuck ();
       }
       else if (state == CollisionState::StrafeLeft) {
         strafe_speed_ = -pev->maxspeed;
@@ -1593,8 +1593,7 @@ void Bot::MoveToGoal () {
 
   // apply sticky ducking to ensure hull shrinks properly
   if (press_duck) {
-    pev->button |= IN_DUCK;
-    duck_timer_.start (0.15f);
+    buttons_.PressDuck (0.15f);
   }
   last_used_nodes_timer_.start ();
 
@@ -1602,26 +1601,27 @@ void Bot::MoveToGoal () {
   if (IsInWater ()) {
     // check if we need to go forward or back press the correct buttons
     if (IsInFov (dest_origin_ - GetEyesPos ()) > 90.0f) {
-      pev->button |= IN_BACK;
+      buttons_.PressBack ();
     }
     else {
-      pev->button |= IN_FORWARD;
+      buttons_.PressForward ();
     }
 
     if (move_angles_.x > 60.0f) {
-      pev->button |= IN_DUCK;
+      buttons_.PressDuck ();
     }
     else if (move_angles_.x < -60.0f) {
-      pev->button |= IN_JUMP;
+      buttons_.PressJump ();
     }
   }
   else if (IsOnLadder ()) {
-    pev->button |= IN_FORWARD;
+    buttons_.PressForward ();
   }
 }
 
 void Bot::ResetMovement () {
-  pev->button = 0;
+  // keep timed holds alive, drop the untimed presses from the previous frame
+  buttons_.BeginFrame ();
 
   move_speed_ = 0.0f;
   strafe_speed_ = 0.0f;
@@ -1630,48 +1630,7 @@ void Bot::ResetMovement () {
 }
 
 void Bot::TranslateInput () {
-  // no shooting allowed, if yb_dont_shoot is enabled
-  if (cv_dont_shoot) {
-    pev->button &= ~IN_ATTACK;
-  }
-
-  if (!duck_timer_.elapsed ()) {
-    pev->button |= IN_DUCK;
-  }
-
-  if (pev->button & IN_JUMP) {
-    jump_time_ = game.Time ();
-  }
-
-  if (jump_time_ + 0.85f > game.Time ()) {
-    if (!IsOnFloor () && !IsInWater () && !IsOnLadder ()) {
-      pev->button |= IN_DUCK;
-    }
-  }
-
-  if (!(pev->button & (IN_FORWARD | IN_BACK))) {
-    if (move_speed_ > 0.0f) {
-      pev->button |= IN_FORWARD;
-    }
-    else if (move_speed_ < 0.0f) {
-      pev->button |= IN_BACK;
-    }
-  }
-
-  // strafing on a ladder slides the bot off sideways, drop it at the output stage
-  if (IsOnLadder ()) {
-    strafe_speed_ = 0.0f;
-    pev->button &= ~(IN_MOVELEFT | IN_MOVERIGHT);
-  }
-
-  if (!(pev->button & (IN_MOVELEFT | IN_MOVERIGHT))) {
-    if (strafe_speed_ > 0.0f) {
-      pev->button |= IN_MOVERIGHT;
-    }
-    else if (strafe_speed_ < 0.0f) {
-      pev->button |= IN_MOVELEFT;
-    }
-  }
+  buttons_.Translate (*this);
 }
 
 bool Bot::IsWalkableAscent (const ystl::Vector &src, const ystl::Vector &dst) {
@@ -1763,7 +1722,7 @@ bool Bot::UpdateNavigation () {
             pev->velocity.z = 0.0f;
           }
         }
-        pev->button |= IN_JUMP;
+        buttons_.PressJump ();
 
         jump_finished_ = true;
         check_terrain_ = false;
@@ -1803,7 +1762,7 @@ bool Bot::UpdateNavigation () {
 
       // do not duck while not on ladder
       if (!IsOnLadder ()) {
-        pev->button &= ~IN_DUCK;
+        buttons_.ReleaseDuck ();
       }
       approaching_ladder_timer_.start (0.5f);
     }
@@ -1817,7 +1776,7 @@ bool Bot::UpdateNavigation () {
 
     // press jump button if we need to leave the ladder
     if (!IsPreviousLadder () && IsOnLadder () && path_origin_.z < pev->origin.z && ladder_dir_ == LadderDir::Down) {
-      pev->button |= IN_JUMP;
+      buttons_.PressJump ();
     }
 
     // prevent bots-towers on ladders
@@ -1904,7 +1863,7 @@ bool Bot::UpdateNavigation () {
         if (!should_use_button && button_push_timer_.elapsed ()) {
           // do not use door directly under xash, or we will get failed assert in gamedll code
           if (game.Is (GameFlags::Xash3D)) {
-            pev->button |= IN_USE;
+            buttons_.PressUse ();
           }
           else {
             MDLL_Use (tr.hit, Ent ());
@@ -2202,7 +2161,7 @@ bool Bot::UpdateLiftHandling () {
     nav_timer_.start ();
     aim_flags_ |= AimFlags::Nav;
 
-    pev->button &= ~(IN_FORWARD | IN_BACK | IN_MOVELEFT | IN_MOVERIGHT);
+    buttons_.ReleaseMove ();
 
     IgnoreCollision ();
   };
@@ -2738,7 +2697,7 @@ bool Bot::FindNextBestNodeEx (const ystl::Array<int32_t> &data, bool handle_fail
 
 float Bot::GetEstimatedNodeReachTime () {
   const bool long_term_reachability =
-    has_flag (path_flags_, NodeFlag::Crouch) || has_flag (path_flags_, NodeFlag::Ladder) || ((pev->button | pev->oldbuttons) & IN_DUCK);
+    has_flag (path_flags_, NodeFlag::Crouch) || has_flag (path_flags_, NodeFlag::Ladder) || buttons_.IsDucking () || (pev->oldbuttons & IN_DUCK);
 
   float estimated_time = long_term_reachability ? 8.5f : 3.5f;
 
@@ -3572,7 +3531,7 @@ bool Bot::AdvanceMovement () {
           !game_state.IsBombPlanted () && personality_ != Personality::Rusher && !has_c4_ && !is_vip_ &&
           loosed_bomb_node_index_ == kInvalidNodeIndex && !has_hostage_ && !is_creature_ && !ShouldRushEndgameTime ()) {
 
-        camp_buttons_ = 0;
+        camp_duck_ = false;
 
         // do not pause right before a jump connection
         bool jump_ahead = false;
@@ -3621,7 +3580,7 @@ bool Bot::AdvanceMovement () {
         else if (bots.EnemySpotted () && !IsOnLadder () && !IsInWater () && !jump_ahead && IsOnFloor ()) {
           // danger on the node is comparable with bot's aggression - duck for a while
           if (danger >= emotion_.base_aggression * 0.5f) {
-            camp_buttons_ |= IN_DUCK;
+            camp_duck_ = true;
           }
           else if (rg.chance (Skill ())) {
             min_speed_ = GetShiftSpeed ();

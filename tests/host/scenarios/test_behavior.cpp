@@ -119,11 +119,11 @@ struct BehaviorHook {
   static ystl::Vector CampDirection (Bot &bot, const ystl::Vector &dest) {
     return bot.GetCampDirection (dest);
   }
-  static int CampButtons (Bot &bot) {
-    return bot.camp_buttons_;
+  static bool CampDuck (Bot &bot) {
+    return bot.camp_duck_;
   }
-  static void SetCampButtons (Bot &bot, int buttons) {
-    bot.camp_buttons_ = buttons;
+  static void SetCampDuck (Bot &bot, bool duck) {
+    bot.camp_duck_ = duck;
   }
   static void SelectCamp (Bot &bot, int index) {
     bot.SelectCampButtons (index);
@@ -603,23 +603,23 @@ TEST_CASE ("unit/behavior_senses") {
   bot->emotion_.fear = 0.9f;
   bot->emotion_.aggression = 0.1f;
   bot->pev->health = 100.0f;
-  BehaviorHook::SetCampButtons (*bot, 0);
+  BehaviorHook::SetCampDuck (*bot, false);
   BehaviorHook::SelectCamp (*bot, 0);
-  CHECK (!!(BehaviorHook::CampButtons (*bot) & IN_DUCK));
+  CHECK (BehaviorHook::CampDuck (*bot));
 
   bot->emotion_.fear = 0.1f;
   bot->emotion_.aggression = 0.9f;
   BehaviorHook::SelectCamp (*bot, 0);
-  CHECK (!(BehaviorHook::CampButtons (*bot) & IN_DUCK));
+  CHECK (!(BehaviorHook::CampDuck (*bot)));
 
   bot->personality_ = Personality::Normal;
   bot->pev->health = 50.0f;
   BehaviorHook::SelectCamp (*bot, 0);
-  CHECK (!!(BehaviorHook::CampButtons (*bot) & IN_DUCK));
+  CHECK (BehaviorHook::CampDuck (*bot));
 
   graph.paths_[0].vis.crouch = 7;
   BehaviorHook::SelectCamp (*bot, 0);
-  CHECK (!(BehaviorHook::CampButtons (*bot) & IN_DUCK));
+  CHECK (!(BehaviorHook::CampDuck (*bot)));
 
   // shift speed drops only when everything is quiet
   bot->num_enemies_left_ = 0;

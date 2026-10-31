@@ -120,7 +120,7 @@ struct BlindState {
   ystl::CountdownTimer timer {}; // time when bot is blinded
   float move_speed {}; // mad speeds when bot is blind
   float side_move_speed {}; // mad side move speeds when bot is blind
-  int button {}; // buttons bot press, when blind
+  bool duck {}; // duck while blind
   int node_index { kInvalidNodeIndex }; // node index to cover when blind (invalid until takeBlind assigns cover)
 };
 
@@ -145,6 +145,7 @@ struct TeamCooldowns {
 
 // bot core behavior data mixin
 class BehaviorData {
+  friend class InputButtons;
   friend class DebugPanel;
   friend struct TestHook;
   friend struct ChatHook;
@@ -159,8 +160,9 @@ class BehaviorData {
 protected:
   Sense states_ {}; // sensing bitstates
 
+  InputButtons buttons_ {}; // input buttons, mirror into pev->button
   int old_buttons_ {}; // our old buttons
-  int pending_buttons_ {}; // button presses queued for the next movement command
+  bool pending_attack2_ {}; // attack2 press queued for the next movement command
   uint32_t model_mask_ {}; // model mask bits
 
   float frame_interval_ {}; // bot's frame interval
@@ -188,7 +190,6 @@ protected:
   float min_speed_ {}; // minimum speed in normal mode
   ystl::CountdownTimer item_check_timer_ {}; // time next search for items needs to be done
   ystl::IntervalTimer last_equip_timer_ {}; // last time we equipped in buyzone
-  ystl::CountdownTimer duck_timer_ {}; // time to duck
   ystl::CountdownTimer breakable_timer_ {}; // breakable acquired time
   ystl::CountdownTimer breakable_shoot_timer_ {}; // time when bot started shooting breakable
   ystl::CountdownTimer debug_update_timer_ {}; // time to update last debug timestamp

@@ -393,10 +393,10 @@ void Bot::TaskNormal () {
       knife_attack_timer_.elapsed () && !has_hostage_ && !HasShield () && NumFriendsNear (pev->origin, 96.0f) == 0) {
 
     if (rg.chance (40)) {
-      pev->button |= IN_ATTACK;
+      buttons_.PressAttack ();
     }
     else {
-      pev->button |= IN_ATTACK2;
+      buttons_.PressAttack2 ();
     }
     knife_attack_timer_.start (rg (2.5f, 6.0f));
   }
@@ -475,10 +475,10 @@ void Bot::TaskNormal () {
         if (camping_allowed) {
           // crouched camping here?
           if (has_flag (path_flags_, NodeFlag::Crouch)) {
-            camp_buttons_ = IN_DUCK;
+            camp_duck_ = true;
           }
           else {
-            camp_buttons_ = 0;
+            camp_duck_ = false;
           }
           SelectBestWeapon ();
 
@@ -763,19 +763,19 @@ void Bot::TaskSeekCover () {
     if (has_flag (path_flags_, NodeFlag::Camp)) {
       // use the existing camp node prefs
       if (has_flag (path_flags_, NodeFlag::Crouch)) {
-        camp_buttons_ = IN_DUCK;
+        camp_duck_ = true;
       }
       else {
-        camp_buttons_ = 0;
+        camp_duck_ = false;
       }
     }
     else {
       // choose a crouch or stand pos
       if (path_->vis.crouch <= path_->vis.stand) {
-        camp_buttons_ = IN_DUCK;
+        camp_duck_ = true;
       }
       else {
-        camp_buttons_ = 0;
+        camp_duck_ = false;
       }
 
       // enter look direction from previously calculated positions
@@ -873,7 +873,9 @@ void Bot::TaskPause () {
     wants_to_fire_ = true;
   }
   else {
-    pev->button |= camp_buttons_;
+    if (camp_duck_) {
+      buttons_.PressDuck ();
+    }
   }
 
   // stop camping if time over or gets hurt by something else than bullets
@@ -907,7 +909,7 @@ void Bot::TaskBlind () {
 
       blind_.move_speed = 0.0f;
       blind_.side_move_speed = 0.0f;
-      blind_.button = 0;
+      blind_.duck = false;
 
       states_ |= Sense::SuspectEnemy;
       CompleteTask ();
@@ -924,7 +926,9 @@ void Bot::TaskBlind () {
   else {
     move_speed_ = blind_.move_speed;
     strafe_speed_ = blind_.side_move_speed;
-    pev->button |= blind_.button;
+    if (blind_.duck) {
+      buttons_.PressDuck ();
+    }
 
     states_ |= Sense::SuspectEnemy;
   }
@@ -1022,7 +1026,9 @@ void Bot::TaskCamp () {
     next_camp_dir_timer_.start (rg (1.0f, 4.0f));
   }
   // press remembered crouch button
-  pev->button |= camp_buttons_;
+  if (camp_duck_) {
+    buttons_.PressDuck ();
+  }
 
   // stop camping if time over or gets hurt by something else than bullets
   if (Task ()->time < game.Time () || last_damage_type_ > 0) {
@@ -1050,10 +1056,10 @@ void Bot::TaskHide () {
 
   if (HasShield () && !reload_data_.is_reloading) {
     if (!IsShieldDrawn ()) {
-      pev->button |= IN_ATTACK2; // draw the shield!
+      buttons_.PressAttack2 (); // draw the shield!
     }
     else {
-      pev->button |= IN_DUCK; // duck under if the shield is already drawn
+      buttons_.PressDuck (); // duck under if the shield is already drawn
     }
   }
 
@@ -1062,7 +1068,7 @@ void Bot::TaskHide () {
     if (!has_flag (path_flags_, NodeFlag::Camp)) {
       CompleteTask ();
 
-      camp_buttons_ = 0;
+      camp_duck_ = false;
       prev_goal_index_ = kInvalidNodeIndex;
 
       return;
@@ -1073,13 +1079,15 @@ void Bot::TaskHide () {
   else if (enemy_.last_origin.empty ()) {
     CompleteTask ();
 
-    camp_buttons_ = 0;
+    camp_duck_ = false;
     prev_goal_index_ = kInvalidNodeIndex;
 
     return;
   }
 
-  pev->button |= camp_buttons_;
+  if (camp_duck_) {
+    buttons_.PressDuck ();
+  }
   nav_timer_.start ();
 
   if (!reload_data_.is_reloading) {
@@ -1096,7 +1104,7 @@ void Bot::TaskMoveTo () {
   aim_flags_ |= AimFlags::Nav;
 
   if (IsShieldDrawn ()) {
-    pev->button |= IN_ATTACK2;
+    buttons_.PressAttack2 ();
   }
 
   auto ensure_dest_index_ok = [&] (int &index) {
@@ -1164,10 +1172,11 @@ void Bot::TaskPlantBomb () {
 
       // hold crouch while planting so the engine does not try to stand up
       if (IsDucking () || has_flag (path_flags_, NodeFlag::Crouch)) {
-        pev->button |= (IN_ATTACK | IN_DUCK);
+        buttons_.PressAttack ();
+        buttons_.PressDuck ();
       }
       else {
-        pev->button |= IN_ATTACK;
+        buttons_.PressAttack ();
       }
       move_speed_ = 0.0f;
       strafe_speed_ = 0.0f;
@@ -1355,13 +1364,13 @@ void Bot::TaskDefuseBomb () {
 
   const bool bomb_close = !game.IsNullEntity (bomb_entity) && game.GetEntityOrigin (bomb_entity).distance_sq (pev->origin) < ystl::sqrf (96.0f);
 
-  pev->button |= IN_USE;
+  buttons_.PressUse ();
 
   // if defusing is not already started, maybe crouch before
   if (!has_progress_bar_ && duck_defuse_check_timer_.elapsed ()) {
     ystl::Vector bot_duck_origin {}, bot_stand_origin {};
 
-    if (pev->button & IN_DUCK) {
+    if (buttons_.IsDucking ()) {
       bot_duck_origin = pev->origin;
       bot_stand_origin = pev->origin + ystl::Vector (0.0f, 0.0f, 18.0f);
     }
@@ -1386,15 +1395,15 @@ void Bot::TaskDefuseBomb () {
 
   // press duck button
   if (duck_defuse_ || (old_buttons_ & IN_DUCK)) {
-    pev->button |= IN_DUCK;
+    buttons_.PressDuck ();
   }
   else {
-    pev->button &= ~IN_DUCK;
+    buttons_.ReleaseDuck ();
   }
 
   // we are defusing bomb
   if (has_progress_bar_ || (old_buttons_ & IN_USE) || !game.IsNullEntity (pickup_item_) || bomb_close) {
-    pev->button |= IN_USE;
+    buttons_.PressUse ();
 
     if (bomb_close) {
       MDLL_Use (bomb_entity, Ent ());
@@ -1487,7 +1496,7 @@ void Bot::TaskFollowUser () {
   }
 
   if (IsShieldDrawn ()) {
-    pev->button |= IN_ATTACK2;
+    buttons_.PressAttack2 ();
   }
 
   // reached destination?
@@ -1578,12 +1587,14 @@ void Bot::TaskThrowExplosive () {
         }
       }
       else if (!(old_buttons_ & IN_ATTACK)) {
-        pev->button |= IN_ATTACK;
+        buttons_.PressAttack ();
       }
     }
   }
   if (!cv_move_during_throw) {
-    pev->button |= camp_buttons_;
+    if (camp_duck_) {
+      buttons_.PressDuck ();
+    }
   }
 }
 
@@ -1644,12 +1655,14 @@ void Bot::TaskThrowFlashbang () {
         }
       }
       else if (!(old_buttons_ & IN_ATTACK)) {
-        pev->button |= IN_ATTACK;
+        buttons_.PressAttack ();
       }
     }
   }
   if (!cv_move_during_throw) {
-    pev->button |= camp_buttons_;
+    if (camp_duck_) {
+      buttons_.PressDuck ();
+    }
   }
 }
 
@@ -1704,11 +1717,13 @@ void Bot::TaskThrowSmoke () {
       }
     }
     else if (!(old_buttons_ & IN_ATTACK)) {
-      pev->button |= IN_ATTACK;
+      buttons_.PressAttack ();
     }
   }
   if (!cv_move_during_throw) {
-    pev->button |= camp_buttons_;
+    if (camp_duck_) {
+      buttons_.PressDuck ();
+    }
   }
 }
 
@@ -1733,10 +1748,10 @@ void Bot::TaskDoubleJump () {
     bool in_jump = (double_jump_entity_->v.button & IN_JUMP) || (double_jump_entity_->v.oldbuttons & IN_JUMP);
 
     if (duck_for_jump_ < game.Time ()) {
-      pev->button |= IN_DUCK;
+      buttons_.PressDuck ();
     }
     else if (in_jump && !(old_buttons_ & IN_JUMP)) {
-      pev->button |= IN_JUMP;
+      buttons_.PressJump ();
     }
 
     const ystl::Vector src = pev->origin + ystl::Vector (0.0f, 0.0f, 45.0f);
@@ -1796,7 +1811,7 @@ void Bot::TaskEscapeFromBomb () {
   }
 
   if (IsShieldDrawn ()) {
-    pev->button |= IN_ATTACK2;
+    buttons_.PressAttack2 ();
   }
 
   if (!UsesKnife () && game.IsNullEntity (enemy_.current) && !game.IsAliveEntity (enemy_.last)) {
@@ -1809,7 +1824,7 @@ void Bot::TaskEscapeFromBomb () {
 
     // press duck button if we still have some enemies
     if (num_enemies_left_ > 0) {
-      camp_buttons_ = IN_DUCK;
+      camp_duck_ = true;
     }
 
     // we're reached destination point so just sit down and camp
@@ -1897,7 +1912,9 @@ void Bot::TaskShootBreakable () {
     }
   }
   aim_flags_ |= AimFlags::Override;
-  pev->button |= camp_buttons_;
+  if (camp_duck_) {
+    buttons_.PressDuck ();
+  }
 
   check_terrain_ = false;
   move_to_goal_ = false;
@@ -1914,7 +1931,7 @@ void Bot::TaskShootBreakable () {
     shoot_time_ = game.Time ();
 
     // enforce shooting
-    if (!UsesKnife () && !reload_data_.is_reloading && !(pev->button & IN_RELOAD) && GetAmmoInClip () > 0) {
+    if (!UsesKnife () && !reload_data_.is_reloading && !buttons_.IsReloading () && GetAmmoInClip () > 0) {
       wants_to_fire_ = true;
     }
 

@@ -40,8 +40,8 @@ struct ManagerHook {
     bot.move_speed_ = fwd;
     bot.strafe_speed_ = side;
   }
-  static void SetPending (Bot &bot, int buttons) {
-    bot.pending_buttons_ = buttons;
+  static void SetPending (Bot &bot, bool attack2) {
+    bot.pending_attack2_ = attack2;
   }
   static void SetLastCommand (Bot &bot, float msec, float time) {
     bot.last_command_msec_ = msec;
@@ -49,6 +49,18 @@ struct ManagerHook {
   }
   static int Starved (Bot &bot) {
     return bot.starved_commands_;
+  }
+  static int OldButtons (Bot &bot) {
+    return bot.old_buttons_;
+  }
+  static void PressAttack (Bot &bot) {
+    bot.buttons_.PressAttack ();
+  }
+  static void Reset (Bot &bot) {
+    bot.ResetMovement ();
+  }
+  static void PressDuckFor (Bot &bot, float seconds) {
+    bot.buttons_.PressDuck (seconds);
   }
   static void SetThinkInterval (Bot &bot, float interval) {
     bot.think_interval_ = interval;
@@ -1367,10 +1379,11 @@ TEST_CASE ("unit/manager_tick") {
 
   // starved command path plus pending buttons and both look branches
   ManagerHook::SetLastCommand (*a, 50.0f, game.Time () - 1.0f);
-  ManagerHook::SetPending (*a, IN_ATTACK);
+  ManagerHook::SetPending (*a, true);
   ManagerHook::SetSpeeds (*a, 0.0f, 0.0f);
   tickmgr.RunCommand (a);
   CHECK (ManagerHook::Starved (*a) >= 0);
+  CHECK ((ManagerHook::OldButtons (*a) & IN_ATTACK2) != 0);
   ManagerHook::SetSpeeds (*a, 200.0f, 0.0f);
   a->StartTask (TaskId::Attack, TaskPri::kMoveTo, kInvalidNodeIndex, 0.0f, true);
   tickmgr.RunCommand (a);
@@ -1410,6 +1423,51 @@ TEST_CASE ("unit/manager_tick") {
 
   ystl::rg.clear_forced ();
   cv_quota.Revert ();
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/manager_buttons") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootManager (engine, cs);
+  ystl::rg.seed (1234);
+
+  bots.Addbot ("BtnA", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+  Bot *a = testhost::FindBot ("BtnA");
+  HOST_REQUIRE (a != nullptr);
+  a->is_alive_ = true;
+
+  ManagerHook::SetSpeeds (*a, 0.0f, 0.0f);
+
+  // a tap is consumed by the command and cleared on the next movement reset
+  ManagerHook::Reset (*a);
+  ManagerHook::PressAttack (*a);
+  tickmgr.RunCommand (a);
+  CHECK ((ManagerHook::OldButtons (*a) & IN_ATTACK) != 0);
+
+  ManagerHook::Reset (*a);
+  tickmgr.RunCommand (a);
+  CHECK ((ManagerHook::OldButtons (*a) & IN_ATTACK) == 0);
+
+  // without a reset between commands the tap stays in the issued command
+  ManagerHook::Reset (*a);
+  ManagerHook::PressAttack (*a);
+  tickmgr.RunCommand (a);
+  CHECK ((ManagerHook::OldButtons (*a) & IN_ATTACK) != 0);
+  tickmgr.RunCommand (a);
+  CHECK ((ManagerHook::OldButtons (*a) & IN_ATTACK) != 0);
+
+  // a timed hold outlives the movement reset, an untimed tap does not
+  ManagerHook::Reset (*a);
+  ManagerHook::PressDuckFor (*a, 5.0f);
+  tickmgr.RunCommand (a);
+  CHECK ((ManagerHook::OldButtons (*a) & IN_DUCK) != 0);
+  ManagerHook::Reset (*a);
+  tickmgr.RunCommand (a);
+  CHECK ((ManagerHook::OldButtons (*a) & IN_DUCK) != 0);
+
   bots.Destroy ();
 }
 

@@ -211,7 +211,7 @@ void Bot::CheckRadioQueue () {
         target_entity_ = nullptr;
         PushRadioChat (RadioChat::RogerThat);
 
-        camp_buttons_ = 0;
+        camp_duck_ = false;
         StartTask (TaskId::Pause, TaskPri::kPause, kInvalidNodeIndex, game.Time () + rg (30.0f, 60.0f), false);
       }
     }

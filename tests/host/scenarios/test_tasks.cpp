@@ -101,8 +101,8 @@ struct TasksHook {
   static void SetPathOrigin (Bot &bot, const ystl::Vector &pos) {
     bot.path_origin_ = pos;
   }
-  static void SetCampButtons (Bot &bot, int buttons) {
-    bot.camp_buttons_ = buttons;
+  static void SetCampDuck (Bot &bot, bool duck) {
+    bot.camp_duck_ = duck;
   }
   static void SetCampDirection (Bot &bot, int dir) {
     bot.camp_direction_ = dir;
@@ -407,7 +407,7 @@ TEST_CASE ("unit/tasks_basic") {
   CHECK (bot->blind_.node_index == kInvalidNodeIndex);
   bot->blind_.move_speed = 50.0f;
   bot->blind_.side_move_speed = 60.0f;
-  bot->blind_.button = IN_DUCK;
+  bot->blind_.duck = true;
   TasksHook::Execute (*bot);
   CHECK (TasksHook::MoveSpeed (*bot) == 50.0f);
   CHECK (TasksHook::StrafeSpeed (*bot) == 60.0f);
@@ -1200,7 +1200,7 @@ TEST_CASE ("unit/tasks_seek") {
   // ...expired hides stand down even from a good camp spot...
   TasksHook::SetLastEnemyOrigin (*bot, ystl::Vector (600.0f, 0.0f, 0.0f));
   TasksHook::SetPathFlags (*bot, NodeFlag::Camp);
-  TasksHook::SetCampButtons (*bot, 0);
+  TasksHook::SetCampDuck (*bot, false);
   bot->ClearTasks ();
   bot->StartTask (TaskId::Hide, TaskPri::kHide, kInvalidNodeIndex, game.Time () - 1.0f, true);
   TasksHook::Execute (*bot);
@@ -1819,7 +1819,7 @@ TEST_CASE ("unit/tasks_panic") {
   TasksHook::SetOldButtons (*bot, 0);
   cv_move_during_throw.Set (0);
   TasksHook::SetThrow (*bot, ystl::Vector (2000.0f, 0.0f, 0.0f));
-  TasksHook::SetCampButtons (*bot, IN_DUCK);
+  TasksHook::SetCampDuck (*bot, true);
   bot->ClearTasks ();
   bot->StartTask (TaskId::ThrowSmoke, TaskPri::kThrow, kInvalidNodeIndex, game.Time () + 100.0f, true);
   TasksHook::Execute (*bot);

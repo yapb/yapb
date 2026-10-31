@@ -343,9 +343,9 @@ void TickManager::RunCommand (Bot *bot) {
   bot->last_command_msec_ = static_cast<float> (msec_val);
 
   // flush queued button presses, so they won't be overwritten by engine
-  if (bot->pending_buttons_ != 0) {
-    bot->pev->button |= bot->pending_buttons_;
-    bot->pending_buttons_ = 0;
+  if (bot->pending_attack2_) {
+    bot->buttons_.PressAttack2 ();
+    bot->pending_attack2_ = false;
   }
 
   bot->TranslateInput ();
@@ -362,13 +362,13 @@ void TickManager::RunCommand (Bot *bot) {
     return bot->move_angles_;
   };
 
-  const auto input_buttons = static_cast<uint16_t> (bot->pev->button);
+  const auto input_buttons = static_cast<uint16_t> (bot->buttons_.Bits ());
   const auto input_impulse = static_cast<uint8_t> (bot->pev->impulse);
 
   engfuncs.pfnRunPlayerMove (bot->Ent (), input_angles (), bot->move_speed_, bot->strafe_speed_, 0.0f, input_buttons, input_impulse, msec_val);
 
   // save our own copy of old buttons, since bot code is not running every frame now
-  bot->old_buttons_ = bot->pev->button;
+  bot->old_buttons_ = bot->buttons_.Bits ();
 }
 
 uint8_t TickManager::ComputeMsec (const Bot *bot) const {
@@ -1412,6 +1412,7 @@ Bot::Bot (edict_t *bot, Difficulty difficulty, Personality personality, Team tea
 
   const int client_index = game.IndexOfEntity (bot);
   pev = &bot->v;
+  buttons_.Bind (&pev->button);
 
   // create the player entity by calling mod's player function
   bots.ExecGameEntity (bot);
@@ -1841,7 +1842,7 @@ void Bot::NewRound () {
 
   num_friends_left_ = 0;
   num_enemies_left_ = 0;
-  old_buttons_ = pev->button;
+  old_buttons_ = buttons_.Bits ();
   rechoice_goal_count_ = 0;
 
   ystl::fill (previous_nodes_, kInvalidNodeIndex);
@@ -1997,7 +1998,7 @@ void Bot::NewRound () {
   bomb_search_overridden_ = false;
   fire_hurts_friend_ = false;
 
-  blind_.button = 0;
+  blind_.duck = false;
   blind_.timer.invalidate ();
   avoid_flash_timer_.invalidate ();
   avoid_flash_ent_ = nullptr;
@@ -2091,7 +2092,7 @@ void Bot::NewRound () {
   time_camping_ = 0.0f;
   camp_direction_ = 0;
   next_camp_dir_timer_.invalidate ();
-  camp_buttons_ = 0;
+  camp_duck_ = false;
 
   sound_update_timer_.invalidate ();
   heard_sound_timer_.start ();
@@ -2228,7 +2229,7 @@ void Bot::UpdateTeamJoin () {
 
   // cs prior beta 7.0 uses hud-based motd, so press fire once
   if (game.Is (GameFlags::Legacy)) {
-    pev->button |= IN_ATTACK;
+    buttons_.PressAttack ();
   }
 
   // check if something has assigned team to us
@@ -2450,7 +2451,7 @@ void Manager::SelectLeaders (Team team, bool reset) {
 
           if (ystl::rg.chance (50)) {
             bot.PushRadioChat (RadioChat::FollowMe);
-            bot.camp_buttons_ = 0;
+            bot.camp_duck_ = false;
           }
         }
       }
@@ -2484,7 +2485,7 @@ void Manager::SelectLeaders (Team team, bool reset) {
             else {
               bot.PushRadioChat (RadioChat::FollowMe);
             }
-            bot.camp_buttons_ = 0;
+            bot.camp_duck_ = false;
           }
         }
       }

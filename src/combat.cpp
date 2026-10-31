@@ -826,7 +826,7 @@ bool Bot::LookupEnemies () {
   // is the bot using a sniper rifle or a zoomable rifle?
   if ((UsesSniper () || UsesZoomableRifle ()) && zoom_check_timer_.remaining_time () < -1.0f) {
     if (pev->fov < 90.0f) {
-      pev->button |= IN_ATTACK2;
+      buttons_.PressAttack2 ();
     }
     else {
       zoom_check_timer_.invalidate ();
@@ -1371,7 +1371,7 @@ void Bot::AttackMovement () {
     if (difficulty_ >= Difficulty::Normal && distance_sq < ystl::sqrf (kSprayDistance) && (reload_data_.is_reloading || health_value_ < 35.0f) &&
         jump_time_ + 5.0f < game.Time () && IsOnFloor () && pev->velocity.length2d () > 150.0f && !UsesSniper () && is_enemy_cone) {
 
-      pev->button |= IN_JUMP;
+      buttons_.PressJump ();
     }
   }
   else if (fight_style_ == Fight::Stay) {
@@ -1382,10 +1382,10 @@ void Bot::AttackMovement () {
       strafe_speed_ = 0.0f;
     }
     else {
-      const bool already_ducking = !duck_timer_.elapsed () || IsDucking () || ((pev->button | pev->oldbuttons) & IN_DUCK);
+      const bool already_ducking = IsDucking () || buttons_.IsDucking () || (pev->oldbuttons & IN_DUCK);
 
       if (already_ducking) {
-        duck_timer_.start (frame_interval_ * 3.0f);
+        buttons_.PressDuck (frame_interval_ * 3.0f);
       }
       else if ((distance_sq > ystl::sqrf (kSprayDistanceX2) && HasPrimaryWeapon ()) && is_full_view && GetTaskId () != TaskId::SeekCover &&
                GetTaskId () != TaskId::Hunt) {
@@ -1395,7 +1395,7 @@ void Bot::AttackMovement () {
           const int enemy_nearest_index = graph.GetNearest (enemy_.current->v.origin);
 
           if (vistab.VisibleBothSides (current_node_index_, enemy_nearest_index, VisIndex::Crouch)) {
-            duck_timer_.start (frame_interval_ * 3.0f);
+            buttons_.PressDuck (frame_interval_ * 3.0f);
           }
         }
       }
@@ -1409,7 +1409,7 @@ void Bot::AttackMovement () {
 
     // only force unduck if we're not behind cover, ducking while reloading behind cover is beneficial
     if (is_enemy_cone) {
-      duck_timer_.invalidate ();
+      buttons_.ReleaseDuck ();
     }
   }
 
@@ -1432,7 +1432,7 @@ void Bot::AttackMovement () {
         strafe_speed_ = -strafe_speed_;
         move_speed_ = -move_speed_;
       }
-      pev->button &= ~IN_JUMP;
+      buttons_.ReleaseJump ();
     }
   }
   IgnoreCollision ();

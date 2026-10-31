@@ -279,7 +279,7 @@ void DebugPanel::Update (Bot *bot) {
 
   // LEGS: buttons and speeds
   Set (DebugChannel::Legs, 0, "Move: %.0f Strafe: %.0f", bot->move_speed_, bot->strafe_speed_);
-  Set (DebugChannel::Legs, 1, "Keys: %s", KeysName (bot->pev->button));
+  Set (DebugChannel::Legs, 1, "Keys: %s", KeysName (bot->buttons_.Bits ()));
   Set (DebugChannel::Legs, 2, "Msec: %.0f Starved: %d", bot->last_command_msec_, bot->starved_commands_);
 
   // HAND: view angles and weapon

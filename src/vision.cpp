@@ -334,7 +334,7 @@ void Bot::SetAimDirection () {
   if (!has_flag (flags, AimFlags::Grenade | AimFlags::Enemy | AimFlags::Entity)) {
 
     // check if narrow place and we're duck, do not predict enemies in that situation
-    const bool ducked_in_narrow_place = IsInNarrowPlace () && (has_flag (path_flags_, NodeFlag::Crouch) || (pev->button & IN_DUCK));
+    const bool ducked_in_narrow_place = IsInNarrowPlace () && (has_flag (path_flags_, NodeFlag::Crouch) || buttons_.IsDucking ());
 
     if (ducked_in_narrow_place || IsOnLadder () || IsInWater () || has_flag (path_flags_, NodeFlag::Ladder) ||
         has_flag (current_travel_flags_, PathFlag::Jump)) {

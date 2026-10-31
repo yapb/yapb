@@ -475,7 +475,7 @@ bool Bot::CheckZoom (float distance) {
   }
 
   if (zoom_change && zoom_check_timer_.elapsed ()) {
-    pev->button |= IN_ATTACK2;
+    buttons_.PressAttack2 ();
     shoot_time_ = game.Time () + 0.15f;
 
     zoom_check_timer_.start (0.5f);
@@ -528,12 +528,12 @@ void Bot::HandleWeapons (float distance, int, Weapon id, int choosen) {
     const bool has_enemy = !game.IsNullEntity (enemy_.current);
 
     if (distance >= 750.0f && !IsShieldDrawn ()) {
-      pev->button |= IN_ATTACK2; // draw the shield
+      buttons_.PressAttack2 (); // draw the shield
     }
     else if (IsShieldDrawn () || reload_data_.is_reloading || (has_enemy && (enemy_.current->v.button & IN_RELOAD)) ||
              (has_enemy && !SeesEntity (enemy_.current->v.origin))) {
 
-      pev->button |= IN_ATTACK2; // draw out the shield
+      buttons_.PressAttack2 (); // draw out the shield
     }
     shield_check_timer_.start (1.0f);
   }
@@ -568,28 +568,28 @@ void Bot::HandleWeapons (float distance, int, Weapon id, int choosen) {
         const auto primary_attack_chance = (old_buttons_ & IN_ATTACK2) ? 80 : 40;
 
         if (rg.chance (primary_attack_chance) || HasShield ()) {
-          pev->button |= IN_ATTACK; // use primary attack
+          buttons_.PressAttack (); // use primary attack
         }
         else {
-          pev->button |= IN_ATTACK2; // use secondary attack
+          buttons_.PressAttack2 (); // use secondary attack
         }
       }
     }
     else {
       // if automatic weapon press attack
       if (tab[choosen].primary_fire_hold) {
-        pev->button |= IN_ATTACK;
+        buttons_.PressAttack ();
       }
 
       // if not, toggle
       else {
         if ((old_buttons_ & IN_ATTACK) == 0) {
-          pev->button |= IN_ATTACK;
+          buttons_.PressAttack ();
         }
       }
     }
 
-    if (pev->button & IN_ATTACK) {
+    if (buttons_.IsAttacking ()) {
       shoot_time_ = time_delta;
     }
   }
@@ -608,11 +608,11 @@ void Bot::HandleWeapons (float distance, int, Weapon id, int choosen) {
       shoot_time_ = time_delta;
       zoom_check_timer_.start (0.0f);
 
-      pev->button |= IN_ATTACK; // use primary attack
+      buttons_.PressAttack (); // use primary attack
     }
     else {
       if ((old_buttons_ & IN_ATTACK) == 0) {
-        pev->button |= IN_ATTACK;
+        buttons_.PressAttack ();
       }
 
       // values here never overclock shotguns/snipers, they only unthrottle pistols
@@ -1229,10 +1229,10 @@ void Bot::CheckReload () {
       if (current_weapon_ != prop.id) {
         SelectWeaponById (prop.id);
       }
-      pev->button &= ~IN_ATTACK;
+      buttons_.ReleaseAttack ();
 
       if (!(old_buttons_ & IN_RELOAD)) {
-        pev->button |= IN_RELOAD; // press reload button
+        buttons_.PressReload (); // press reload button
       }
       reload_data_.is_reloading = true;
       return;
@@ -1298,18 +1298,18 @@ void Bot::CheckBurstMode (float distance) {
 
   // if current weapon is glock, disable burstmode on long distances, enable it else
   if (current_weapon_ == Weapon::Glock18 && distance < 300.0f && weapon_burst_mode_ == BurstMode::Off) {
-    pev->button |= IN_ATTACK2;
+    buttons_.PressAttack2 ();
   }
   else if (current_weapon_ == Weapon::Glock18 && distance >= 300.0f && weapon_burst_mode_ == BurstMode::On) {
-    pev->button |= IN_ATTACK2;
+    buttons_.PressAttack2 ();
   }
 
   // if current weapon is famas, disable burstmode on short distances, enable it else
   if (current_weapon_ == Weapon::Famas && distance > 400.0f && weapon_burst_mode_ == BurstMode::Off) {
-    pev->button |= IN_ATTACK2;
+    buttons_.PressAttack2 ();
   }
   else if (current_weapon_ == Weapon::Famas && distance <= 400.0f && weapon_burst_mode_ == BurstMode::On) {
-    pev->button |= IN_ATTACK2;
+    buttons_.PressAttack2 ();
   }
 }
 
@@ -1321,14 +1321,14 @@ void Bot::CheckSilencer () {
     if (rg.chance (current_weapon_ == Weapon::USP ? prob / 2 : prob)) {
       // is the silencer not attached
       if (pev->weaponanim > 6) {
-        pev->button |= IN_ATTACK2; // attach the silencer
+        buttons_.PressAttack2 (); // attach the silencer
       }
     }
     else {
 
       // is the silencer attached
       if (pev->weaponanim <= 6) {
-        pev->button |= IN_ATTACK2; // detach the silencer
+        buttons_.PressAttack2 (); // detach the silencer
       }
     }
   }

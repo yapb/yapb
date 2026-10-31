@@ -216,6 +216,7 @@ struct AvoidState {
 
 // bot navigation data mixin
 class NavigateData {
+  friend class InputButtons;
   friend class DebugPanel;
   friend struct NavigateHook;
   friend struct PracticeHook;
@@ -257,7 +258,7 @@ protected:
   NodeFlag path_flags_ {}; // current node flags
   int need_avoid_grenade_ {}; // which direction to strafe away
   int camp_direction_ {}; // camp facing direction
-  int camp_buttons_ {}; // buttons to press while camping
+  bool camp_duck_ {}; // duck while camping
   int try_open_door_ {}; // attempt's to open the door
   int door_block_count_ {}; // counter for door blocking attempts
   DoorBlockType door_block_type_ {}; // type of door blocker

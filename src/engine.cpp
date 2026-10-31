@@ -9,6 +9,126 @@
 
 namespace bot {
 
+void InputButtons::PressMask (int32_t mask, float seconds) {
+  if (bits_ == nullptr || mask == 0) {
+    return;
+  }
+
+  *bits_ |= mask;
+
+  const uint32_t pressed = static_cast<uint32_t> (mask);
+
+  for (int32_t i = 0; i < kMaxBits; ++i) {
+    const uint32_t bit = uint32_t { 1 } << i;
+
+    if ((pressed & bit) == 0) {
+      continue;
+    }
+
+    // an untimed press is a one frame tap, so any older hold must be dropped
+    if (seconds > 0.0f) {
+      holds_[i].start (seconds);
+    }
+    else {
+      holds_[i].invalidate ();
+    }
+  }
+}
+
+void InputButtons::ReleaseMask (int32_t mask) {
+  if (bits_ == nullptr) {
+    return;
+  }
+
+  *bits_ &= ~mask;
+
+  const uint32_t released = static_cast<uint32_t> (mask);
+
+  for (int32_t i = 0; i < kMaxBits; ++i) {
+    const uint32_t bit = uint32_t { 1 } << i;
+
+    if ((released & bit) != 0) {
+      holds_[i].invalidate ();
+    }
+  }
+}
+
+void InputButtons::Translate (Bot &bot) {
+  // no shooting allowed, if yb_dont_shoot is enabled
+  if (cv_dont_shoot) {
+    ReleaseAttack ();
+  }
+
+  if (IsJumping ()) {
+    bot.jump_time_ = game.Time ();
+  }
+
+  if (bot.jump_time_ + 0.85f > game.Time ()) {
+    if (!bot.IsOnFloor () && !bot.IsInWater () && !bot.IsOnLadder ()) {
+      PressDuck ();
+    }
+  }
+
+  if (!IsMovingForwardBack ()) {
+    if (bot.move_speed_ > 0.0f) {
+      PressForward ();
+    }
+    else if (bot.move_speed_ < 0.0f) {
+      PressBack ();
+    }
+  }
+
+  // strafing on a ladder slides the bot off sideways, drop it at the output stage
+  if (bot.IsOnLadder ()) {
+    bot.strafe_speed_ = 0.0f;
+    ReleaseStrafe ();
+  }
+
+  if (!IsStrafing ()) {
+    if (bot.strafe_speed_ > 0.0f) {
+      PressMoveRight ();
+    }
+    else if (bot.strafe_speed_ < 0.0f) {
+      PressMoveLeft ();
+    }
+  }
+}
+
+void InputButtons::ReleaseAll () {
+  if (bits_ == nullptr) {
+    return;
+  }
+
+  *bits_ = 0;
+
+  for (auto &hold : holds_) {
+    hold.invalidate ();
+  }
+}
+
+void InputButtons::BeginFrame () {
+  if (bits_ == nullptr) {
+    return;
+  }
+
+  for (int32_t i = 0; i < kMaxBits; ++i) {
+    const uint32_t bit = uint32_t { 1 } << i;
+
+    if (holds_[i].started () && holds_[i].elapsed ()) {
+      *bits_ = static_cast<int32_t> (static_cast<uint32_t> (*bits_) & ~bit);
+      holds_[i].invalidate ();
+    }
+  }
+
+  // untimed presses only live for the frame that issued them
+  for (int32_t i = 0; i < kMaxBits; ++i) {
+    if (!holds_[i].started ()) {
+      const uint32_t bit = uint32_t { 1 } << i;
+      *bits_ = static_cast<int32_t> (static_cast<uint32_t> (*bits_) & ~bit);
+    }
+  }
+}
+
 Game::Game () {
   start_entity_ = nullptr;
   local_entity_ = nullptr;

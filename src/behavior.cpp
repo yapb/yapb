@@ -223,7 +223,7 @@ void Bot::CheckBreakable (edict_t *touch) {
   if (game.IsNullEntity (breakable_entity_) || breakable_origin_.empty ()) {
     return;
   }
-  camp_buttons_ = pev->button & IN_DUCK;
+  camp_duck_ = buttons_.IsDucking ();
   StartTask (TaskId::ShootBreakable, TaskPri::kShootBreakable, kInvalidNodeIndex, 0.0f, false);
 }
 
@@ -285,7 +285,7 @@ void Bot::CheckBreakablesAround () {
       breakable_origin_ = origin;
       breakable_entity_ = breakable;
 
-      camp_buttons_ = pev->button & IN_DUCK;
+      camp_duck_ = buttons_.IsDucking ();
 
       StartTask (TaskId::ShootBreakable, TaskPri::kShootBreakable, kInvalidNodeIndex, 0.0f, false);
       break;
@@ -1179,7 +1179,7 @@ void Bot::CheckParachute () {
 
     // press use anyway
     if (fall_down_timer_.started () && fall_down_timer_.elapsed ()) {
-      pev->button |= IN_USE;
+      buttons_.PressUse ();
     }
   }
 }
@@ -1474,7 +1474,7 @@ void Bot::LogicDuringFreezetime () {
   if (is_stale_) {
     return;
   }
-  pev->button &= ~IN_DUCK;
+  buttons_.ReleaseDuck ();
 
   UpdateLookAngles ();
 
@@ -1483,7 +1483,7 @@ void Bot::LogicDuringFreezetime () {
   }
 
   if (rg.chance (15) && jump_time_ < game.Time ()) {
-    pev->button |= IN_JUMP;
+    buttons_.PressJump ();
     jump_time_ = game.Time () + rg (1.0f, 3.0f);
   }
   ystl::SmallArray<edict_t *> players {};
@@ -1578,7 +1578,7 @@ void Bot::CheckSpawnConditions () {
   // check if we already switched weapon mode
   if (check_weapon_switch_ && buying_finished_ && spawn_timer_.greater_than (rg (3.0f, 4.5f))) {
     if (HasShield () && IsShieldDrawn ()) {
-      pev->button |= IN_ATTACK2;
+      buttons_.PressAttack2 ();
     }
     else {
       switch (current_weapon_) {
@@ -1590,7 +1590,7 @@ void Bot::CheckSpawnConditions () {
       case Weapon::Famas:
       case Weapon::Glock18:
         if (rg.chance (50)) {
-          pev->button |= IN_ATTACK2;
+          buttons_.PressAttack2 ();
         }
         break;
 
@@ -1600,7 +1600,7 @@ void Bot::CheckSpawnConditions () {
     }
 
     // movement in freezetime is disabled, so queue the press for the next think
-    pending_buttons_ |= IN_ATTACK2;
+    pending_attack2_ = true;
     check_weapon_switch_ = false;
   }
 }
@@ -1770,7 +1770,7 @@ void Bot::Logic () {
   // must avoid a grenade?
   if (need_avoid_grenade_ != 0) {
     // don't duck to get away faster
-    pev->button &= ~IN_DUCK;
+    buttons_.ReleaseDuck ();
 
     ystl::Vector right {}, forward {};
     pev->v_angle.angle_vectors (&forward, &right, nullptr);
@@ -1812,9 +1812,9 @@ void Bot::Logic () {
 }
 
 void Bot::ResetSimulation () {
-  pev->button = 0;
+  buttons_.ReleaseAll ();
   pev->oldbuttons = 0;
-  pending_buttons_ = 0;
+  pending_attack2_ = false;
   old_buttons_ = 0;
   pev->velocity.clear ();
 }
@@ -2122,7 +2122,7 @@ void Bot::TakeBlind (int alpha) {
   if (difficulty_ <= Difficulty::Normal) {
     blind_.move_speed = 0.0f;
     blind_.side_move_speed = 0.0f;
-    blind_.button = IN_DUCK;
+    blind_.duck = true;
 
     return;
   }
@@ -2142,7 +2142,7 @@ void Bot::TakeBlind (int alpha) {
   }
   else if (personality_ == Personality::Careful) {
     blind_.move_speed = 0.0f;
-    blind_.button = IN_DUCK;
+    blind_.duck = true;
   }
   else {
     blind_.move_speed = pev->maxspeed;
@@ -2546,18 +2546,18 @@ void Bot::SelectCampButtons (int index) {
 
   if (personality_ == Personality::Rusher || pev->health >= 90.0f) {
     if (path.vis.crouch < path.vis.stand && emotion_.fear > emotion_.aggression) {
-      camp_buttons_ |= IN_DUCK;
+      camp_duck_ = true;
     }
     else {
-      camp_buttons_ &= ~IN_DUCK;
+      camp_duck_ = false;
     }
   }
   else {
     if (path.vis.crouch <= path.vis.stand) {
-      camp_buttons_ |= IN_DUCK;
+      camp_duck_ = true;
     }
     else {
-      camp_buttons_ &= ~IN_DUCK;
+      camp_duck_ = false;
     }
   }
 }
@@ -2652,10 +2652,9 @@ bool Bot::IsEnemyDefusingBomb (const ystl::Vector &bomb_origin) const {
 }
 
 float Bot::GetShiftSpeed () {
-  if (GetTaskId () == TaskId::SeekCover || has_flag (aim_flags_, AimFlags::Enemy) || IsDucking () ||
-      ((pev->button | pev->oldbuttons) & IN_DUCK) || has_flag (current_travel_flags_, PathFlag::Jump) ||
-      has_flag (path_flags_, NodeFlag::Ladder) || IsOnLadder () || IsInWater () || IsKnifeMode () || IsStuckState () || num_enemies_left_ <= 0 ||
-      !lost_reachable_node_timer_.elapsed ()) {
+  if (GetTaskId () == TaskId::SeekCover || has_flag (aim_flags_, AimFlags::Enemy) || IsDucking () || buttons_.IsDucking () ||
+      (pev->oldbuttons & IN_DUCK) || has_flag (current_travel_flags_, PathFlag::Jump) || has_flag (path_flags_, NodeFlag::Ladder) ||
+      IsOnLadder () || IsInWater () || IsKnifeMode () || IsStuckState () || num_enemies_left_ <= 0 || !lost_reachable_node_timer_.elapsed ()) {
 
     return pev->maxspeed;
   }

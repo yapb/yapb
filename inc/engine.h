@@ -86,6 +86,130 @@ enum class PlayerPart : int32_t {
 // entity prototype
 using EntityProto = void (*) (entvars_t *);
 
+class Bot;
+
+// per-bot input buttons, mirrored into entvars_t::button.
+// every write goes through here; an untimed press lasts one frame, a timed one lasts seconds
+class InputButtons final {
+public:
+  static constexpr int32_t kMaxBits = 32;
+
+private:
+  int32_t *bits_ = nullptr; // points at entvars_t::button
+  ystl::CountdownTimer holds_[kMaxBits]; // per bit release timer, not started means untimed
+
+private:
+  void PressMask (int32_t mask, float seconds);
+  void ReleaseMask (int32_t mask);
+
+  bool Held (int32_t mask) const {
+    return bits_ != nullptr && (*bits_ & mask) != 0;
+  }
+
+public:
+  // binds the mirror field the buttons are written into
+  void Bind (int32_t *bits) {
+    bits_ = bits;
+  }
+
+  int32_t Bits () const {
+    return bits_ != nullptr ? *bits_ : 0;
+  }
+
+  // turns the bot movement intent into input buttons
+  void Translate (Bot &bot);
+
+  // movement; seconds > 0 makes the button release itself after that time
+  void PressForward (float seconds = 0.0f) {
+    PressMask (IN_FORWARD, seconds);
+  }
+  void PressBack (float seconds = 0.0f) {
+    PressMask (IN_BACK, seconds);
+  }
+  void PressMoveLeft (float seconds = 0.0f) {
+    PressMask (IN_MOVELEFT, seconds);
+  }
+  void PressMoveRight (float seconds = 0.0f) {
+    PressMask (IN_MOVERIGHT, seconds);
+  }
+  void ReleaseStrafe () {
+    ReleaseMask (IN_MOVELEFT | IN_MOVERIGHT);
+  }
+  void ReleaseMove () {
+    ReleaseMask (IN_FORWARD | IN_BACK | IN_MOVELEFT | IN_MOVERIGHT);
+  }
+
+  bool IsMovingForward () const {
+    return Held (IN_FORWARD);
+  }
+  bool IsMovingBack () const {
+    return Held (IN_BACK);
+  }
+  bool IsMovingForwardBack () const {
+    return Held (IN_FORWARD | IN_BACK);
+  }
+  bool IsStrafing () const {
+    return Held (IN_MOVELEFT | IN_MOVERIGHT);
+  }
+
+  // actions
+  void PressDuck (float seconds = 0.0f) {
+    PressMask (IN_DUCK, seconds);
+  }
+  void ReleaseDuck () {
+    ReleaseMask (IN_DUCK);
+  }
+  bool IsDucking () const {
+    return Held (IN_DUCK);
+  }
+
+  void PressJump (float seconds = 0.0f) {
+    PressMask (IN_JUMP, seconds);
+  }
+  void ReleaseJump () {
+    ReleaseMask (IN_JUMP);
+  }
+  bool IsJumping () const {
+    return Held (IN_JUMP);
+  }
+
+  void PressAttack (float seconds = 0.0f) {
+    PressMask (IN_ATTACK, seconds);
+  }
+  void ReleaseAttack () {
+    ReleaseMask (IN_ATTACK);
+  }
+  bool IsAttacking () const {
+    return Held (IN_ATTACK);
+  }
+
+  void PressAttack2 (float seconds = 0.0f) {
+    PressMask (IN_ATTACK2, seconds);
+  }
+  void ReleaseAttack2 () {
+    ReleaseMask (IN_ATTACK2);
+  }
+  bool IsAttacking2 () const {
+    return Held (IN_ATTACK2);
+  }
+
+  void PressReload (float seconds = 0.0f) {
+    PressMask (IN_RELOAD, seconds);
+  }
+  bool IsReloading () const {
+    return Held (IN_RELOAD);
+  }
+
+  void PressUse (float seconds = 0.0f) {
+    PressMask (IN_USE, seconds);
+  }
+
+  void ReleaseAll ();
+
+  // drops expired timed holds, then clears untimed presses left from the last frame
+  void BeginFrame ();
+};
+
 // work around missing precache string allocation on original hlds
 class EngineWrap final {
 public:
