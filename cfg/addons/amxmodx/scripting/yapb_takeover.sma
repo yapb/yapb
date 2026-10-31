@@ -17,12 +17,15 @@
 #pragma semicolon 1
 
 new const PLUGIN_NAME[] = "YaPB Bot Takeover";
-new const PLUGIN_VERSION[] = "1.0.0";
+new const PLUGIN_VERSION[] = "1.0.2";
 new const PLUGIN_AUTHOR[] = "Vaqtincha & YB Team";
 new const LOG_FILE[] = "yapb_takeover.log";
 
 new const INVALID_WEAPONS_BS = (1 << any:WEAPON_NONE) | (1 << any:WEAPON_KNIFE);
 new const USEFUL_SLOTS_BS = (1 << any:PRIMARY_WEAPON_SLOT) | (1 << any:PISTOL_SLOT);
+new const RESTORE_TASK_OFFSET = 1000;
+new const RESTORE_MAX_ATTEMPTS = 40;
+
 enum {
   MAX_TRANSFER_ITEMS = 32,
   MAX_TRANSFER_WEAPONS = _:WEAPON_P90 + 1,
@@ -81,6 +84,7 @@ enum _:TransferData {
 
 new g_player[MAX_CLIENTS + 1][PlayerData];
 new g_transfer[MAX_CLIENTS + 1][TransferData];
+new g_restore_attempts[MAX_CLIENTS + 1];
 
 bool:has_state (const id, const flags) {
   return bool:(g_player[id][pd_flags] & flags);
@@ -115,7 +119,6 @@ new g_max_players;
 new g_hud_sync;
 
 new HookChain:g_spawn_hook;
-new HookChain:g_target_hook;
 new HamHook:g_strip_hook;
 
 new bool:g_enabled;
@@ -209,7 +212,7 @@ public plugin_init () {
   RegisterHookChain (RG_CSGameRules_PlayerKilled, "on_player_killed", .post = false);
   RegisterHookChain (RG_CBasePlayer_Killed, "on_player_killed_post", .post = true);
 
-  g_target_hook = RegisterHookChain (RG_CBasePlayer_Observer_IsValidTarget, "on_observer_target", .post = true);
+  RegisterHookChain (RG_CBasePlayer_Observer_IsValidTarget, "on_observer_target", .post = true);
 
   g_spawn_hook = RegisterHookChain (RG_CSGameRules_GetPlayerSpawnSpot, "on_spawn_spot", .post = false);
   DisableHookChain (g_spawn_hook);
@@ -248,13 +251,17 @@ stop_botfeatures () {
 }
 
 public client_putinserver (id) {
+  g_restore_attempts[id] = 0;
+  
   g_player[id][pd_bot] = 0;
   g_player[id][pd_uses] = 0;
   g_player[id][pd_vip] = false;
   g_player[id][pd_vip_player] = false;
   g_player[id][pd_vip_owner] = 0;
   g_player[id][pd_bot_model] = 0;
+  
   clear_transfer_state (id);
+  
   set_state(id, PF_SIM_OFF, false);
   set_state(id, PF_SPAWN_PENDING, false);
   set_state(id, PF_SPAWN_VELOCITY, false);
@@ -263,20 +270,15 @@ public client_putinserver (id) {
 }
 
 public yb_bot_spawned (index) {
-  if (!has_state(index, PF_SIM_OFF)) {
-    return;
-  }
-  set_task (0.5, "restore_bot_simulation_task", index);
+  queue_restore_simulation (index);
 }
 
 public on_player_spawn_post (index) {
-  if (!has_state(index, PF_SIM_OFF)) {
-    return;
-  }
-  set_task (0.5, "restore_bot_simulation_task", index);
+  queue_restore_simulation (index);
 }
 
 public yb_bot_removed (index, bool:kicked) {
+  g_restore_attempts[index] = 0;
   set_state(index, PF_SIM_OFF, false);
 
   for (new player = 1; player <= g_max_players; player++) {
@@ -289,6 +291,8 @@ public yb_bot_removed (index, bool:kicked) {
 
 public client_disconnected (id) {
   remove_task (id);
+  remove_task (id + RESTORE_TASK_OFFSET);
+  g_restore_attempts[id] = 0;
 
   new controlled_bot = g_player[id][pd_bot];
 
@@ -319,7 +323,9 @@ public client_disconnected (id) {
   g_player[id][pd_vip_player] = false;
   g_player[id][pd_vip_owner] = 0;
   g_player[id][pd_bot_model] = 0;
+  
   clear_transfer_state (id);
+  
   set_state(id, PF_SIM_OFF, false);
   set_spawn_pending (id, false);
   set_state(id, PF_SPAWN_VELOCITY, false);
@@ -358,23 +364,18 @@ public on_observer_think (const id) {
       takeover (id, bot);
     }
   }
-
   return HC_CONTINUE;
 }
 
 public on_observer_target (const id, const target, const bool:same_team) {
-  if (!g_hud || g_round_ended) {
-    return;
-  }
-
-  if (!g_enabled) {
+  if (!g_hud || g_round_ended || !g_enabled) {
     ClearSyncHud (id, g_hud_sync);
     return;
   }
 
   new bot = GetHookChainReturn (ATYPE_INTEGER);
 
-  if (bot <= 0 || !yb_is_user_bot (bot) || !yb_is_bot_alive (bot) || yb_is_bot_stale (bot) || !observer_mode_allowed (id)) {
+  if (bot <= 0 || !yb_is_user_bot (bot) || !is_user_alive (bot) || yb_is_bot_stale (bot) || !observer_mode_allowed (id)) {
     ClearSyncHud (id, g_hud_sync);
     return;
   }
@@ -401,7 +402,6 @@ public on_observer_target (const id, const target, const bool:same_team) {
     ShowSyncHudMsg (id, g_hud_sync, "%s", text);
     return;
   }
-
   format (text, charsmax (text), "%L", id, g_use_key ? "TAKEOVER_PROMPT_E" : "TAKEOVER_PROMPT_N", name);
 
   set_hudmessage (25, 200, 20, -1.0, 0.60, 0, 0.0, 1.5, 0.5, 0.5, -1);
@@ -410,7 +410,6 @@ public on_observer_target (const id, const target, const bool:same_team) {
 
 public on_round_end (const WinStatus:status, const ScenarioEventEndRound:event, const Float:delay) {
   g_round_ended = true;
-  DisableHookChain (g_target_hook);
 }
 
 public on_restart_pre () {
@@ -418,7 +417,6 @@ public on_restart_pre () {
   get_players (players, count, "ch");
 
   g_round_ended = false;
-  EnableHookChain (g_target_hook);
   DisableHookChain (g_spawn_hook);
 
   for (new slot_player = 1; slot_player <= g_max_players; slot_player++) {
@@ -462,17 +460,53 @@ public on_restart_pre () {
 }
 
 public on_restart_post () {
-  for (new id = 1; id <= g_max_players; id++) {
-    if (!has_state(id, PF_SIM_OFF)) {
-      continue;
-    }
+  g_round_ended = false;
 
-    set_task (1.0, "restore_bot_simulation_task", id);
+  for (new id = 1; id <= g_max_players; id++) {
+    queue_restore_simulation (id);
   }
 }
 
-public restore_bot_simulation_task (bot) {
+queue_restore_simulation (bot) {
+  if (bot < 1 || bot > g_max_players || !has_state(bot, PF_SIM_OFF) || !is_user_connected(bot)) {
+    return;
+  }
+
+  if (task_exists(bot + RESTORE_TASK_OFFSET)) {
+    return;
+  }
+
+  g_restore_attempts[bot] = 0;
+  set_task (0.5, "restore_bot_simulation_task", bot + RESTORE_TASK_OFFSET, _, _, "b");
+}
+
+public restore_bot_simulation_task (taskid) {
+  new bot = taskid - RESTORE_TASK_OFFSET;
+
+  if (bot < 1 || bot > g_max_players || !is_user_connected(bot) || !has_state(bot, PF_SIM_OFF)) {
+    remove_task(taskid);
+    return;
+  }
+
+  if (!yb_is_user_bot(bot)) {
+    set_state(bot, PF_SIM_OFF, false);
+    remove_task(taskid);
+    return;
+  }
+
+  g_restore_attempts[bot]++;
+
+  if (g_restore_attempts[bot] > RESTORE_MAX_ATTEMPTS) {
+    log_takeover ("Simulation restore timeout: bot=%d", bot);
+    remove_task(taskid);
+    return;
+  }
+
   restore_bot_simulation (bot);
+
+  if (!has_state(bot, PF_SIM_OFF) || !is_user_connected(bot)) {
+    remove_task(taskid);
+  }
 }
 
 public on_player_killed (const victim, const killer, const inflictor) {
@@ -483,6 +517,7 @@ public on_player_killed (const victim, const killer, const inflictor) {
   new victim_bot = g_player[victim][pd_bot];
 
   if (victim_bot > 0) {
+    rollback_vip (victim, victim_bot);
     g_player[victim][pd_bot] = 0;
   }
 
@@ -644,21 +679,50 @@ public on_weaponstrip (const entity, const activator, const caller, const use_ty
 }
 
 can_takeover (id) {
-  if (!g_enabled || g_round_ended || is_user_alive (id)) {
+  if (!g_enabled) {
+    log_takeover ("CanTakeover: disabled id=%d", id);
+    return 0;
+  }
+
+  if (g_round_ended) {
+    log_takeover ("CanTakeover: round ended id=%d", id);
+    return 0;
+  }
+
+  if (is_user_alive (id)) {
+    log_takeover ("CanTakeover: player alive id=%d", id);
     return 0;
   }
 
   new bot = get_entvar (id, var_iuser2);
 
-  if (bot <= 0 || bot == id || !yb_is_user_bot (bot) || !yb_is_bot_alive (bot)) {
+  if (bot <= 0) {
+    log_takeover ("CanTakeover: no observer target id=%d", id);
     return 0;
   }
 
-  if (yb_is_bot_stale (bot) || !yb_is_bot_simulating (bot)) {
+  if (bot == id) {
+    log_takeover ("CanTakeover: target is self id=%d", id);
+    return 0;
+  }
+
+  if (!yb_is_user_bot (bot)) {
+    log_takeover ("CanTakeover: target not bot id=%d bot=%d", id, bot);
+    return 0;
+  }
+
+  if (!is_user_alive (bot)) {
+    log_takeover ("CanTakeover: bot dead id=%d bot=%d", id, bot);
+    return 0;
+  }
+
+  if (yb_is_bot_stale (bot)) {
+    log_takeover ("CanTakeover: bot stale id=%d bot=%d", id, bot);
     return 0;
   }
 
   if (!observer_mode_allowed (id)) {
+    log_takeover ("CanTakeover: observer mode denied id=%d mode=%d", id, get_entvar (id, var_iuser1));
     return 0;
   }
 
@@ -666,26 +730,35 @@ can_takeover (id) {
   new bot_team = get_user_team (bot);
 
   if (player_team != 1 && player_team != 2) {
+    log_takeover ("CanTakeover: invalid player team id=%d team=%d", id, player_team);
     return 0;
   }
 
   if (g_team_only && player_team != bot_team) {
+    log_takeover ("CanTakeover: team mismatch id=%d bot=%d", id, bot);
     return 0;
   }
 
   if (bot_controller (bot) > 0) {
+    log_takeover ("CanTakeover: bot busy id=%d bot=%d", id, bot);
     client_print_color (id, print_team_default, "%L", id, "TAKEOVER_BUSY");
     return 0;
   }
 
   new max_uses = g_max_uses;
 
+  if (max_uses < 0) {
+    max_uses = 0;
+  }
+
   if (max_uses > 0 && g_player[id][pd_uses] >= max_uses) {
+    log_takeover ("CanTakeover: uses limit id=%d", id);
     client_print_color (id, print_team_default, "%L", id, "TAKEOVER_LIMIT");
     return 0;
   }
 
   if (g_map_has_vip_zone && get_member (bot, m_bIsVIP) && !g_allow_vip) {
+    log_takeover ("CanTakeover: vip denied id=%d bot=%d", id, bot);
     return 0;
   }
 
@@ -933,6 +1006,10 @@ rollback_transfer (receiver, source) {
   set_member (source, m_bHasPrimary, get_member (source, m_rgpPlayerItems, PRIMARY_WEAPON_SLOT) > 0);
   set_member (receiver, m_bHasPrimary, get_member (receiver, m_rgpPlayerItems, PRIMARY_WEAPON_SLOT) > 0);
 
+  if (yb_is_user_bot (source) && is_user_connected (source)) {
+    rg_switch_best_weapon (source);
+  }
+
   set_transfer_flag(receiver, TF_ACTIVE, false);
 }
 
@@ -965,8 +1042,7 @@ restore_bot_simulation (bot) {
     return;
   }
 
-  if (!is_user_alive (bot) || Float:get_entvar (bot, var_health) <= 0.0 ||
-      yb_is_bot_stale (bot) || !yb_is_bot_alive (bot)) {
+  if (!is_user_alive (bot) || Float:get_entvar (bot, var_health) <= 0.0 || yb_is_bot_stale (bot)) {
     return;
   }
 
@@ -1010,7 +1086,6 @@ takeover (id, bot) {
     log_takeover ("SimulationOff failed: player=%d bot=%d", id, bot);
     return;
   }
-
   set_state(bot, PF_SIM_OFF, true);
 
   new model = _:get_member (bot, m_iModelName);
@@ -1062,6 +1137,7 @@ takeover (id, bot) {
   remove_task (id);
   set_spawn_pending (id, true);
   set_state(id, PF_SPAWN_DONE, false);
+  
   rg_round_respawn (id);
   set_task (1.0, "validate_takeover", id);
 
@@ -1140,9 +1216,11 @@ abort_takeover (id, bot) {
 
   g_player[id][pd_bot] = 0;
   clear_transfer_state (id);
+  
   set_state(id, PF_SPAWN_VELOCITY, false);
   set_state(id, PF_SPAWN_ICON, false);
   set_state(id, PF_SPAWN_DONE, false);
+  
   log_takeover ("Takeover aborted: player=%d bot=%d", id, bot);
 }
 
@@ -1160,13 +1238,16 @@ full_reset_player (id, bool:remove_items = true) {
 
   set_member (id, m_bNotKilled, false);
   rg_reset_user_model (id, true);
+  
   g_player[id][pd_bot] = 0;
   g_player[id][pd_uses] = 0;
   g_player[id][pd_vip] = false;
   g_player[id][pd_vip_player] = false;
   g_player[id][pd_vip_owner] = 0;
   g_player[id][pd_bot_model] = 0;
+  
   clear_transfer_state (id);
+  
   set_state(id, PF_SPAWN_VELOCITY, false);
   set_state(id, PF_SPAWN_ICON, false);
   set_state(id, PF_SPAWN_DONE, false);
@@ -1181,7 +1262,6 @@ transfer_inventory (source, receiver, bool:back) {
   if (back && g_map_has_vip_zone && get_member (source, m_bIsVIP)) {
     return 0;
   }
-
   clear_transfer_state (receiver);
 
   new ArmorType:source_armor_type, ArmorType:receiver_armor_type;
@@ -1194,6 +1274,7 @@ transfer_inventory (source, receiver, bool:back) {
   g_transfer[receiver][td_armor] = rg_get_user_armor (receiver, receiver_armor_type);
   g_transfer[receiver][td_armor_type] = receiver_armor_type;
   g_transfer[receiver][td_nvg] = bool:get_member (receiver, m_bHasNightVision);
+  
   set_transfer_flag(receiver, TF_C4_SOURCE, bool:get_member (source, m_bHasC4));
   set_transfer_flag(receiver, TF_C4_TARGET, bool:get_member (receiver, m_bHasC4));
   set_transfer_flag(receiver, TF_DEFUSER_SOURCE, bool:get_member (source, m_bHasDefuser));
@@ -1201,6 +1282,7 @@ transfer_inventory (source, receiver, bool:back) {
   set_transfer_flag(receiver, TF_SHIELD_SOURCE, bool:get_member (source, m_bOwnsShield));
   set_transfer_flag(receiver, TF_SHIELD_TARGET, bool:get_member (receiver, m_bOwnsShield));
   set_transfer_flag(receiver, TF_ACTIVE, true);
+  
   g_transfer[receiver][td_count] = 0;
 
   new bool:failed;
@@ -1279,6 +1361,7 @@ transfer_inventory (source, receiver, bool:back) {
   new Float:release_throw;
   new InventorySlotType:slot;
   new active = get_member (source, m_pActiveItem);
+  new active_item;
   new bool:active_transferred;
 
   for (slot = PRIMARY_WEAPON_SLOT; slot <= GRENADE_SLOT; slot++) {
@@ -1289,24 +1372,31 @@ transfer_inventory (source, receiver, bool:back) {
       id = WeaponIdType:0;
       ammo = 0;
       target_ammo = 0;
+      new bool:item_is_active = active == item;
 
       if (g_transfer[receiver][td_count] >= MAX_TRANSFER_ITEMS) {
         failed = true;
         break;
       }
 
-      if (slot == GRENADE_SLOT && active == item) {
-        release_throw = Float:get_member (active, m_flReleaseThrow);
+      if (item_is_active) {
+        if (slot == GRENADE_SLOT) {
+          release_throw = Float:get_member (item, m_flReleaseThrow);
 
-        if (release_throw == 0.0) {
-          ExecuteHam (Ham_Item_Holster, active, 1);
-          set_entvar (source, var_button, get_entvar (source, var_button) & ~IN_ATTACK);
+          if (release_throw == 0.0) {
+            ExecuteHam (Ham_Item_Holster, item, 1);
+            set_entvar (source, var_button, get_entvar (source, var_button) & ~IN_ATTACK);
+          }
+          else if (release_throw > 0.0) {
+            ExecuteHam (Ham_Weapon_RetireWeapon, item);
+            active = get_member (source, m_pActiveItem);
+            item = next;
+            continue;
+          }
         }
-        else if (release_throw > 0.0) {
-          ExecuteHam (Ham_Weapon_RetireWeapon, active);
+        else {
+          ExecuteHam (Ham_Item_Holster, item, 1);
           active = get_member (source, m_pActiveItem);
-          item = next;
-          continue;
         }
       }
 
@@ -1349,8 +1439,9 @@ transfer_inventory (source, receiver, bool:back) {
 
           slots |= (1 << any:slot);
 
-          if (active == item) {
+          if (item_is_active) {
             active_transferred = true;
+            active_item = item;
           }
         }
         else {
@@ -1388,8 +1479,8 @@ transfer_inventory (source, receiver, bool:back) {
     }
   }
 
-  if (active_transferred && active > 0 && !is_nullent (active)) {
-    rg_switch_weapon (receiver, active);
+  if (active_transferred && active_item > 0 && !is_nullent (active_item)) {
+    rg_switch_weapon (receiver, active_item);
   }
 
   if (get_member (source, m_bOwnsShield)) {
@@ -1404,8 +1495,8 @@ transfer_inventory (source, receiver, bool:back) {
       failed = true;
     }
 
-    if (active_transferred && !yb_is_user_bot (receiver) && get_member (source, m_bShieldDrawn)) {
-      ExecuteHam (Ham_Weapon_SecondaryAttack, active);
+    if (active_transferred && active_item > 0 && !is_nullent (active_item) && !yb_is_user_bot (receiver) && get_member (source, m_bShieldDrawn)) {
+      ExecuteHam (Ham_Weapon_SecondaryAttack, active_item);
     }
   }
 
@@ -1430,22 +1521,20 @@ kill_bot (bot, const Float:origin[3]) {
 }
 
 bool:set_player_position (id, Float:origin[3], const Float:angles[3], const Float:mins[3], const Float:maxs[3], hull, skip, const Float:velocity[3]) {
-  new Float:move[4][3] = {
+  new const Float:move[5][3] = {
+    { 0.0, 0.0, 0.0 },
     { 1.0, 1.0, 0.0 },
     { 1.0, -1.0, 0.0 },
     { -1.0, -1.0, 0.0 },
     { -1.0, 1.0, 0.0 }
   };
 
-  new Float:base[3], Float:candidate[3];
-  base[0] = origin[0];
-  base[1] = origin[1];
-  base[2] = origin[2];
+  new Float:candidate[3];
 
   for (new attempt = 0; attempt < sizeof (move); attempt++) {
-    candidate[0] = base[0] - mins[0] * move[attempt][0];
-    candidate[1] = base[1] - mins[1] * move[attempt][1];
-    candidate[2] = base[2];
+    candidate[0] = origin[0] - mins[0] * move[attempt][0];
+    candidate[1] = origin[1] - mins[1] * move[attempt][1];
+    candidate[2] = origin[2];
 
     if (is_free_space (candidate, hull, skip)) {
       if (hull == HULL_HEAD) {
@@ -1484,7 +1573,7 @@ random_teammate (team) {
   for (new i = 0; i < count; i++) {
     new bot = players[i];
 
-    if (get_user_team (bot) != team || !yb_is_bot_alive (bot) || yb_is_bot_stale (bot)) {
+    if (get_user_team (bot) != team || !is_user_alive (bot) || yb_is_bot_stale (bot) || bot_controller (bot) > 0) {
       continue;
     }
 
@@ -1538,7 +1627,7 @@ log_takeover (const format[], any:...) {
     return;
   }
 
-  new message[256];
+  new message[512];
   vformat (message, charsmax (message), format, 2);
   log_to_file (LOG_FILE, "%s", message);
 }
