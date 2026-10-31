@@ -4734,18 +4734,19 @@ ystl::Vector Bot::CalcJumpVelocity (const ystl::Vector &start, const ystl::Vecto
 }
 
 void Bot::RetimeJumpVelocityForLip () {
-  // apex-timed takeoff for marginal rising jump links: meet the lip at the arc apex
+  // a higher landing shortens airtime; time the takeoff to the node, not a nearby face
   if (!IsOnFloor () || IsInWater ()) {
     return;
   }
   const float rise = path_origin_.z - pev->origin.z;
 
-  if (rise <= 30.0f) {
-    return; // flat or falling links fly fine on the mapper velocity
+  // node z noise is not a climb; falling links keep the learned speed
+  if (rise <= 4.0f) {
+    return;
   }
   const float link_speed = desired_velocity_.length2d ();
 
-  if (link_speed <= 1.0f) {
+  if (link_speed <= 1.0f || pev->maxspeed <= 1.0f) {
     return;
   }
   const float gravity = sv_gravity.As<float> ();
@@ -4754,31 +4755,67 @@ void Bot::RetimeJumpVelocityForLip () {
     return;
   }
   const ystl::Vector dir = desired_velocity_.normalize2d ();
+  const ystl::Vector to_node = (path_origin_ - pev->origin).get2d ();
+  const float node_dist = to_node.length2d ();
 
-  // face distance at waist height (the lip we must rise over)
-  constexpr float kFaceProbeRange = 128.0f;
+  if (node_dist < 20.0f) {
+    return; // vertical pop, mapper data already fits
+  }
+  const float align = dir.dot (to_node) / node_dist;
+  const bool toward_node = align >= 0.5f;
+
+  // along-track distance to the node plane; an off-axis heading covers less of the gap
+  const float dist = toward_node ? node_dist / align : node_dist;
+
+  // ducked feet vs a standing node's floor; a crouch node sits 18 lower, so the bonus cancels
+  const float duck = has_flag (path_flags_, NodeFlag::Crouch) ? 0.0f : 18.0f;
+  constexpr float kClearMargin = 4.0f;
+  const float need = ystl::max (0.0f, rise - duck + kClearMargin);
+  const float disc = kPlayerJumpTakeoff * kPlayerJumpTakeoff - 2.0f * gravity * need;
+
+  if (disc < 0.0f) {
+    return; // above a standing jump; horizontal speed cannot buy the height
+  }
+  const float sqrt_disc = ystl::sqrtf (disc);
+  const float t_late = (kPlayerJumpTakeoff + sqrt_disc) / gravity;
+  const float t_early = ystl::max ((kPlayerJumpTakeoff - sqrt_disc) / gravity, 0.05f);
+
+  if (t_late <= 0.05f) {
+    return;
+  }
+  // slowest speed that is still above the lip when the node is reached
+  const float speed_min = dist / t_late;
+
+  // jump runs before ground friction, so weapon maxspeed is not the takeoff cap
+  constexpr float kTakeoffCap = 320.0f;
+  float speed = link_speed;
+
+  if (toward_node && speed < speed_min) {
+    speed = ystl::min (speed_min, kTakeoffCap);
+  }
+
+  // a closer face must be met after the climb, but not by giving up the gap
+  const float probe = ystl::min (ystl::max (dist, 48.0f), 256.0f);
   Trace::Result tr {};
-  trace.Line (pev->origin, pev->origin + dir * kFaceProbeRange, TraceIgnore::Monsters, Ent (), &tr);
+  trace.Line (pev->origin, pev->origin + dir * probe, TraceIgnore::Monsters, Ent (), &tr);
 
-  if (tr.fraction >= 1.0f) {
-    return; // open air, nothing to time against
+  if (tr.fraction < 1.0f && !tr.start_solid) {
+    const float face = tr.fraction * probe;
+
+    if (face >= 20.0f && face + 8.0f < dist) {
+      const float face_max = face / t_early;
+
+      if (speed > face_max && face_max >= speed_min) {
+        speed = face_max;
+      }
+    }
   }
-  const float dist = tr.fraction * kFaceProbeRange;
 
-  if (dist < 20.0f) {
-    return; // face at the nose: vertical pop territory, keep mapper data
+  if (ystl::abs (speed - link_speed) <= 1.0f) {
+    return;
   }
-  // arrival height on the learned arc (+18 mid-air duck the engine applies)
-  const float rise_time = dist / link_speed;
-  const float arrival = kPlayerJumpTakeoff * rise_time - 0.5f * gravity * rise_time * rise_time + 18.0f;
-
-  if (arrival >= rise + 4.0f) {
-    return; // sufficient, keep mapper data
-  }
-  const float timed = ystl::clamp (dist / (kPlayerJumpTakeoff / gravity), 80.0f, pev->maxspeed);
-
-  desired_velocity_.x = dir.x * timed;
-  desired_velocity_.y = dir.y * timed;
+  desired_velocity_.x = dir.x * speed;
+  desired_velocity_.y = dir.y * speed;
 }
 
 } // namespace bot

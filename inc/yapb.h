@@ -388,7 +388,7 @@ private:
   // calculate player jump velocity to reach a node, null if infeasible
   ystl::Vector CalcJumpVelocity (const ystl::Vector &start, const ystl::Vector &stop);
 
-  // retime a mapper jump so the arc apex meets the lip it must rise over
+  // retime a mapper jump so a long, slightly higher link still clears the lip
   void RetimeJumpVelocityForLip ();
 
   // true when the ascent can be walked with engine step height

@@ -134,6 +134,9 @@ struct NavigateHook {
   static void SetDesiredVelocity (Bot &bot, const ystl::Vector &value) {
     bot.desired_velocity_ = value;
   }
+  static ystl::Vector DesiredVelocity (Bot &bot) {
+    return bot.desired_velocity_;
+  }
   static void SetMovedDistance (Bot &bot, float value) {
     bot.moved_distance_ = value;
   }
@@ -6972,6 +6975,23 @@ TEST_CASE ("unit/navigate_relay") {
   sv_gravity.Set (-800);
   CHECK (NavigateHook::CalcJump (*bot, ystl::Vector (0.0f, 0.0f, 0.0f), ystl::Vector (100.0f, 0.0f, 0.0f)).empty ());
   sv_gravity.Set (800);
+
+  // ...a long jump to a slightly higher node speeds up; a drop keeps the learned speed...
+  bot->pev->flags |= FL_ONGROUND;
+  bot->pev->waterlevel = 0;
+  bot->pev->origin = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->pev->maxspeed = 221.0f;
+  NavigateHook::SetPathFlags (*bot, static_cast<NodeFlag> (0));
+  NavigateHook::SetPathOriginVec (*bot, ystl::Vector (160.0f, 0.0f, 12.0f));
+  NavigateHook::SetDesiredVelocity (*bot, ystl::Vector (180.0f, 0.0f, 0.0f));
+  bot->RetimeJumpVelocityForLip ();
+  CHECK (NavigateHook::DesiredVelocity (*bot).length2d () > 220.0f);
+  CHECK (NavigateHook::DesiredVelocity (*bot).length2d () < 260.0f);
+
+  NavigateHook::SetPathOriginVec (*bot, ystl::Vector (160.0f, 0.0f, -40.0f));
+  NavigateHook::SetDesiredVelocity (*bot, ystl::Vector (180.0f, 0.0f, 0.0f));
+  bot->RetimeJumpVelocityForLip ();
+  CHECK (NavigateHook::DesiredVelocity (*bot).x == 180.0f);
 
   mode_walls.Reset ();
   table.pfnServerDeactivate ();
