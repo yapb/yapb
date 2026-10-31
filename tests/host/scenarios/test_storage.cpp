@@ -137,7 +137,7 @@ TEST_CASE ("unit/storage_io") {
 
   // undersized graphs are refused up front
   BuildStorageGraph (3);
-  ystl::Array<Path> few {};
+  ystl::Array<Path, ReservePolicy::Proportional> few {};
   few.push (Path {});
   few.push (Path {});
   few.push (Path {});
@@ -166,6 +166,64 @@ TEST_CASE ("unit/storage_io") {
   hdr.version = static_cast<int32_t> (StorageVersion::Practice);
   hdr.options = static_cast<int32_t> (StorageOption::Practice);
   hdr.length = 99;
+  {
+    MakeParent (load_path);
+    ystl::File file (load_path, "wb");
+    HOST_REQUIRE (!file.eof ());
+    file.le_write (hdr);
+  }
+  CHECK (!bstor.Load (entries));
+
+  // wrong versions and formats are rejected with their own errors
+  hdr.version = 1;
+  hdr.length = 8;
+  {
+    MakeParent (load_path);
+    ystl::File file (load_path, "wb");
+    HOST_REQUIRE (!file.eof ());
+    file.le_write (hdr);
+  }
+  CHECK (!bstor.Load (entries));
+
+  hdr.version = static_cast<int32_t> (StorageVersion::Practice);
+  hdr.options = static_cast<int32_t> (StorageOption::Matrix);
+  {
+    MakeParent (load_path);
+    ystl::File file (load_path, "wb");
+    HOST_REQUIRE (!file.eof ());
+    file.le_write (hdr);
+  }
+  CHECK (!bstor.Load (entries));
+
+  // zero-length payloads never reach the decoder
+  hdr.options = static_cast<int32_t> (StorageOption::Practice);
+  hdr.length = 0;
+  {
+    MakeParent (load_path);
+    ystl::File file (load_path, "wb");
+    HOST_REQUIRE (!file.eof ());
+    file.le_write (hdr);
+  }
+  CHECK (!bstor.Load (entries));
+
+  // undecodable payloads are rejected after a valid header
+  hdr.length = 8;
+  hdr.compressed = 16;
+  hdr.uncompressed = static_cast<int32_t> (8 * sizeof (Practice::Entry));
+  {
+    MakeParent (load_path);
+    ystl::File file (load_path, "wb");
+    HOST_REQUIRE (!file.eof ());
+    file.le_write (hdr);
+
+    for (int i = 0; i < 16; ++i) {
+      file.put_char (0); // zero token decodes a zero match distance
+    }
+  }
+  CHECK (!bstor.Load (entries));
+
+  // truncated payloads are rejected before decoding
+  hdr.compressed = 1000;
   {
     MakeParent (load_path);
     ystl::File file (load_path, "wb");

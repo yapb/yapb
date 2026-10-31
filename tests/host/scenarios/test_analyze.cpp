@@ -504,6 +504,19 @@ TEST_CASE ("unit/analyze_finish") {
   CHECK (all_reached);
   AnalyzeHook::Sanity (); // breakdown only logs, never crashes
 
+  // ...a damaged graph exercises every breakdown class...
+  graph.Reset ();
+  const int bad0 = AddAnaNode (ystl::Vector (0.0f, 0.0f, 0.0f));
+  const int bad1 = AddAnaNode (ystl::Vector (100.0f, 0.0f, 0.0f));
+  graph.PopulateNodes ();
+  graph.paths_[bad1].number = 99; // misnumbered
+  graph.paths_[bad0].links[0].index = static_cast<int16_t> (bad0); // self link
+  graph.paths_[bad0].links[0].distance = 10;
+  graph.paths_[bad1].links[0].index = 50; // dangling link
+  graph.paths_[bad1].links[0].distance = 10;
+  graph.paths_[bad0].flags |= NodeFlag::Camp; // camp without an end
+  AnalyzeHook::Sanity ();
+
   graph.Reset ();
   BuildAnaChain (3, 100.0f);
   CHECK (!AnalyzeHook::Repair ());
@@ -593,6 +606,87 @@ TEST_CASE ("unit/analyze_finish") {
   analyzer.Update ();
   CHECK (!analyzer.IsAnalyzing ());
   cv_graph_analyze_auto_start.Set (1);
+}
+
+TEST_CASE ("unit/analyze_importance") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootAnalyze (engine, cs);
+  graph.Reset ();
+
+  // empty graphs optimize to a no-op
+  AnalyzeHook::ClearOptimized ();
+  CHECK (!AnalyzeHook::OptimizeSlice ());
+  CHECK (AnalyzeHook::Importance (0) == 0.0f);
+
+  const int a0 = AddAnaNode (ystl::Vector (0.0f, 0.0f, 0.0f));
+  const int a1 = AddAnaNode (ystl::Vector (100.0f, 0.0f, 0.0f));
+  const int a2 = AddAnaNode (ystl::Vector (200.0f, 0.0f, 0.0f));
+  LinkAna (a0, a1);
+  LinkAna (a1, a0);
+  LinkAna (a1, a2);
+  LinkAna (a2, a1);
+  graph.PopulateNodes ();
+  HOST_REQUIRE (a0 == 0 && a1 == 1 && a2 == 2);
+
+  // two links plus two backlinks price the middle node at eight
+  CHECK (AnalyzeHook::Importance (a1) == 8.0f);
+  CHECK (AnalyzeHook::Importance (99) == 0.0f);
+
+  // role flags stack on top of the link count
+  graph.paths_[a1].flags |= NodeFlag::Goal;
+  CHECK (AnalyzeHook::Importance (a1) == 1008.0f);
+  graph.paths_[a1].flags |= NodeFlag::Ladder;
+  CHECK (AnalyzeHook::Importance (a1) == 1508.0f);
+  graph.paths_[a1].flags |= NodeFlag::Rescue;
+  CHECK (AnalyzeHook::Importance (a1) == 2008.0f);
+  graph.paths_[a1].flags |= NodeFlag::Camp;
+  CHECK (AnalyzeHook::Importance (a1) == 2308.0f);
+  graph.paths_[a1].flags |= NodeFlag::Button;
+  CHECK (AnalyzeHook::Importance (a1) == 2558.0f);
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/analyze_passes") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootAnalyze (engine, cs);
+  graph.Reset ();
+
+  // near-duplicates collapse into the kept node
+  const int d0 = AddAnaNode (ystl::Vector (0.0f, 0.0f, 0.0f));
+  const int d1 = AddAnaNode (ystl::Vector (10.0f, 0.0f, 0.0f));
+  const int d2 = AddAnaNode (ystl::Vector (2000.0f, 0.0f, 0.0f));
+  LinkAna (d0, d1);
+  LinkAna (d1, d0);
+  graph.PopulateNodes ();
+  HOST_REQUIRE (d0 == 0 && d1 == 1 && d2 == 2);
+
+  AnalyzeHook::ClearOptimized ();
+  CHECK (AnalyzeHook::OptimizeSlice ());
+  CHECK (!AnalyzeHook::OptimizeSlice ()); // nothing left to merge
+
+  // islands without links are bypassed unless protected
+  graph.Reset ();
+  const int u0 = AddAnaNode (ystl::Vector (0.0f, 0.0f, 0.0f));
+  const int u1 = AddAnaNode (ystl::Vector (100.0f, 0.0f, 0.0f));
+  const int u2 = AddAnaNode (ystl::Vector (2000.0f, 0.0f, 0.0f));
+  LinkAna (u0, u1);
+  LinkAna (u1, u0);
+  graph.PopulateNodes ();
+  HOST_REQUIRE (u0 == 0 && u1 == 1 && u2 == 2);
+
+  AnalyzeHook::ClearOptimized ();
+  CHECK (AnalyzeHook::OptimizeSlice ());
+
+  graph.paths_[u2].flags |= NodeFlag::Goal;
+  AnalyzeHook::ClearOptimized ();
+  CHECK (!AnalyzeHook::OptimizeSlice ());
+
+  bots.Destroy ();
 }
 
 } // namespace bot

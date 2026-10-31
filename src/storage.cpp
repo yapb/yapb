@@ -544,16 +544,16 @@ void Storage::CheckInstallLocation () {
 }
 
 // explicit instantiation definitions for the concrete storage payload types
-#define BOT_STORAGE_INSTANTIATE_PAYLOAD(U) \
-   template bool Storage::Load<U, ReservePolicy::PowerOfTwo> (ystl::Array<U, ReservePolicy::PowerOfTwo> &, ExtenHeader *, StorageOption *); \
-   template bool Storage::Save<U, ReservePolicy::PowerOfTwo> (const ystl::Array<U, ReservePolicy::PowerOfTwo> &, ExtenHeader *, StorageOption); \
-   template bool Storage::Load<U, ReservePolicy::Proportional> (ystl::Array<U, ReservePolicy::Proportional> &, ExtenHeader *, StorageOption *); \
-   template bool Storage::Save<U, ReservePolicy::Proportional> (const ystl::Array<U, ReservePolicy::Proportional> &, ExtenHeader *, StorageOption);
+// (only the reserve policies actually used: proportional member arrays for
+// matrix/path/vistable, power-of-two locals for practice entries)
+#define BOT_STORAGE_INSTANTIATE_PAYLOAD(U, R) \
+   template bool Storage::Load<U, R> (ystl::Array<U, R> &, ExtenHeader *, StorageOption *); \
+   template bool Storage::Save<U, R> (const ystl::Array<U, R> &, ExtenHeader *, StorageOption);
 
-BOT_STORAGE_INSTANTIATE_PAYLOAD (FloydWarshallAlgo::Matrix)
-BOT_STORAGE_INSTANTIATE_PAYLOAD (Practice::Entry)
-BOT_STORAGE_INSTANTIATE_PAYLOAD (GraphVistable::VisStorage)
-BOT_STORAGE_INSTANTIATE_PAYLOAD (Path)
+BOT_STORAGE_INSTANTIATE_PAYLOAD (FloydWarshallAlgo::Matrix, ReservePolicy::Proportional)
+BOT_STORAGE_INSTANTIATE_PAYLOAD (Practice::Entry, ReservePolicy::PowerOfTwo)
+BOT_STORAGE_INSTANTIATE_PAYLOAD (GraphVistable::VisStorage, ReservePolicy::Proportional)
+BOT_STORAGE_INSTANTIATE_PAYLOAD (Path, ReservePolicy::Proportional)
 
 #undef BOT_STORAGE_INSTANTIATE_PAYLOAD
 

@@ -169,6 +169,31 @@ TEST_CASE ("unit/planner_search") {
   CHECK (plannerHeuristics::optimal_hostage.G (Team::CT, 2, 1, 0) == 7.5f);
   graph.paths_[2].flags &= ~NodeFlag::Crouch;
 
+  // ...optimal/safe hostage heuristics track the plain flavors per mode...
+  {
+    const int heuristic_before = cv_path_heuristic_mode.As<int> ();
+
+    for (int mode = 0; mode <= 4; ++mode) {
+      cv_path_heuristic_mode.Set (mode);
+
+      const float plain = mode == 2 ? 0.0f : 700.0f;
+      CHECK (plannerHeuristics::optimal_hostage.H (0, 7) == plain);
+      CHECK (plannerHeuristics::safe_hostage.H (0, 7) == (mode == 2 ? 0.0f : 0.546875f));
+    }
+    cv_path_heuristic_mode.Set (heuristic_before);
+  }
+
+  // ...no-hostage nodes price out of the optimal hostage flavor...
+  CHECK (plannerHeuristics::optimal_hostage.H (9, 7) == kInfiniteHeuristic);
+
+  // ...crouch/ladder stacking prices hostage transport at the ladder rate...
+  graph.paths_[2].flags |= NodeFlag::Crouch;
+  graph.paths_[2].flags |= NodeFlag::Ladder;
+  CHECK (plannerHeuristics::optimal_hostage.G (Team::CT, 2, 1, 0) == 7.5f);
+  CHECK (plannerHeuristics::safe_hostage.G (Team::CT, 2, 1, 0) == 0.0f);
+  graph.paths_[2].flags &= ~NodeFlag::Crouch;
+  graph.paths_[2].flags &= ~NodeFlag::Ladder;
+
   // ...random flavors stay inside their documented bands...
   const float random_g = plannerHeuristics::diversity.G (Team::CT, 1, 0, 100);
   CHECK (random_g >= 50.0f && random_g <= 150.0f);
@@ -321,6 +346,28 @@ TEST_CASE ("unit/planner_search") {
     planner.Init ();
     CHECK (!planner.IsMemoryLimitHit ());
   }
+
+  // ...post smoothing trims the chain once the visibility table is ready...
+  cv_path_astar_post_smooth.Set (1);
+
+  for (int i = 0; i < graph.Length (); ++i) {
+    graph.paths_[i].radius = 48.0f; // smoothing only skips wide nodes
+  }
+  vistab.Load ();
+
+  for (int i = 0; i < 40 && !vistab.IsReady (); ++i) {
+    vistab.Rebuild ();
+  }
+  HOST_REQUIRE (vistab.IsReady ());
+
+  seq.clear ();
+  CHECK (astar.Find (Team::CT, 0, 7, sink) == AStarResult::Success);
+  CHECK (seq.size () == 3 && seq[0] == 7 && seq[2] == 0);
+
+  seq.clear ();
+  CHECK (astar.Find (Team::CT, 0, 1, sink) == AStarResult::Success);
+  CHECK (seq.size () == 2);
+  cv_path_astar_post_smooth.Set (0);
 }
 
 TEST_CASE ("unit/planner_stale_graph") {

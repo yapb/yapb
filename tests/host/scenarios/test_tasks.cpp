@@ -1077,6 +1077,57 @@ TEST_CASE ("unit/tasks_desires") {
   TasksHook::Filter (*bot);
   CHECK (bot->GetTaskId () == TaskId::PickupItem);
 
+  // a button pickup preempts even a running move
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::MoveTo, TaskPri::kMoveTo, 5, 0.0f, true);
+  bot->pickup_item_ = box;
+  bot->pickup_type_ = Pickup::Button;
+  TasksHook::Filter (*bot);
+  CHECK (bot->GetTaskId () == TaskId::PickupItem);
+
+  // ...cover hunger scales with status, but never beats a latched pickup...
+  bots.Addbot ("TskF", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 2));
+
+  Bot *foe_bot = testhost::FindBot ("TskF");
+  HOST_REQUIRE (foe_bot != nullptr);
+  foe_bot->team_ = Team::CT;
+  foe_bot->is_alive_ = true;
+
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::PickupItem, TaskPri::kButton, kInvalidNodeIndex, 0.0f, true);
+  bot->pickup_item_ = nullptr;
+  TasksHook::SetLastEnemy (*bot, foe_bot->Ent ());
+  TasksHook::SetLastEnemyOrigin (*bot, ystl::Vector (500.0f, 0.0f, 0.0f));
+  bot->enemy_ = foe_bot->Ent ();
+  TasksHook::SetStates (*bot, Sense::Invalid);
+  bot->health_value_ = 50.0f;
+  bot->pev->max_health = 100.0f;
+  bot->fear_level_ = 0.5f;
+  bot->num_friends_left_ = 2;
+  bot->num_enemies_left_ = 2;
+  bot->has_c4_ = false;
+  bot->current_weapon_ = Weapon::AK47;
+  bot->weapon_type_ = WeaponType::Rifle;
+  bot->see_enemy_timer_.start (); // fresh sighting, heard nothing yet
+
+  TasksHook::SetCreature (*bot, true);
+  bot->is_vip_ = true;
+  TasksHook::Filter (*bot);
+  CHECK (bot->GetTaskId () == TaskId::PickupItem); // zeroed cover keeps the pickup
+  TasksHook::SetCreature (*bot, false);
+  bot->is_vip_ = false;
+
+  TasksHook::SetReloading (*bot, true); // reloading triples the hunger into cover
+  TasksHook::Filter (*bot);
+  CHECK (bot->GetTaskId () == TaskId::SeekCover);
+  TasksHook::SetReloading (*bot, false);
+
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::PickupItem, TaskPri::kButton, kInvalidNodeIndex, 0.0f, true);
+  TasksHook::Filter (*bot); // healthy bots halve it instead, pickup holds
+  CHECK (bot->GetTaskId () == TaskId::PickupItem);
+
   bots.Destroy ();
 }
 

@@ -60,6 +60,10 @@ TEST_CASE ("unit/support_pure") {
   CHECK (now.chars ()[10] == ' ');
   CHECK (now.chars ()[13] == ':');
   CHECK (now.chars ()[16] == ':');
+
+  // null origins never match anyone
+  CHECK (!util.FindNearestPlayer ({}));
+  CHECK (!util.FindNearestBot ({}));
 }
 
 TEST_CASE ("unit/support_conf") {

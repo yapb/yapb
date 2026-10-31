@@ -137,6 +137,9 @@ struct NavigateHook {
   static ystl::Vector DesiredVelocity (Bot &bot) {
     return bot.desired_velocity_;
   }
+  static void RetimeJump (Bot &bot) {
+    bot.RetimeJumpVelocityForLip ();
+  }
   static void SetMovedDistance (Bot &bot, float value) {
     bot.moved_distance_ = value;
   }
@@ -3054,13 +3057,13 @@ TEST_CASE ("unit/navigate_jump_retime") {
     }
   });
 
-  auto run_takeoff = [&] (Bot &bot, float fraction) {
+  auto run_takeoff = [&] (Bot &bot, float fraction, float speed = 130.0f) {
     wall_fraction = fraction;
     engine.AdvanceTime (0.15f);
 
     NavigateHook::ChangeNode (bot, 1); // dest node, rise reads off its origin
     NavigateHook::SetTravelFlags (bot, PathFlag::Jump);
-    NavigateHook::SetDesiredVelocity (bot, ystl::Vector (130.0f, 0.0f, 0.0f));
+    NavigateHook::SetDesiredVelocity (bot, ystl::Vector (speed, 0.0f, 0.0f));
     bot.pev->button = 0;
     CHECK (!NavigateHook::UpdateNav (bot));
     CHECK ((bot.pev->button & IN_JUMP) != 0);
@@ -3074,20 +3077,32 @@ TEST_CASE ("unit/navigate_jump_retime") {
     return bot;
   };
 
-  // marginal arc (lip 24 out, +2.9 margin): braked to the 80 floor
+  // takeoff retiming in numbers: rise 51, gap 66, standing takeoff.
+  // the arc only has to clear rise - 18 (crouch floor) + 4 (margin),
+  // so the takeoff is raised to the minimum sufficient speed and a face
+  // vetoes it only when the capped speed still clears the whole gap.
+  sv_gravity.Set (800.0f);
+  const float gravity = sv_gravity.As<float> ();
+  const float need = 51.0f - 18.0f + 4.0f;
+  const float disc = kPlayerJumpTakeoff * kPlayerJumpTakeoff - 2.0f * gravity * need;
+  const float cruise = 66.0f / ((kPlayerJumpTakeoff + ystl::sqrtf (disc)) / gravity);
+  const float braked = (66.0f / 128.0f) * 66.0f / ((kPlayerJumpTakeoff - ystl::sqrtf (disc)) / gravity);
+  CHECK (cruise > 130.0f);
+
+  // near lip (24 out, below the 20 face gate): veto skipped, boosted up
   auto slow_bot = make_takeoff_bot ("RetimeSlow", ystl::Vector (0.0f, 300.0f, 0.0f));
   HOST_REQUIRE (slow_bot.get () != nullptr);
 
   const ystl::Vector slow = run_takeoff (*slow_bot, 24.0f / 128.0f);
-  CHECK (slow.x == 80.0f);
+  CHECK (slow.x == cruise);
   CHECK (slow.y == 0.0f);
 
-  // sufficient arc (lip 50 out, +10.9 margin): mapper velocity untouched
+  // mid lip (50 out, capped speed still short of the gap): veto skipped, boosted up
   auto keep_bot = make_takeoff_bot ("RetimeKeep", ystl::Vector (0.0f, 300.0f, 0.0f));
   HOST_REQUIRE (keep_bot.get () != nullptr);
 
   const ystl::Vector kept = run_takeoff (*keep_bot, 50.0f / 128.0f);
-  CHECK (kept.x == 130.0f);
+  CHECK (kept.x == cruise);
   CHECK (kept.y == 0.0f);
 
   // flat dest (rise 0): gate skips, mapper velocity untouched
@@ -3098,21 +3113,30 @@ TEST_CASE ("unit/navigate_jump_retime") {
   CHECK (flat.x == 130.0f);
   CHECK (flat.y == 0.0f);
 
-  // open air (no face within 128): mapper velocity untouched
+  // open air (no face within 128): mapper velocity untouched, boosted up
   auto open_bot = make_takeoff_bot ("RetimeOpen", ystl::Vector (0.0f, 300.0f, 0.0f));
   HOST_REQUIRE (open_bot.get () != nullptr);
 
   const ystl::Vector open = run_takeoff (*open_bot, 1.0f);
-  CHECK (open.x == 130.0f);
+  CHECK (open.x == cruise);
   CHECK (open.y == 0.0f);
 
-  // far lip (66 out, short by 0.5): boosted towards apex timing
+  // far lip (66 out): capped speed clears the gap, mapper velocity untouched
   auto fast_bot = make_takeoff_bot ("RetimeFast", ystl::Vector (0.0f, 300.0f, 0.0f));
   HOST_REQUIRE (fast_bot.get () != nullptr);
 
   const ystl::Vector fast = run_takeoff (*fast_bot, 66.0f / 128.0f);
-  CHECK (fast.x > 190.0f && fast.x < 205.0f);
+  CHECK (fast.x == cruise);
   CHECK (fast.y == 0.0f);
+
+  // hot takeoff into the same lip: vetoed down, but never below the gap speed
+  auto brake_bot = make_takeoff_bot ("RetimeBrake", ystl::Vector (0.0f, 300.0f, 0.0f));
+  HOST_REQUIRE (brake_bot.get () != nullptr);
+
+  const ystl::Vector braked_vel = run_takeoff (*brake_bot, 66.0f / 128.0f, 200.0f);
+  CHECK (braked_vel.x == braked);
+  CHECK (braked_vel.x < 200.0f && braked_vel.x > cruise);
+  CHECK (braked_vel.y == 0.0f);
 
   engine.SetTraceLineHook (nullptr);
 
@@ -6984,13 +7008,13 @@ TEST_CASE ("unit/navigate_relay") {
   NavigateHook::SetPathFlags (*bot, static_cast<NodeFlag> (0));
   NavigateHook::SetPathOriginVec (*bot, ystl::Vector (160.0f, 0.0f, 12.0f));
   NavigateHook::SetDesiredVelocity (*bot, ystl::Vector (180.0f, 0.0f, 0.0f));
-  bot->RetimeJumpVelocityForLip ();
+  NavigateHook::RetimeJump (*bot);
   CHECK (NavigateHook::DesiredVelocity (*bot).length2d () > 220.0f);
   CHECK (NavigateHook::DesiredVelocity (*bot).length2d () < 260.0f);
 
   NavigateHook::SetPathOriginVec (*bot, ystl::Vector (160.0f, 0.0f, -40.0f));
   NavigateHook::SetDesiredVelocity (*bot, ystl::Vector (180.0f, 0.0f, 0.0f));
-  bot->RetimeJumpVelocityForLip ();
+  NavigateHook::RetimeJump (*bot);
   CHECK (NavigateHook::DesiredVelocity (*bot).x == 180.0f);
 
   mode_walls.Reset ();

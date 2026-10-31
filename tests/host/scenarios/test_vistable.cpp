@@ -198,4 +198,36 @@ TEST_CASE ("unit/vistable_serial") {
   CHECK (graph[8].vis.stand == 9);
 }
 
+TEST_CASE ("unit/vistable_blocked") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootVis (engine, cs);
+
+  // saving with no table is a quiet no-op
+  vistab.Save ();
+  CHECK (vistab.IsReady ());
+
+  BuildVisGraph (4);
+  graph.paths_[0].flags |= NodeFlag::Crouch;
+  vistab.Load ();
+  CHECK (!vistab.IsReady ());
+
+  // a fully walled world sees nothing from any stance
+  engine.SetTraceLineHook ([] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
+    (void)no_monsters;
+    (void)skip;
+    testhost::FakeEngine::TraceNoHit (v1, v2, no_monsters, skip, out);
+    out->flFraction = 0.5f;
+  });
+  HOST_REQUIRE (FinishRebuild ());
+
+  CHECK (!vistab.Visible (0, 1));
+  CHECK (!vistab.Visible (1, 0));
+  CHECK (!vistab.VisibleBothSides (0, 2));
+  engine.SetTraceLineHook (nullptr);
+
+  bots.Destroy ();
+}
+
 } // namespace bot

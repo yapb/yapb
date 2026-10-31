@@ -69,6 +69,30 @@ TEST_CASE ("unit/linkage_tables") {
   // ...disconnect clears editor/issuer state and forwards...
   table.pfnClientDisconnect (client);
 
+  // ...client lifecycle wrappers forward through the installed tables...
+  table.pfnClientPutInServer (client);
+
+  char *userinfo = engfuncs.pfnGetInfoKeyBuffer (client);
+  HOST_REQUIRE (userinfo != nullptr);
+  table.pfnClientUserInfoChanged (client, userinfo);
+
+  playermove_t pm {};
+  table.pfnPM_Move (&pm, 0);
+
+  usercmd_t cmd {};
+  table.pfnCmdStart (client, &cmd, 0);
+
+  // ...engine wrappers installed by givefnptrs forward too...
+  engine.Funcs ().pfnClientCommand (client, "say hi");
+
+  char style[8] = { 'a', 0 };
+  engine.Funcs ().pfnLightStyle (0, style);
+  engine.Funcs ().pfnGetPlayerAuthId (client);
+  engine.Funcs ().pfnCmd_Args ();
+  engine.Funcs ().pfnCmd_Argv (0);
+  engine.Funcs ().pfnCmd_Argc ();
+  engine.Funcs ().pfnSetClientMaxspeed (client, 320.0f);
+
   // ...engine sound/message wrappers forward plus feed bot systems...
   engine.Funcs ().pfnEmitSound (spawn, 0, "weapons/ak47-1.wav", 1.0f, 0.8f, 0, 100);
   engine.Funcs ().pfnMessageBegin (0, 0, nullptr, nullptr);
@@ -89,6 +113,31 @@ TEST_CASE ("unit/linkage_tables") {
   // ...user message registration round-trips through the collector...
   const int msg = engine.Funcs ().pfnRegUserMsg ("LinkMsg", 8);
   CHECK (msg > 0);
+
+  // ...post/new tables resolve through the same game dll...
+  gamefuncs_t post {};
+  HOST_REQUIRE (GetEntityApiPost (&post, 140) != 0);
+
+  newgamefuncs_t updated {};
+  int version = 0;
+  HOST_REQUIRE (GetNewDLLFunctions (&updated, &version) != 0);
+  updated.pfnOnFreeEntPrivateData (spawn);
+
+  // ...registered server commands dispatch through the installed handlers...
+  for (const auto &cmd : engine.ServerCmds ()) {
+    if (cmd.name == "meta") {
+      ystl::Array<ystl::String> args {};
+      args.push ("meta");
+      engine.SetCmdArgs (args);
+      cmd.func ();
+    }
+    else if (cmd.name == product.cmd_pri || cmd.name == product.cmd_sec) {
+      ystl::Array<ystl::String> args {};
+      args.push (cmd.name);
+      engine.SetCmdArgs (args);
+      cmd.func ();
+    }
+  }
 
   // ...server activation state stays consistent after the extra calls...
   CHECK (!game.IsNullEntity (spawn));

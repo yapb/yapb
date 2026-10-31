@@ -232,6 +232,12 @@ struct BehaviorHook {
   static bool IsDefusing (Bot &bot, const ystl::Vector &pos) {
     return bot.IsBombDefusing (pos);
   }
+  static void SetSimulating (Bot &bot, bool value) {
+    bot.SetSimulating (value);
+  }
+  static bool IsEnemyDefusing (Bot &bot, const ystl::Vector &pos) {
+    return bot.IsEnemyDefusingBomb (pos);
+  }
   static bool MoveToGoalState (Bot &bot) {
     return bot.move_to_goal_;
   }
@@ -1110,6 +1116,48 @@ TEST_CASE ("unit/behavior_logic") {
   clients.Update ();
 
   CHECK (BehaviorHook::IsDefusing (*bot, ystl::Vector (10.0f, 0.0f, 0.0f)));
+
+  game_state.SetBombPlanted (false);
+  game_state.SetBombOrigin (true);
+
+  // ...simulation freezes and thaws the bot cleanly...
+  bot->pev->button = IN_JUMP;
+  bot->pev->velocity = ystl::Vector (10.0f, 0.0f, 0.0f);
+  BehaviorHook::SetSimulating (*bot, false);
+  CHECK ((bot->pev->flags & FL_FROZEN) != 0);
+  CHECK (bot->pev->button == 0);
+  CHECK (bot->pev->velocity.empty ());
+  BehaviorHook::SetSimulating (*bot, true);
+  CHECK ((bot->pev->flags & FL_FROZEN) == 0);
+
+  // ...an enemy bot defusing near the bomb reads as an enemy defuse...
+  game_state.SetBombPlanted (true);
+  game_state.SetBombOrigin (false, ystl::Vector (10.0f, 0.0f, 0.0f));
+  other->team_ = Team::CT;
+  other->pev->origin = ystl::Vector (50.0f, 0.0f, 0.0f);
+  other->StartTask (TaskId::DefuseBomb, TaskPri::kDefuseBomb, kInvalidNodeIndex, 0.0f, true);
+  clients.Update ();
+  CHECK (BehaviorHook::IsEnemyDefusing (*bot, ystl::Vector (10.0f, 0.0f, 0.0f)));
+
+  // ...idle or distant enemies, and unarmed humans, do not...
+  other->ClearTasks ();
+  clients.Update ();
+  CHECK (!BehaviorHook::IsEnemyDefusing (*bot, ystl::Vector (10.0f, 0.0f, 0.0f)));
+
+  other->pev->origin = ystl::Vector (5000.0f, 0.0f, 0.0f);
+  other->StartTask (TaskId::DefuseBomb, TaskPri::kDefuseBomb, kInvalidNodeIndex, 0.0f, true);
+  clients.Update ();
+  CHECK (!BehaviorHook::IsEnemyDefusing (*bot, ystl::Vector (10.0f, 0.0f, 0.0f)));
+
+  human->v.origin = ystl::Vector (10.0f, 0.0f, 0.0f);
+  clients[human].team = Team::CT;
+  human->v.button = IN_USE;
+  clients.Update ();
+  CHECK (BehaviorHook::IsEnemyDefusing (*bot, ystl::Vector (10.0f, 0.0f, 0.0f)));
+
+  human->v.button = 0;
+  clients.Update ();
+  CHECK (!BehaviorHook::IsEnemyDefusing (*bot, ystl::Vector (10.0f, 0.0f, 0.0f)));
 
   game_state.SetBombPlanted (false);
   game_state.SetBombOrigin (true);
@@ -2798,6 +2846,13 @@ TEST_CASE ("unit/behavior_breakables") {
   bot->ClearTasks ();
   BehaviorHook::SetBreakable (*bot, nullptr);
   table.pfnTouch (brk, bot->Ent ());
+  CHECK (bot->GetTaskId () == TaskId::ShootBreakable);
+  CHECK (BehaviorHook::Breakable (*bot) == brk);
+  bot->ClearTasks ();
+
+  // ...the reverse touch direction maps the same way...
+  BehaviorHook::SetBreakable (*bot, nullptr);
+  table.pfnTouch (bot->Ent (), brk);
   CHECK (bot->GetTaskId () == TaskId::ShootBreakable);
   CHECK (BehaviorHook::Breakable (*bot) == brk);
   bot->ClearTasks ();

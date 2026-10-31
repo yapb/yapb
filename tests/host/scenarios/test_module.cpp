@@ -205,6 +205,33 @@ TEST_CASE ("unit/module_api") {
   CHECK (api->GetCurrentNodeId (99) == kInvalidNodeIndex);
   CHECK (api->GetBotGoal (99) == kInvalidNodeIndex);
 
+  // ...bad slots answer defaults without touching the bots...
+  CHECK (api->GetBotWeapon (0) == 0);
+  CHECK (api->GetBotAmmo (0, 0) == 0);
+  CHECK (api->GetBotAmmoInClip (0) == 0);
+  CHECK (api->GetBotDifficulty (0) == static_cast<int> (Difficulty::Invalid));
+  CHECK (api->GetBotPersonality (99) == static_cast<int> (Personality::Invalid));
+  CHECK (api->GetBotTask (99) == static_cast<int> (TaskId::None));
+  CHECK (api->GetBotTaskData (99) == kInvalidNodeIndex);
+  CHECK (api->GetBotLastVictim (99) == 0);
+  CHECK (!api->IsBotEnemyReachable (99));
+  CHECK (api->GetBotLastEnemyOrigin (99) == nullptr);
+  CHECK (!api->IsBotStuck (99));
+  CHECK (api->GetBotStuckTime (99) == 0.0f);
+  CHECK (api->GetBotLookAt (99) == nullptr);
+  CHECK (api->GetBotPathLength (99) == 0);
+  CHECK (!api->IsBotCamping (99));
+
+  float nowhere[3] = {};
+  api->SetBotLookAt (99, nowhere);
+  CHECK (!api->SetBotSimulation (99, true));
+  CHECK (!api->IsBotSimulating (99));
+  CHECK (!api->IsBotAlive (99));
+  CHECK (!api->IsBotStale (99));
+  CHECK (!api->KickBot (99, true, false));
+  CHECK (!api->SetBotPersonality (99, static_cast<int> (Personality::Normal)));
+  CHECK (ystl::StringRef (api->GetBotWeaponName (99)).empty ());
+
   // ...an empty graph answers empty...
   graph.Reset ();
   CHECK (!api->HasGraph ());

@@ -31,6 +31,9 @@ struct BuyHook {
   static int PickBest (Bot &bot, ystl::SmallArray<int> &vec, int money_save) {
     return bot.PickBestWeapon (vec, money_save);
   }
+  static ystl::RWrand &Rng (Bot &bot) {
+    return bot.rg;
+  }
   static bool Eligible (Bot &bot, const WeaponInfo *weapon, Team team) {
     return bot.IsWeaponEligibleForPurchase (weapon, team);
   }
@@ -228,6 +231,30 @@ TEST_CASE ("unit/buying_select") {
   ystl::SmallArray<int> solo {};
   solo.push (7);
   CHECK (BuyHook::PickBest (*bot, solo, 0) == 7);
+
+  // randomized picks stay inside the candidate set across all flavors
+  ystl::SmallArray<int> duo {};
+  duo.push (3);
+  duo.push (5);
+
+  bot->personality_ = Personality::Careful;
+  bot->money_amount_ = 16000;
+  const int careful = BuyHook::PickBest (*bot, duo, 0);
+  CHECK (careful == 3 || careful == 5);
+
+  bot->personality_ = Personality::Normal;
+  bot->difficulty_ = Difficulty::Expert; // experts skip the 50/75 softening
+  BuyHook::Rng (*bot).force_chance (false);
+  const int expert = BuyHook::PickBest (*bot, duo, 0);
+  CHECK (expert == 3 || expert == 5);
+  bot->difficulty_ = Difficulty::Normal;
+
+  bot->money_amount_ = 1000;
+  BuyHook::Rng (*bot).force_chance (true);
+  const int clamped = BuyHook::PickBest (*bot, duo, 900); // thin funds clamp the factor
+  CHECK (clamped == 3 || clamped == 5);
+  BuyHook::Rng (*bot).clear_forced ();
+  bot->money_amount_ = 3000;
 
   // eligibility is pure: team, legacy select and bans decide
   BuyFixture fx {};
@@ -441,6 +468,70 @@ TEST_CASE ("unit/buying_flow") {
   bot->has_hostage_ = false;
   CHECK (BuyHook::QueueLength (*bot) == queue_base + 7);
   CHECK (testhost::CsCalls (cs, "ClientCommand") == flow_base + 7);
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/buying_loaded") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootBuy (engine, cs);
+
+  bots.Addbot ("BuyL", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("BuyL");
+  HOST_REQUIRE (bot != nullptr);
+  bot->team_ = Team::Terrorist;
+  bot->money_amount_ = 16000;
+  bot->ignore_buy_delay_ = true;
+  bots.UpdateTeamEconomics (Team::Terrorist, true);
+
+  int base = testhost::CsCalls (cs, "ClientCommand");
+  size_t queue = BuyHook::QueueLength (*bot);
+
+  // a funded primary lane buys the rifle through the whole machine
+  bot->buy_state_ = BuyState::PrimaryWeapon;
+  bot->pev->weapons = 0;
+  BuyHook::BuyWeapons (*bot);
+  CHECK (testhost::CsCalls (cs, "ClientCommand") == base + 3);
+  CHECK (BuyHook::QueueLength (*bot) == queue + 1);
+  CHECK (bot->buy_state_ == BuyState::ArmorVestHelm);
+  base += 3;
+  queue += 1;
+
+  // ...then the vest and helmet ride the same economics...
+  bot->pev->armorvalue = 0.0f;
+  BuyHook::BuyWeapons (*bot);
+  CHECK (bot->buy_state_ == BuyState::SecondaryWeapon);
+
+  bot->buy_context_ = BuyContext::HasGoodEconomics | BuyContext::IsPistolRound;
+  BuyHook::BuyArmor (*bot);
+  CHECK (testhost::CsCalls (cs, "ClientCommand") == base + 2);
+  base += 2;
+
+  // ...secondaries stay down without a pistol round...
+  BuyHook::BuyWeapons (*bot);
+  CHECK (testhost::CsCalls (cs, "ClientCommand") == base);
+  CHECK (bot->buy_state_ == BuyState::Ammo);
+
+  // ...nightvision stays shelved on an unlucky roll...
+  bot->money_amount_ = 16000;
+  BuyHook::Rng (*bot).force_chance (false);
+  BuyHook::BuyNvg (*bot);
+  CHECK (testhost::CsCalls (cs, "ClientCommand") == base);
+  BuyHook::Rng (*bot).clear_forced ();
+
+  // ...a live buy zone arms the delay-free machine...
+  engine.AdvanceTime (25.0f); // past the round-start buy delay for any roll
+  bot->in_buy_zone_ = true;
+  const size_t zone_queue = BuyHook::QueueLength (*bot);
+  BuyHook::EnterZone (*bot, BuyState::PrimaryWeapon);
+  CHECK (bot->ignore_buy_delay_);
+  CHECK (!bot->buying_finished_);
+  CHECK (bot->buy_state_ == BuyState::PrimaryWeapon);
+  CHECK (BuyHook::QueueLength (*bot) == zone_queue + 1);
 
   bots.Destroy ();
 }

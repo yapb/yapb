@@ -1665,4 +1665,103 @@ TEST_CASE ("unit/radio_voice") {
   bots.Destroy ();
 }
 
+TEST_CASE ("unit/radio_followups") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootRadio (engine, cs);
+
+  bots.Addbot ("RadU", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("RadU");
+  HOST_REQUIRE (bot != nullptr);
+
+  edict_t *human = game.CreateFakeClient ("RadBoss");
+  HOST_REQUIRE (!game.IsNullEntity (human));
+  human->v.flags &= ~FL_FAKECLIENT;
+  human->v.health = 100.0f;
+  human->v.origin = ystl::Vector (200.0f, 0.0f, 0.0f);
+  bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  clients.Update ();
+
+  clients[human].team = Team::Terrorist;
+  bot->team_ = Team::Terrorist;
+  bot->num_friends_left_ = 1;
+  RadioHook::SetRadioPercent (*bot, 100); // every percent roll passes
+  RadioHook::DrainQueue (*bot);
+
+  // new rounds are acknowledged outright
+  bot->radio_order_ = RadioChat::NewRound;
+  bot->radio_entity_ = human;
+  RadioHook::CheckQueue (*bot);
+  CHECK (RadioHook::RadioSelect (*bot) == RadioChat::YouHeardTheMan);
+
+  // taking fire with no target calls for backup
+  bot->fear_level_ = 0.5f;
+  bot->radio_order_ = RadioChat::TakingFireNeedAssistance;
+  RadioHook::CheckQueue (*bot);
+  CHECK (RadioHook::RadioSelect (*bot) == RadioChat::OnMyWay);
+  CHECK (bot->fear_level_ == 0.3f);
+
+  // spotted enemies with a close caller do the same
+  bot->radio_order_ = RadioChat::EnemySpotted;
+  RadioHook::CheckQueue (*bot);
+  CHECK (RadioHook::RadioSelect (*bot) == RadioChat::OnMyWay);
+  CHECK (bot->fear_level_ < 0.3f && bot->fear_level_ > 0.1f);
+
+  // a leader takes the point when asked
+  RadioHook::SetLeader (*bot, true);
+  bot->radio_order_ = RadioChat::YouTakeThePoint;
+  RadioHook::CheckQueue (*bot);
+  CHECK (RadioHook::RadioSelect (*bot) == RadioChat::RogerThat);
+  RadioHook::SetLeader (*bot, false);
+
+  // storming the front moves out
+  bot->ClearTasks ();
+  bot->radio_order_ = RadioChat::StormTheFront;
+  RadioHook::CheckQueue (*bot);
+  CHECK (RadioHook::RadioSelect (*bot) == RadioChat::RogerThat);
+  CHECK (bot->GetTaskId () == TaskId::MoveTo);
+
+  // blowing cover runs from a planted bomb
+  game_state.SetBombPlanted (true);
+  game_state.SetBombOrigin (false, ystl::Vector (200.0f, 0.0f, 0.0f));
+  bot->ClearTasks ();
+  bot->radio_order_ = RadioChat::ShesGonnaBlow;
+  RadioHook::CheckQueue (*bot);
+  CHECK (RadioHook::RadioSelect (*bot) == RadioChat::RogerThat);
+  CHECK (bot->GetTaskId () == TaskId::EscapeFromBomb);
+  game_state.SetBombPlanted (false);
+  game_state.SetBombOrigin (true);
+
+  // standing down clears the follow and acknowledges
+  RadioHook::SetTargetEntity (*bot, human);
+  bot->radio_order_ = RadioChat::GoGoGo;
+  RadioHook::CheckQueue (*bot);
+  CHECK (RadioHook::RadioSelect (*bot) == RadioChat::RogerThat);
+  CHECK (RadioHook::TargetEntity (*bot) == nullptr);
+
+  // a paused bot moves out instead when the caller is close
+  bot->ClearTasks ();
+  bot->StartTask (TaskId::Pause, TaskPri::kPause, kInvalidNodeIndex, 0.0f, true);
+  bot->radio_order_ = RadioChat::GoGoGo;
+  RadioHook::CheckQueue (*bot);
+  CHECK (RadioHook::RadioSelect (*bot) == RadioChat::RogerThat);
+  CHECK (bot->GetTaskId () == TaskId::MoveTo);
+
+  // heading toward a live caller moves out, movers stay put
+  bot->ClearTasks ();
+  RadioHook::StartHeadedTimer (*bot);
+  RadioHook::HeadToward (*bot);
+  CHECK (bot->GetTaskId () == TaskId::MoveTo);
+
+  bot->StartTask (TaskId::MoveTo, TaskPri::kMoveTo, kInvalidNodeIndex, 0.0f, true);
+  RadioHook::HeadToward (*bot);
+  CHECK (bot->GetTaskId () == TaskId::MoveTo);
+
+  bots.Destroy ();
+}
+
 } // namespace bot

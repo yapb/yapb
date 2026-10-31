@@ -1856,4 +1856,30 @@ TEST_CASE ("unit/manager_teamwork") {
   bots.Destroy ();
 }
 
+TEST_CASE ("unit/manager_exec") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootManager (engine, cs);
+
+  bots.Addbot ("ExecA", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *a = testhost::FindBot ("ExecA");
+  HOST_REQUIRE (a != nullptr);
+
+  // entities without a gamedll player entry kick the matching bot
+  clients.Update ();
+  bots.ExecGameEntity (a->Ent ());
+  CHECK (a->is_stale_);
+
+  // strangers pass through without touching anyone
+  edict_t *stranger = engine.SpawnEntity ("info_null");
+  HOST_REQUIRE (stranger != nullptr);
+  bots.ExecGameEntity (stranger);
+  CHECK (bots.GetBotCount () == 1);
+
+  bots.Destroy ();
+}
+
 } // namespace bot

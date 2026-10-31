@@ -188,6 +188,19 @@ TEST_CASE ("unit/message_dispatch") {
   SendLongs (bot->Ent (), kMoney, { 1500 });
   CHECK (bot->money_amount_ == 1500);
 
+  // ...short frames never reach the handlers...
+  for (const auto id : { kTextMsg, kVGUIMenu, kShowMenu, kWeaponList, kCurWeapon, kAmmo, kDamage, kStatusIcon, kScreenFade,
+                         kBarTime, kItemStatus, kNVGToggle, kFlashBat, kTeamInfo, kScoreInfo, kScoreAttrib, kDeathMsg, kHLTV, kResetHUD }) {
+    SendLongs (bot->Ent (), id, {});
+    SendLongs (nullptr, id, {});
+  }
+  CHECK (bot->money_amount_ == 1500);
+
+  // ...phantom killers never reach the bots, idle hltv never restarts...
+  SendLongs (bot->Ent (), kDeathMsg, { 99, 99 });
+  SendLongs (bot->Ent (), kHLTV, { 1, 90 });
+  CHECK (bot->money_amount_ == 1500);
+
   bots.Destroy ();
 }
 
@@ -560,6 +573,15 @@ TEST_CASE ("unit/message_round") {
   CHECK (a->last_victim_ == b->Ent ());
   SendLongs (nullptr, kDeathMsg, { a_idx }); // too short
   CHECK (a->is_alive_);
+
+  // death messages with a missing victim never route
+  SendLongs (nullptr, kDeathMsg, { a_idx, 99 });
+  CHECK (a->is_alive_);
+
+  // zero deaths divide by one
+  SendLongs (nullptr, kScoreInfo, { a_idx, 8, 0, 0, 0 });
+  CHECK (a->kpd_ratio_ == 8.0f);
+  CHECK (a->death_count_ == 0);
 
   // hltv only restarts the round on the fov reset
   const float round_start = game_state.GetRoundStartTime ();

@@ -145,6 +145,33 @@ struct CombatHook {
   static float Memory (Bot &bot) {
     return bot.EnemyMemorySpan ();
   }
+  static bool InCombat (Bot &bot) {
+    return bot.IsInCombat ();
+  }
+  static float Score (Bot &bot, edict_t *enemy) {
+    return bot.EngagementScore (enemy);
+  }
+  static int Engaging (Bot &bot, edict_t *enemy) {
+    return bot.TeammatesEngaging (enemy);
+  }
+  static bool WantsFire (Bot &bot) {
+    return bot.wants_to_fire_;
+  }
+  static void StartSurprise (Bot &bot, float duration) {
+    bot.enemy_surprise_timer_.start (duration);
+  }
+  static void SetParts (Bot &bot, Visibility parts) {
+    bot.enemy_parts_ = parts;
+  }
+  static void SetEnemyOrigin (Bot &bot, const ystl::Vector &origin) {
+    bot.enemy_origin_ = origin;
+  }
+  static void SetWantsFire (Bot &bot, bool value) {
+    bot.wants_to_fire_ = value;
+  }
+  static void Damage (Bot &bot, edict_t *inflictor) {
+    bot.TakeDamage (inflictor, 10, 0, 0);
+  }
   static void SetAimFlags (Bot &bot, AimFlags flags) {
     bot.aim_flags_ = flags;
   }
@@ -2179,6 +2206,170 @@ TEST_CASE ("unit/combat_focus_fire") {
   b->enemy_ = near_foe;
   c->enemy_ = near_foe;
   CHECK (!CombatHook::ShouldSwitch (*a, far_foe, near_foe));
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/combat_scores") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootCombat (engine, cs);
+
+  bots.Addbot ("ScoreA", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("ScoreB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  bots.Addbot ("ScoreC", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 3));
+
+  Bot *a = testhost::FindBot ("ScoreA");
+  Bot *b = testhost::FindBot ("ScoreB");
+  Bot *c = testhost::FindBot ("ScoreC");
+  HOST_REQUIRE (a != nullptr && b != nullptr && c != nullptr);
+
+  a->team_ = b->team_ = c->team_ = Team::Terrorist;
+  a->is_alive_ = b->is_alive_ = c->is_alive_ = true;
+  a->pev->origin = ystl::Vector (0.0f, 0.0f, 0.0f);
+
+  edict_t *foe = MakeFoe ("ScoreFoe", ystl::Vector (150.0f, 0.0f, 0.0f));
+  edict_t *far = MakeFoe ("ScoreFar", ystl::Vector (900.0f, 0.0f, 0.0f));
+  HOST_REQUIRE (foe != nullptr && far != nullptr);
+  clients.Update ();
+
+  // memory span stays inside its documented band
+  CHECK (CombatHook::Memory (*a) >= 3.0f && CombatHook::Memory (*a) <= 8.0f);
+
+  // combat state follows senses, trigger and fresh damage
+  CombatHook::SetStates (*a, Sense::SeeingEnemy);
+  CHECK (CombatHook::InCombat (*a));
+  CombatHook::SetStates (*a, Sense::Invalid);
+  CHECK (!CombatHook::InCombat (*a));
+
+  CombatHook::SetWantsFire (*a, true);
+  CHECK (CombatHook::InCombat (*a));
+  CombatHook::SetWantsFire (*a, false);
+  CHECK (!CombatHook::InCombat (*a));
+
+  CombatHook::Damage (*a, foe);
+  CHECK (CombatHook::InCombat (*a));
+  engine.AdvanceTime (2.0f);
+  CHECK (!CombatHook::InCombat (*a));
+
+  // closer, shooting, sniper and wounded enemies score higher
+  CHECK (CombatHook::Score (*a, nullptr) == 0.0f);
+
+  const float plain = CombatHook::Score (*a, foe);
+  CHECK (plain > 0.0f);
+  CHECK (CombatHook::Score (*a, far) < plain);
+
+  foe->v.button = IN_ATTACK;
+  CHECK (CombatHook::Score (*a, foe) > plain);
+  foe->v.button = 0;
+
+  foe->v.weapons = ystl::to_underlying (ystl::bit (Weapon::AWP));
+  CHECK (CombatHook::Score (*a, foe) > plain);
+  foe->v.weapons = 0;
+
+  foe->v.health = 20.0f;
+  CHECK (CombatHook::Score (*a, foe) > plain);
+  foe->v.health = 100.0f;
+
+  // mates on the same target count, empty selectors never switch
+  CHECK (CombatHook::Engaging (*a, foe) == 0);
+  b->enemy_ = foe;
+  CHECK (CombatHook::Engaging (*a, foe) == 1);
+  c->enemy_ = foe;
+  CHECK (CombatHook::Engaging (*a, foe) == 2);
+
+  CHECK (!CombatHook::ShouldSwitch (*a, nullptr, foe));
+  CHECK (!CombatHook::ShouldSwitch (*a, foe, nullptr));
+  CHECK (!CombatHook::ShouldSwitch (*a, foe, foe));
+
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/combat_aim") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootCombat (engine, cs);
+
+  bots.Addbot ("FocusX", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("FocusX");
+  HOST_REQUIRE (bot != nullptr);
+  bot->team_ = Team::Terrorist;
+  bot->is_alive_ = true;
+  bot->pev->origin = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+
+  edict_t *foe = MakeFoe ("FocusFoe", ystl::Vector (100.0f, 0.0f, 0.0f));
+  HOST_REQUIRE (foe != nullptr);
+  clients.Update ();
+
+  // no enemy, no focus work
+  CombatHook::SetWantsFire (*bot, true);
+  CombatHook::Focus (*bot);
+  CHECK (CombatHook::WantsFire (*bot));
+
+  bot->enemy_ = foe;
+
+  // surprised bots only track, never pull the trigger yet
+  CombatHook::SetWantsFire (*bot, false);
+  CombatHook::StartSurprise (*bot, 10.0f);
+  CombatHook::Focus (*bot);
+  CHECK (!CombatHook::WantsFire (*bot));
+  bot->enemy_surprise_timer_.invalidate (); // back to business, no frames run
+
+  // visible parts drive the aim spot from the second the parts land
+  CombatHook::SetParts (*bot, Visibility::Head | Visibility::Body);
+
+  // knifers fire point blank, hold off a step further out
+  bot->current_weapon_ = Weapon::Knife;
+  bot->weapon_type_ = WeaponType::Melee;
+  foe->v.origin = ystl::Vector (50.0f, 0.0f, 0.0f);
+  CombatHook::SetEnemyOrigin (*bot, foe->v.origin);
+  CombatHook::Focus (*bot);
+  CHECK (CombatHook::WantsFire (*bot));
+
+  foe->v.origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  CombatHook::SetEnemyOrigin (*bot, foe->v.origin);
+  CombatHook::Focus (*bot);
+  CHECK (!CombatHook::WantsFire (*bot));
+
+  // body-only parts aim the same center mass
+  CombatHook::SetParts (*bot, Visibility::Body);
+  foe->v.origin = ystl::Vector (50.0f, 0.0f, 0.0f);
+  CombatHook::SetEnemyOrigin (*bot, foe->v.origin);
+  CombatHook::Focus (*bot);
+  CHECK (CombatHook::WantsFire (*bot));
+
+  // rifles fire on a settled bead: the first look primes it, the next pulls
+  bot->current_weapon_ = Weapon::AK47;
+  bot->weapon_type_ = WeaponType::Rifle;
+  foe->v.origin = ystl::Vector (1000.0f, 0.0f, 28.0f);
+  foe->v.v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  CombatHook::SetEnemyOrigin (*bot, foe->v.origin);
+  CombatHook::Focus (*bot);
+  CombatHook::Focus (*bot);
+  CHECK (CombatHook::WantsFire (*bot));
+
+  // facing away kills the bead, point blank overrides it back for scopes
+  bot->current_weapon_ = Weapon::AWP;
+  bot->weapon_type_ = WeaponType::Sniper;
+  bot->pev->v_angle = ystl::Vector (0.0f, 180.0f, 0.0f);
+  foe->v.origin = ystl::Vector (1000.0f, 0.0f, 28.0f);
+  CombatHook::SetEnemyOrigin (*bot, foe->v.origin);
+  CombatHook::Focus (*bot);
+  CombatHook::Focus (*bot);
+  CHECK (!CombatHook::WantsFire (*bot));
+
+  foe->v.origin = ystl::Vector (85.0f, 0.0f, 28.0f);
+  CombatHook::SetEnemyOrigin (*bot, foe->v.origin);
+  CombatHook::Focus (*bot);
+  CombatHook::Focus (*bot);
+  CHECK (CombatHook::WantsFire (*bot));
 
   bots.Destroy ();
 }

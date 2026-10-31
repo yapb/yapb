@@ -34,6 +34,7 @@ namespace bot {
 extern "C" {
 void GiveFnptrsToDll (enginefuncs_t *funcs, globalvars_t *globals);
 int GetEntityAPI (gamefuncs_t *table, int version);
+int GetEntityApiPost (gamefuncs_t *table, int version);
 int GetNewDLLFunctions (newgamefuncs_t *table, int *version);
 IBotModule *GetBotAPI (int version);
 }

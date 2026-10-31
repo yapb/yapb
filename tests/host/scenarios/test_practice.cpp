@@ -376,4 +376,81 @@ TEST_CASE ("unit/practice_update") {
   bots.Destroy ();
 }
 
+TEST_CASE ("unit/practice_stale") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootPractice (engine, cs);
+
+  // hand-built payload with stale and default entries round-trips cleanly
+  ystl::Array<Practice::Entry> stale {};
+
+  Practice::Entry good {};
+  good.team = 1;
+  good.src = 1;
+  good.dst = 1;
+  good.cell = Practice::Cell (10, 20, 1);
+  stale.push (good);
+
+  Practice::Entry bad_team {};
+  bad_team.team = 99;
+  bad_team.src = 1;
+  bad_team.dst = 1;
+  bad_team.cell = Practice::Cell (10, 20, 1);
+  stale.push (bad_team);
+
+  Practice::Entry bad_node {};
+  bad_node.team = 0;
+  bad_node.src = 50;
+  bad_node.dst = 50;
+  bad_node.cell = Practice::Cell (10, 20, 1);
+  stale.push (bad_node);
+
+  Practice::Entry blank {};
+  blank.team = 0;
+  blank.src = 2;
+  blank.dst = 2;
+  stale.push (blank); // default cell
+
+  CHECK (bstor.Save (stale));
+
+  // harness-only mirror (prod engine FS bridges the save/load bases)
+  {
+    const ystl::String prac_path = bstor.BuildPath (StorageFile::Practice);
+    const ystl::String prac_load_path = bstor.BuildPath (StorageFile::Practice, true);
+    ystl::File::make_path (ystl::String (prac_path.substr (0, prac_path.find_last_of (kPathSeparator))).chars ());
+    ystl::File::make_path (ystl::String (prac_load_path.substr (0, prac_load_path.find_last_of (kPathSeparator))).chars ());
+    ystl::File src (prac_path, "rb");
+    ystl::File dst (prac_load_path, "wb");
+    HOST_REQUIRE (src.eof () == false);
+
+    for (int ch = src.get (); ch != EOF; ch = src.get ()) {
+      dst.put_char (ch);
+    }
+    src.close ();
+    dst.close ();
+  }
+
+  practice.Load ();
+  CHECK (practice.GetValue (Team::CT, 1, 1) == 20);
+  CHECK (practice.GetValue (Team::Terrorist, 2, 2) == 0);
+
+  // the payload on disk holds all four entries, stale or not
+  ystl::Array<Practice::Entry> probe {};
+  CHECK (bstor.Load (probe));
+  CHECK (probe.size () == 4);
+
+  // the save base parses directly too
+  const ystl::String prac_path = bstor.BuildPath (StorageFile::Practice);
+  ystl::MemFile direct (prac_path);
+  CHECK (direct);
+
+  // a resized graph skips the danger update until the next load
+  graph.Reset ();
+  practice.Update ();
+  CHECK (practice.GetValue (Team::CT, 1, 1) == 20);
+
+  bots.Destroy ();
+}
+
 } // namespace bot

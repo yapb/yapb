@@ -190,6 +190,15 @@ TEST_CASE ("unit/fakeping_calc [modern]") {
 
   cv_show_latency.Set (0);
 
+  // the bit-packer clamps garbage instead of writing it
+  PingBitMsg packer {};
+  packer.Write (1, 0); // empty size
+  packer.Write (1, 33); // over the word
+  packer.Write (-5, PingBitMsg::Single); // negative clamps to zero
+  packer.Write (99, PingBitMsg::Single); // over-limit clamps to the cap
+  packer.Send (human); // nothing packed, no message
+  packer.Broadcast (); // nothing packed, no broadcast
+
   bots.Destroy ();
 }
 

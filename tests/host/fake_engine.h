@@ -136,6 +136,9 @@ public:
   const ystl::Array<ystl::String> &ServerCommands () const {
     return server_commands_;
   }
+  const ystl::Array<ServerCmd> &ServerCmds () const {
+    return server_cmds_;
+  }
   const ystl::Array<ystl::String> &ClientCommands () const {
     return client_commands_;
   }

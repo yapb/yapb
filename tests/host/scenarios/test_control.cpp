@@ -2141,4 +2141,55 @@ TEST_CASE ("unit/control_pageflow") {
   bots.Destroy ();
 }
 
+TEST_CASE ("unit/control_nodefix") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootControl (engine, cs);
+  CleanupControlFiles ();
+
+  edict_t *editor = game.CreateFakeClient ("FixEditor");
+  HOST_REQUIRE (!game.IsNullEntity (editor));
+  clients.Update ();
+  clients[editor].flags |= ClientFlags::Admin;
+  RunCmdAs (engine, editor, { "yb", "g", "acquire_editor" });
+  HOST_REQUIRE (graph.HasEditor ());
+
+  // ...an empty graph refuses the fix up front...
+  graph.Reset ();
+  size_t mark = PrintMark (engine);
+  RunCmd (engine, { "yb", "g", "fix" });
+  DrainPrints (engine);
+  CHECK (PrintedSince (engine, mark, "empty"));
+
+  // ...a running analysis waits instead of repairing...
+  BuildControlGraph ();
+  analyzer.Start ();
+  HOST_REQUIRE (analyzer.IsAnalyzing ());
+  mark = PrintMark (engine);
+  RunCmd (engine, { "yb", "g", "fix" });
+  DrainPrints (engine);
+  CHECK (PrintedSince (engine, mark, "in progress"));
+  analyzer.Suspend ();
+  graph.SetMessageSilence (false);
+
+  // ...a healthy graph repairs with a clean sanity bill...
+  mark = PrintMark (engine);
+  RunCmd (engine, { "yb", "g", "fix" });
+  DrainPrints (engine);
+  CHECK (PrintedSince (engine, mark, "repair finished"));
+
+  // ...uploads stay off without a configured url, no network touched...
+  BuildControlGraph ();
+  cv_graph_url_upload.Set ("");
+  mark = PrintMark (engine);
+  RunCmd (engine, { "yb", "g", "upload" });
+  DrainPrints (engine);
+  CHECK (PrintedSince (engine, mark, "disabled"));
+  cv_graph_url_upload.Set ("@workers");
+
+  CleanupControlFiles ();
+  bots.Destroy ();
+}
+
 } // namespace bot
