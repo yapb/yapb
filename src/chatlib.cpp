@@ -9,8 +9,8 @@
 
 namespace bot {
 
-ChatManager::ChatManager () {
-  clan_tags_ = {
+const ystl::Array<ClanTag> &ChatManager::DefaultClanTags () {
+  static const ystl::Array<ClanTag> tags = {
     { "[[", "]]" },
     { "-=", "=-" },
     { "-[", "]-" },
@@ -35,6 +35,7 @@ ChatManager::ChatManager () {
     { "+",  "+"  },
     { "(",  ")"  },
   };
+  return tags;
 }
 
 void ChatManager::StripTags (ystl::String &line) {
@@ -42,17 +43,19 @@ void ChatManager::StripTags (ystl::String &line) {
     return;
   }
 
-  for (const auto &tag : clan_tags_) {
-    const size_t start = line.find (tag.first, 0);
+  const auto &tags = conf.GetClanTags ().empty () ? DefaultClanTags () : conf.GetClanTags ();
+
+  for (const auto &tag : tags) {
+    const size_t start = line.find (tag.open, 0);
 
     if (start != ystl::String::InvalidIndex) {
-      const size_t end = line.find (tag.second, start);
+      const size_t end = line.find (tag.close, start);
 
       if (end != ystl::String::InvalidIndex && end > start) {
         const size_t diff = end - start;
 
         if (diff < 32 && diff > 1) {
-          line.erase (start, diff + tag.second.size ());
+          line.erase (start, diff + tag.close.size ());
           continue;
         }
       }

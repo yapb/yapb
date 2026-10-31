@@ -592,7 +592,8 @@ TEST_CASE ("unit/chatlib_banks") {
     ystl::strings.join_path (bstor.GetRunningPathVfs (), folders.config, folders.lang, ystl::String ("en_chat.cfg"));
   ystl::File::make_path (ystl::String (chat_file.substr (0, chat_file.find_last_of (kPathSeparator))).chars ());
 
-  ystl::String chat_text = "raw Killed {\n  kill one\n}\nraw DeadChat {\n  dead one\n}\nraw Unknown {\n  unknown one\n}\n";
+  ystl::String chat_text =
+    "raw Killed {\n  kill one\n}\nraw DeadChat {\n  dead one\n}\nraw Unknown {\n  unknown one\n}\nraw Assist {\n  assist one\n}\n";
   chat_text += "Replies {\n  HelloGroup {\n    key = hello\n    raw {\n      hi there\n    }\n  }\n}\n";
   chat_text += "GameNames {\n  CS = cs_one\n}\n";
 
@@ -609,6 +610,7 @@ TEST_CASE ("unit/chatlib_banks") {
   HOST_REQUIRE (conf.HasChatBank (Chat::Kill));
   HOST_REQUIRE (conf.HasChatBank (Chat::Dead));
   HOST_REQUIRE (conf.HasChatBank (Chat::NoKeyword));
+  HOST_REQUIRE (conf.HasChatBank (Chat::Assist));
 
   // indexed lookups resolve through the word loop, punctuation and all
   // (index keys are upper-cased at parse, so query them upper-cased)

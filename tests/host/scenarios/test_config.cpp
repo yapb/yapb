@@ -422,6 +422,32 @@ TEST_CASE ("unit/config_files") {
   HOST_REQUIRE (conf.PickBotName () != nullptr);
 }
 
+TEST_CASE ("unit/config_clantags") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootConfig (engine, cs);
+
+  // space-separated open/close pairs from the ClanTags custom value
+  WriteConfFile (ConfFile ("custom"), "Chat {\n  ClanTags = \"<< >> [[ ]] odd\"\n}\n");
+  conf.LoadCustomConfig ();
+
+  const auto &tags = conf.GetClanTags ();
+  HOST_REQUIRE (tags.size () == 2); // the odd tail is dropped
+  CHECK (tags[0].open == "<<");
+  CHECK (tags[0].close == ">>");
+  CHECK (tags[1].open == "[[");
+  CHECK (tags[1].close == "]]");
+
+  // an empty value clears the list, ChatManager then falls back to the built-in tags
+  WriteConfFile (ConfFile ("custom"), "Chat {\n  ClanTags = \"\"\n}\n");
+  conf.LoadCustomConfig ();
+  CHECK (conf.GetClanTags ().empty ());
+
+  ystl::plat.remove_file (ConfFile ("custom").chars ());
+  conf.LoadCustomConfig ();
+}
+
 TEST_CASE ("unit/config_listen") {
   testhost::FakeEngine engine;
   engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");

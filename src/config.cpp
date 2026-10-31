@@ -744,7 +744,8 @@ void Config::LoadChatConfig () {
     { "Welcome",    Chat::Hello      },
     { "TeamAttack", Chat::TeamAttack },
     { "TeamKill",   Chat::TeamKill   },
-    { "Unknown",    Chat::NoKeyword  }
+    { "Unknown",    Chat::NoKeyword  },
+    { "Assist",     Chat::Assist     }
   };
 
   for (const auto &node : chat->children ()) {
@@ -1106,6 +1107,7 @@ void Config::LoadCustomConfig () {
       { "DisableSpawnControl",   "no"                                 },
       { "UnlockThinkFPS",        "no"                                 },
       { "BlockedClientCommands", "lastinv"                            },
+      { "ClanTags",              ""                                   },
       { "CheckConnectivityHost", GraphUrlResolver::kConnectivityHost  },
       { "GraphGithubDownload",   GraphUrlResolver::kGithubDownloadUrl },
       { "GraphRussiaDownload",   GraphUrlResolver::kRussiaDownloadUrl },
@@ -1138,6 +1140,7 @@ void Config::LoadCustomConfig () {
   rebuild_blocked ();
 
   if (rc == ConfigRead::Missing) {
+    RebuildClanTags ();
     return;
   }
   ystl::ConfParser parser {};
@@ -1162,7 +1165,27 @@ void Config::LoadCustomConfig () {
     }
   }
   rebuild_blocked ();
+  RebuildClanTags ();
   MarkConfigApplied ("custom", text);
+}
+
+void Config::RebuildClanTags () {
+  clan_tags_.clear ();
+
+  ystl::Array<ystl::String> tokens {};
+
+  for (auto part : FetchCustom ("ClanTags").split (" ")) {
+    auto token = ystl::Tokenizer::trim (part, " \t\r\n");
+
+    if (!token.empty ()) {
+      tokens.push (ystl::String (token));
+    }
+  }
+
+  // space-separated open/close pairs, an odd tail is dropped
+  for (size_t i = 0; i + 1 < tokens.size (); i += 2) {
+    clan_tags_.emplace (ClanTag { ystl::move (tokens[i]), ystl::move (tokens[i + 1]) });
+  }
 }
 
 void Config::LoadLogosConfig () {

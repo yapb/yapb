@@ -18,7 +18,14 @@ enum class Chat : int32_t {
   TeamKill, // id to team-kill chat array
   Hello, // id to welcome chat array
   NoKeyword, // id to no keyword chat array
+  Assist, // id to teammate-assist acknowledgement array
   Count // number for array
+};
+
+// strippable clan-tag bracket pair
+struct ClanTag {
+  ystl::String open {};
+  ystl::String close {};
 };
 
 // links keywords and replies together
@@ -74,12 +81,15 @@ struct ChatCollection {
 // bot's chat manager
 class ChatManager : public ystl::Singleton<ChatManager> {
 private:
-  ystl::SmallArray<ystl::Twin<ystl::String, ystl::String>> clan_tags_ {}; // strippable clan tags
   ystl::String upper_case_line_ {}; // reused buffer for upper-cased keyword matching
   ystl::String chat_scratch_ {}; // reused buffer for building outgoing chat messages
 
+private:
+  // built-in clan tags, used when custom.cfg defines none
+  static const ystl::Array<ClanTag> &DefaultClanTags ();
+
 public:
-  ChatManager ();
+  ChatManager () = default;
   ~ChatManager () = default;
 
 public:

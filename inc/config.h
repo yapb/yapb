@@ -86,6 +86,9 @@ private:
 
   ystl::Array<ChatKeywords> replies_ {};
   ystl::HashMap<uint32_t, ystl::SmallArray<size_t>> keyword_index_ {}; // keyword hash -> reply indices for fast lookup
+
+  // strippable clan-tag pairs from custom.cfg (empty = use the built-in fallback)
+  ystl::Array<ClanTag> clan_tags_ {};
   ystl::SmallArray<WeaponInfo> weapons_ {};
   ystl::SmallArray<WeaponProp> weapon_props_ {};
 
@@ -291,6 +294,9 @@ private:
   // applies gamedef.cfg sound templates onto defaults
   void ApplySoundDefs (const ystl::ConfNode *root);
 
+  // rebuilds clan-tag pairs from the ClanTags custom value
+  void RebuildClanTags ();
+
   // hash the language string, only the letters
   uint32_t HashLangString (ystl::StringRef str);
 
@@ -332,6 +338,11 @@ public:
   // get's the keyword index for fast lookup
   ystl::HashMap<uint32_t, ystl::SmallArray<size_t>> &GetKeywordIndex () {
     return keyword_index_;
+  }
+
+  // strippable clan tags (open/close pairs); empty when custom.cfg has none
+  const ystl::Array<ClanTag> &GetClanTags () const {
+    return clan_tags_;
   }
 
   // get's the weapon info data

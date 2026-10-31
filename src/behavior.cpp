@@ -2188,7 +2188,18 @@ void Bot::StartDoubleJump (edict_t *ent) {
   double_jump_entity_ = ent;
 
   StartTask (TaskId::DoubleJump, TaskPri::kDoubleJump, kInvalidNodeIndex, game.Time (), true);
-  SendToChat (ystl::strings.format ("Ok %s, i will help you!", ent->v.netname.str ()), true);
+
+  // acknowledge the requester from the chat bank, %s is the sayer, so point it at them
+  if (conf.HasChatBank (Chat::Assist)) {
+    const int previous_sayer = say_text_buffer_.entity_index;
+
+    say_text_buffer_.entity_index = game.IndexOfPlayer (ent);
+    PushChatMessage (Chat::Assist, true);
+    say_text_buffer_.entity_index = previous_sayer;
+  }
+  else {
+    SendToChat (ystl::strings.format ("Ok %s, i will help you!", ent->v.netname.str ()), true);
+  }
 }
 
 void Bot::SendBotToOrigin (const ystl::Vector &origin) {
