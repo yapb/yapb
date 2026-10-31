@@ -98,15 +98,15 @@ struct RadioHook {
     bot.chatter_times_[message] = value;
   }
   static void SetLastEnemy (Bot &bot, edict_t *ent) {
-    bot.last_enemy_ = ent;
-    bot.last_enemy_origin_ = ent->v.origin;
+    bot.enemy_.last = ent;
+    bot.enemy_.last_origin = ent->v.origin;
   }
   static void ClearLastEnemy (Bot &bot) {
-    bot.last_enemy_ = nullptr;
-    bot.last_enemy_origin_.clear ();
+    bot.enemy_.last = nullptr;
+    bot.enemy_.last_origin.clear ();
   }
   static edict_t *LastEnemy (Bot &bot) {
-    return bot.last_enemy_;
+    return bot.enemy_.last;
   }
   static void SetDoubleJumpEntity (Bot &bot, edict_t *ent) {
     bot.double_jump_entity_ = ent;
@@ -281,12 +281,12 @@ TEST_CASE ("unit/radio_orders") {
   CHECK (bot->GetTaskId () == TaskId::Normal);
 
   // ...unless an enemy is already on, then it's a plain negative
-  bot->enemy_ = human;
+  bot->enemy_.current = human;
   bot->radio_order_ = RadioChat::TakingFireNeedAssistance;
   bot->radio_entity_ = human;
   RadioHook::CheckQueue (*bot);
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::Negative);
-  bot->enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
 
   // spotted enemies trim fear the same way
   bot->emotion_.fear = 0.5f;
@@ -831,17 +831,17 @@ TEST_CASE ("unit/radio_odds") {
   RadioHook::DrainQueue (*bot);
 
   // ...taking fire with an enemy on stays silent on zeroed percent...
-  bot->enemy_ = f1;
+  bot->enemy_.current = f1;
   bot->radio_order_ = RadioChat::TakingFireNeedAssistance;
   bot->radio_entity_ = human;
   RadioHook::SetRadioPercent (*bot, 0);
   RadioHook::CheckQueue (*bot);
   CHECK (RadioHook::QueueLength (*bot) == 0);
-  bot->enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
 
   // ...a stranded backup call answers negative...
   human->v.origin = ystl::Vector (5000.0f, 0.0f, 0.0f);
-  bot->enemy_ = f1;
+  bot->enemy_.current = f1;
   RadioHook::SetMoveToC4 (*bot, true);
   RadioHook::SetRadioPercent (*bot, 100);
   bot->radio_order_ = RadioChat::NeedBackup;
@@ -849,7 +849,7 @@ TEST_CASE ("unit/radio_odds") {
   RadioHook::CheckQueue (*bot);
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::Negative);
   RadioHook::SetMoveToC4 (*bot, false);
-  bot->enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
   human->v.origin = ystl::Vector (200.0f, 0.0f, 0.0f);
 
   // ...matched go-orders stand down with a roger, paused ones move out...
@@ -1405,7 +1405,7 @@ TEST_CASE ("unit/radio_kill") {
   human->v.origin = ystl::Vector (5000.0f, 0.0f, 0.0f); // out of friend census
   clients.Update ();
   RadioHook::SetStates (*bot, Sense::SeeingEnemy);
-  bot->enemy_ = f1;
+  bot->enemy_.current = f1;
   f1->v.health = 100.0f;
   f1->v.deadflag = DEAD_NO;
   clients.Update ();
@@ -1433,7 +1433,7 @@ TEST_CASE ("unit/radio_kill") {
   RadioHook::Rng (*bot).clear_forced ();
   CHECK (RadioHook::RadioSelect (*bot) == RadioChat::SniperWarning);
   f1->v.weapons &= ~ystl::bit (Weapon::AWP);
-  bot->enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
   RadioHook::SetStates (*bot, Sense::Invalid);
 
   game_state.SetBombPlanted (true);

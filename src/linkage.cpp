@@ -832,9 +832,8 @@ YSTL_EXPORT int GetNewDLLFunctions (newgamefuncs_t *table, int *interface_versio
   if (!bot::game.Is (bot::GameFlags::Legacy)) {
     table->pfnOnFreeEntPrivateData = [] (edict_t *ent) YSTL_FORCE_STACK_ALIGN {
       for (auto &bot : bot::bots) {
-        if (bot.enemy_ == ent) {
-          bot.enemy_ = nullptr;
-          bot.last_enemy_ = nullptr;
+        if (bot.enemy_.current == ent) {
+          bot.enemy_.Forget ();
         }
         else if (bot.Ent () == ent) {
           bot.MarkStale ();

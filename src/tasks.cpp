@@ -32,8 +32,8 @@ void Bot::FilterTasks () {
   // decrease fear if players near
   int friendly_num = 0;
 
-  if (!last_enemy_origin_.empty ()) {
-    friendly_num = NumFriendsNear (pev->origin, 500.0f) - NumEnemiesNear (last_enemy_origin_, 500.0f);
+  if (!enemy_.last_origin.empty ()) {
+    friendly_num = NumFriendsNear (pev->origin, 500.0f) - NumEnemiesNear (enemy_.last_origin, 500.0f);
   }
 
   if (friendly_num > 0) {
@@ -74,7 +74,7 @@ void Bot::FilterTasks () {
   float &blinded_desire = blind.desire;
 
   // calculate desires to seek cover or hunt
-  if (game.IsPlayerEntity (last_enemy_) && !last_enemy_origin_.empty () && !has_c4_) {
+  if (game.IsPlayerEntity (enemy_.last) && !enemy_.last_origin.empty () && !has_c4_) {
     const float retreat_level = (pev->max_health - health_value_) * temp_fear; // retreat level depends on bot health
 
     if (is_creature_ || (num_friends_left_ > 0 && num_enemies_left_ > num_friends_left_ / 2)) {
@@ -118,12 +118,12 @@ void Bot::FilterTasks () {
     }
 
     // if half of the round is over, allow hunting (creatures hunt all the time, as soon as they know where to run)
-    if (GetTaskId () != TaskId::EscapeFromBomb && game.IsNullEntity (enemy_) && !is_vip_ &&
+    if (GetTaskId () != TaskId::EscapeFromBomb && game.IsNullEntity (enemy_.current) && !is_vip_ &&
         (is_creature_ || game_state.GetRoundMidTime () < game.Time ()) && !has_hostage_ && !is_using_grenade_ &&
-        current_node_index_ != graph.GetNearest (last_enemy_origin_) && (is_creature_ || personality_ != Personality::Careful) &&
+        current_node_index_ != graph.GetNearest (enemy_.last_origin) && (is_creature_ || personality_ != Personality::Careful) &&
         !cv_ignore_enemies) {
 
-      float desire_level = 4096.0f - ((1.0f - temp_agression) * last_enemy_origin_.distance (pev->origin));
+      float desire_level = 4096.0f - ((1.0f - temp_agression) * enemy_.last_origin.distance (pev->origin));
 
       desire_level = (100.0f * desire_level) / 4096.0f;
 
@@ -389,7 +389,7 @@ void Bot::TaskNormal () {
   }
 
   // bots rushing with knife, when have no enemy (thanks for idea to nicebot project)
-  if (cv_random_knife_attacks && UsesKnife () && !game.IsAliveEntity (last_enemy_) && game.IsNullEntity (enemy_) &&
+  if (cv_random_knife_attacks && UsesKnife () && !game.IsAliveEntity (enemy_.last) && game.IsNullEntity (enemy_.current) &&
       knife_attack_timer_.elapsed () && !has_hostage_ && !HasShield () && NumFriendsNear (pev->origin, 96.0f) == 0) {
 
     if (rg.chance (40)) {
@@ -488,7 +488,7 @@ void Bot::TaskNormal () {
           time_camping_ = game.Time () + rg (cv_camping_time_min.As<float> (), cv_camping_time_max.As<float> ());
           StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, time_camping_, true);
 
-          look_at_safe_ = path_origin_ + path_->start.forward () * 500.0f;
+          look_.safe = path_origin_ + path_->start.forward () * 500.0f;
           aim_flags_ |= AimFlags::Camp;
           camp_direction_ = 0;
 
@@ -672,19 +672,19 @@ void Bot::TaskHunt () {
   aim_flags_ |= AimFlags::Nav;
 
   // if we've got new enemy
-  if (!game.IsNullEntity (enemy_) || game.IsNullEntity (last_enemy_)) {
+  if (!game.IsNullEntity (enemy_.current) || game.IsNullEntity (enemy_.last)) {
 
     // forget about it
     ClearTask (TaskId::Hunt);
     prev_goal_index_ = kInvalidNodeIndex;
   }
-  else if (game.GetPlayerTeam (last_enemy_) == team_) {
+  else if (game.GetPlayerTeam (enemy_.last) == team_) {
 
     // don't hunt down our teammate
     ClearTask (TaskId::Hunt);
 
     prev_goal_index_ = kInvalidNodeIndex;
-    last_enemy_ = nullptr;
+    enemy_.last = nullptr;
   }
   else if (UpdateNavigation ()) // reached last enemy pos?
   {
@@ -692,7 +692,7 @@ void Bot::TaskHunt () {
     CompleteTask ();
 
     prev_goal_index_ = kInvalidNodeIndex;
-    last_enemy_origin_.clear ();
+    enemy_.last_origin.clear ();
   }
 
   // do we need to calculate a new path?
@@ -707,7 +707,7 @@ void Bot::TaskHunt () {
 
     // find new one instead
     else {
-      dest_index = graph.GetNearest (last_enemy_origin_);
+      dest_index = graph.GetNearest (enemy_.last_origin);
     }
 
     // remember index
@@ -734,7 +734,7 @@ void Bot::TaskHunt () {
 void Bot::TaskSeekCover () {
   aim_flags_ |= AimFlags::Nav;
 
-  if (!game.IsAliveEntity (last_enemy_)) {
+  if (!game.IsAliveEntity (enemy_.last)) {
     cover_search_timer_.start (rg (3.0f, 6.0f));
 
     CompleteTask ();
@@ -753,10 +753,10 @@ void Bot::TaskSeekCover () {
     StartTask (TaskId::Hide, TaskPri::kHide, kInvalidNodeIndex, game.Time () + rg (3.0f, 12.0f), false);
 
     // get a valid look direction
-    const ystl::Vector dest = GetCampDirection (last_enemy_origin_);
+    const ystl::Vector dest = GetCampDirection (enemy_.last_origin);
 
     aim_flags_ |= AimFlags::Camp;
-    look_at_safe_ = dest;
+    look_.safe = dest;
     camp_direction_ = 0;
 
     // chosen node is a camp node?
@@ -780,7 +780,7 @@ void Bot::TaskSeekCover () {
 
       // enter look direction from previously calculated positions
       if (!dest.empty ()) {
-        look_at_safe_ = dest;
+        look_.safe = dest;
       }
     }
 
@@ -831,7 +831,7 @@ void Bot::TaskAttack () {
   // always ignore collision checks in this task
   IgnoreCollision ();
 
-  if (!game.IsNullEntity (enemy_)) {
+  if (!game.IsNullEntity (enemy_.current)) {
     AttackMovement ();
 
     if (UsesKnife () && !enemy_origin_.empty ()) {
@@ -842,8 +842,8 @@ void Bot::TaskAttack () {
     CompleteTask ();
     FindNextBestNode ();
 
-    if (!last_enemy_origin_.empty ()) {
-      dest_origin_ = last_enemy_origin_;
+    if (!enemy_.last_origin.empty ()) {
+      dest_origin_ = enemy_.last_origin;
     }
   }
   nav_timer_.start ();
@@ -867,7 +867,7 @@ void Bot::TaskPause () {
     if (move_speed_ < -pev->maxspeed) {
       move_speed_ = -pev->maxspeed;
     }
-    look_at_safe_ = GetEyesPos () + pev->v_angle.forward () * 500.0f;
+    look_.safe = GetEyesPos () + pev->v_angle.forward () * 500.0f;
 
     aim_flags_ |= AimFlags::Override;
     wants_to_fire_ = true;
@@ -888,15 +888,15 @@ void Bot::TaskBlind () {
   nav_timer_.start ();
 
   // if bot remembers last enemy position
-  if (rg.chance (Skill ()) && !last_enemy_origin_.empty () && game.IsPlayerEntity (last_enemy_) && !UsesSniper ()) {
+  if (rg.chance (Skill ()) && !enemy_.last_origin.empty () && game.IsPlayerEntity (enemy_.last) && !UsesSniper ()) {
 
-    auto error = kSprayDistance * last_enemy_origin_.distance (pev->origin) / 2048.0f;
-    auto origin = last_enemy_origin_;
+    auto error = kSprayDistance * enemy_.last_origin.distance (pev->origin) / 2048.0f;
+    auto origin = enemy_.last_origin;
 
     origin.x = origin.x + rg (-error, error);
     origin.y = origin.y + rg (-error, error);
 
-    look_at_ = origin; // face last enemy
+    look_.main = origin; // face last enemy
     wants_to_fire_ = true; // and shoot it
   }
 
@@ -970,17 +970,17 @@ void Bot::TaskCamp () {
 
   // random camp dir, or prediction
   auto use_random_camp_dir_or_predict_enemy = [&] () {
-    if (!last_enemy_origin_.empty () && game.IsAliveEntity (last_enemy_)) {
+    if (!enemy_.last_origin.empty () && game.IsAliveEntity (enemy_.last)) {
       auto path_length = last_predict_length_;
       auto predict_node = last_predict_index_;
 
       if (IsNodeValidForPredict (predict_node) && path_length > 1 && vistab.Visible (predict_node, current_node_index_)) {
 
-        look_at_safe_ = graph[predict_node].origin + pev->view_ofs;
+        look_.safe = graph[predict_node].origin + pev->view_ofs;
       }
     }
     else {
-      look_at_safe_ = graph[GetRandomCampDir ()].origin + pev->view_ofs;
+      look_.safe = graph[GetRandomCampDir ()].origin + pev->view_ofs;
     }
   };
 
@@ -1013,7 +1013,7 @@ void Bot::TaskCamp () {
         use_random_camp_dir_or_predict_enemy ();
       }
       else {
-        look_at_safe_ = to;
+        look_.safe = to;
       }
     }
     else {
@@ -1070,7 +1070,7 @@ void Bot::TaskHide () {
   }
 
   // if we don't have an enemy we're also free to leave
-  else if (last_enemy_origin_.empty ()) {
+  else if (enemy_.last_origin.empty ()) {
     CompleteTask ();
 
     camp_buttons_ = 0;
@@ -1152,7 +1152,7 @@ void Bot::TaskPlantBomb () {
       SelectWeaponById (Weapon::C4);
     }
 
-    if (game.IsAliveEntity (enemy_) || !zones_.bomb) {
+    if (game.IsAliveEntity (enemy_.current) || !zones_.bomb) {
       if (!has_progress_bar_) {
         CompleteTask ();
       }
@@ -1441,8 +1441,8 @@ void Bot::TaskFollowUser () {
 
     if (!game.IsNullEntity (tr.hit) && game.IsPlayerEntity (tr.hit) && game.GetPlayerTeam (tr.hit) != team_) {
       target_entity_ = nullptr;
-      last_enemy_ = tr.hit;
-      last_enemy_origin_ = tr.hit->v.origin;
+      enemy_.last = tr.hit;
+      enemy_.last_origin = tr.hit->v.origin;
 
       CompleteTask ();
       return;
@@ -1531,8 +1531,8 @@ void Bot::TaskThrowExplosive () {
       move_to_goal_ = false;
     }
   }
-  else if (!has_flag (states_, Sense::SuspectEnemy) && !game.IsNullEntity (enemy_)) {
-    dest = enemy_->v.origin + enemy_->v.velocity.get2d ();
+  else if (!has_flag (states_, Sense::SuspectEnemy) && !game.IsNullEntity (enemy_.current)) {
+    dest = enemy_.current->v.origin + enemy_.current->v.velocity.get2d ();
   }
   is_using_grenade_ = true;
   check_terrain_ = false;
@@ -1597,8 +1597,8 @@ void Bot::TaskThrowFlashbang () {
       move_to_goal_ = false;
     }
   }
-  else if (!has_flag (states_, Sense::SuspectEnemy) && !game.IsNullEntity (enemy_)) {
-    dest = enemy_->v.origin + enemy_->v.velocity.get2d ();
+  else if (!has_flag (states_, Sense::SuspectEnemy) && !game.IsNullEntity (enemy_.current)) {
+    dest = enemy_.current->v.origin + enemy_.current->v.velocity.get2d ();
   }
 
   is_using_grenade_ = true;
@@ -1799,7 +1799,7 @@ void Bot::TaskEscapeFromBomb () {
     pev->button |= IN_ATTACK2;
   }
 
-  if (!UsesKnife () && game.IsNullEntity (enemy_) && !game.IsAliveEntity (last_enemy_)) {
+  if (!UsesKnife () && game.IsNullEntity (enemy_.current) && !game.IsAliveEntity (enemy_.last)) {
     SelectWeaponById (Weapon::Knife);
   }
 
@@ -1856,7 +1856,7 @@ void Bot::TaskEscapeFromBomb () {
 
 void Bot::TaskShootBreakable () {
   // yield only to a visible enemy, not a suspect thru-wall one
-  const bool has_visible_enemy = !game.IsNullEntity (enemy_) && has_flag (states_, Sense::SeeingEnemy);
+  const bool has_visible_enemy = !game.IsNullEntity (enemy_.current) && has_flag (states_, Sense::SeeingEnemy);
 
   // breakable destroyed or gave up on it?
   if (has_visible_enemy || !game.IsBreakableEntity (breakable_entity_) || IsIgnoredBreakable (breakable_entity_)) {
@@ -1903,10 +1903,10 @@ void Bot::TaskShootBreakable () {
   move_to_goal_ = false;
 
   nav_timer_.start ();
-  look_at_safe_ = breakable_origin_;
+  look_.safe = breakable_origin_;
 
   // is bot facing the breakable?
-  if (util.ViewDot (Ent (), look_at_safe_) >= 0.90f) {
+  if (util.ViewDot (Ent (), look_.safe) >= 0.90f) {
     move_speed_ = 0.0f;
     strafe_speed_ = 0.0f;
 
@@ -1921,7 +1921,7 @@ void Bot::TaskShootBreakable () {
     // out of ammo, give up on this breakable
     if (!HasAnyAmmoInClip ()) {
       if (UsesKnife ()) {
-        const float dist_to_obstacle = pev->origin.distance_sq (look_at_safe_);
+        const float dist_to_obstacle = pev->origin.distance_sq (look_.safe);
 
         if (dist_to_obstacle > ystl::sqrf (32.0f)) {
           breakable_shoot_timer_.invalidate ();

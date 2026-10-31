@@ -32,6 +32,44 @@ enum class Visibility : int8_t {
 };
 YSTL_ENABLE_ENUM_FLAGS (Visibility);
 
+// current and remembered enemy, with the compound resets in one place
+struct EnemyState {
+  edict_t *current {}; // currently engaged enemy
+  edict_t *last {}; // last enemy, kept after the current one is lost
+  ystl::Vector last_origin {}; // last known position of the last enemy
+  edict_t *aim_lock {}; // enemy the head/body aim lock was rolled for
+
+  bool Has () const {
+    return current != nullptr;
+  }
+
+  // drop the engaged target, keep the memory of the last enemy
+  void Clear () {
+    current = nullptr;
+    aim_lock = nullptr;
+  }
+
+  // drop everything: new round, teleport or a rebuilt graph
+  void Forget () {
+    current = nullptr;
+    last = nullptr;
+    last_origin.clear ();
+    aim_lock = nullptr;
+  }
+
+  // drop the remembered enemy only
+  void ForgetLast () {
+    last = nullptr;
+    last_origin.clear ();
+  }
+
+  // remember where an enemy was last seen
+  void Remember (edict_t *ent, const ystl::Vector &origin) {
+    last = ent;
+    last_origin = origin;
+  }
+};
+
 // throttled, cached result of a visibility probe against a world point
 struct ProbeCache {
   ystl::CountdownTimer timer {}; // throttles the check
@@ -106,14 +144,11 @@ public:
 
   float kpd_ratio_ {}; // kill per death ratio
 
-  edict_t *enemy_ {}; // pointer to enemy entity
-  edict_t *last_enemy_ {}; // pointer to last enemy entity
+  EnemyState enemy_ {};
   edict_t *last_victim_ {}; // pointer to killed entity
-  edict_t *enemy_body_part_set_ {}; // pointer to last enemy body part was set to head
   ystl::CountdownTimer head_roll_timer_ {}; // gates re-rolling the head/body aim decision
   float recoil_compensation_ {}; // low-passed punch compensation; smooths per-shot aim jitter
 
-  ystl::Vector last_enemy_origin_ {}; // vector to last enemy origin
   ystl::Vector last_victim_origin_ {}; // last victim origin to watch it
 };
 

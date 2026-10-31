@@ -1493,8 +1493,8 @@ void Bot::CheckFall () {
       if (current_node_index_ != kInvalidNodeIndex) {
         fall_down_point_[1] = path_origin_;
       }
-      else if (!game.IsNullEntity (enemy_)) {
-        fall_down_point_[1] = enemy_->v.origin;
+      else if (!game.IsNullEntity (enemy_.current)) {
+        fall_down_point_[1] = enemy_.current->v.origin;
       }
       else {
         fall_down_point_[1].clear ();
@@ -1986,8 +1986,8 @@ bool Bot::UpdateNavigation () {
             states_ |= Sense::SeeingEnemy | Sense::SuspectEnemy;
             aim_flags_ |= AimFlags::Enemy;
 
-            enemy_ = blocker;
-            last_enemy_origin_ = blocker->v.origin;
+            enemy_.current = blocker;
+            enemy_.last_origin = blocker->v.origin;
 
             try_open_door_ = 0;
           }
@@ -3316,7 +3316,7 @@ int Bot::FindDefendNode (const ystl::Vector &origin) {
 int Bot::FindCoverNode (float max_distance) {
   // this function tries to find a good cover node if bot wants to hide
 
-  const float enemy_max_distance = last_enemy_origin_.distance (pev->origin);
+  const float enemy_max_distance = enemy_.last_origin.distance (pev->origin);
 
   // do not move to a position near to the enemy
   if (max_distance > enemy_max_distance) {
@@ -3328,7 +3328,7 @@ int Bot::FindCoverNode (float max_distance) {
   }
 
   const int src_index = current_node_index_;
-  const int enemy_index = graph.GetNearest (last_enemy_origin_);
+  const int enemy_index = graph.GetNearest (enemy_.last_origin);
 
   struct NodeDistance {
     int index {};
@@ -3440,7 +3440,7 @@ int Bot::FindCoverNode (float max_distance) {
   // take the first one which isn't spotted by the enemy
   for (const auto &node : nodes) {
     if (node.index != kInvalidNodeIndex) {
-      trace.Line (last_enemy_origin_ + ystl::Vector (0.0f, 0.0f, 36.0f), graph[node.index].origin, TraceIgnore::Everything, Ent (), &tr);
+      trace.Line (enemy_.last_origin + ystl::Vector (0.0f, 0.0f, 36.0f), graph[node.index].origin, TraceIgnore::Everything, Ent (), &tr);
 
       if (tr.fraction < 1.0f) {
         return node.index;
@@ -4238,9 +4238,9 @@ int Bot::GetRandomCampDir () {
   }
 
   // fallback: use last enemy origin for prediction
-  if (!last_enemy_origin_.empty ()) {
+  if (!enemy_.last_origin.empty ()) {
     int path_length = 0;
-    const int predict_node = FindAimingNode (last_enemy_origin_, path_length);
+    const int predict_node = FindAimingNode (enemy_.last_origin, path_length);
 
     if (IsNodeValidForPredict (predict_node) && path_length > 1 && vistab.Visible (predict_node, current_node_index_)) {
       return predict_node;

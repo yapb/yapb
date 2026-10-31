@@ -109,6 +109,14 @@ public:
   }
 };
 
+// where the bot looks: engaged target, camp point, predicted point and nav heading
+struct LookTargets {
+  ystl::Vector main {}; // vector bot should look at
+  ystl::Vector safe {}; // aiming vector when camping
+  ystl::Vector predict {}; // aiming vector when predicting
+  ystl::Vector nav {}; // last valid nav lookat target
+};
+
 // decaying aim focus error from a target sweeping across the view
 struct AimFocusState {
   float deg {}; // focus error in degrees, rises when the target sweeps across the view and fades when it rests
@@ -142,15 +150,13 @@ protected:
   ystl::Vector ideal_angles_ {}; // angle wanted
   ystl::Vector aim_last_error_ {}; // last calculated aim error
   AimFocusState aim_focus_ {};
-  ystl::Vector look_at_ {}; // vector bot should look at
-  ystl::Vector look_at_safe_ {}; // aiming vector when camping
-  ystl::Vector look_at_predict_ {}; // aiming vector when predicting
+  LookTargets look_ {};
   ystl::Vector entity_ {}; // origin of entities like buttons etc
 
 public:
   // origin the bot currently aims at
   ystl::Vector &LookAtVector () {
-    return look_at_;
+    return look_.main;
   }
 
   float view_distance_ {}; // current view distance
@@ -163,7 +169,6 @@ public:
   edict_t *tracking_edict_ {}; // pointer to last tracked player when camping/hiding
 
   // nav target persistence: reuse last valid target when unstable conditions toggle frame-to-frame
-  ystl::Vector nav_look_at_ {}; // last valid nav lookat target
   int nav_look_at_node_ { kInvalidNodeIndex }; // current node when target was set (invalidates on node change)
   ystl::CountdownTimer vertical_move_hold_ {}; // holds vertical-move state to avoid frame-to-frame flicker on stairs/slopes
 

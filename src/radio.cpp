@@ -151,7 +151,7 @@ void Bot::CheckRadioQueue () {
   case RadioChat::GoingToPlantBomb:
     // check if line of sight to object is not blocked (i.e. visible)
     if (SeesEntity (radio_entity_->v.origin) || radio_order_ == RadioChat::StickTogetherTeam) {
-      if (game.IsNullEntity (target_entity_) && game.IsNullEntity (enemy_) && rg.chance (radio_percent_)) {
+      if (game.IsNullEntity (target_entity_) && game.IsNullEntity (enemy_.current) && rg.chance (radio_percent_)) {
 
         int num_followers = 0;
 
@@ -223,7 +223,7 @@ void Bot::CheckRadioQueue () {
 
   case RadioChat::TakingFireNeedAssistance:
     if (game.IsNullEntity (target_entity_)) {
-      if (game.IsNullEntity (enemy_) && see_enemy_timer_.greater_than (4.0f)) {
+      if (game.IsNullEntity (enemy_.current) && see_enemy_timer_.greater_than (4.0f)) {
         // decrease fear levels to lower probability of bot seeking cover again
         emotion_.fear -= 0.2f;
 
@@ -259,7 +259,7 @@ void Bot::CheckRadioQueue () {
   case RadioChat::TooManyEnemies:
   case RadioChat::ScaredEmotion:
   case RadioChat::PinnedDown:
-    if (((game.IsNullEntity (enemy_) && SeesEntity (radio_entity_->v.origin)) || distance_sq < ystl::sqrf (2048.0f) || !move_to_c4_) &&
+    if (((game.IsNullEntity (enemy_.current) && SeesEntity (radio_entity_->v.origin)) || distance_sq < ystl::sqrf (2048.0f) || !move_to_c4_) &&
         rg.chance (radio_percent_) && see_enemy_timer_.greater_than (4.0f)) {
 
       emotion_.fear -= 0.1f;
@@ -297,7 +297,7 @@ void Bot::CheckRadioQueue () {
         emotion_.fear = 0.0f;
       }
     }
-    else if ((game.IsNullEntity (enemy_) && SeesEntity (radio_entity_->v.origin)) || distance_sq < ystl::sqrf (2048.0f)) {
+    else if ((game.IsNullEntity (enemy_.current) && SeesEntity (radio_entity_->v.origin)) || distance_sq < ystl::sqrf (2048.0f)) {
       const auto tid = GetTaskId ();
 
       if (tid == TaskId::Pause || tid == TaskId::Camp) {
@@ -328,7 +328,7 @@ void Bot::CheckRadioQueue () {
     break;
 
   case RadioChat::ShesGonnaBlow:
-    if (game.IsNullEntity (enemy_) && distance_sq < ystl::sqrf (2048.0f) && game_state.IsBombPlanted () && team_ == Team::Terrorist) {
+    if (game.IsNullEntity (enemy_.current) && distance_sq < ystl::sqrf (2048.0f) && game_state.IsBombPlanted () && team_ == Team::Terrorist) {
       PushRadioChat (RadioChat::RogerThat);
 
       if (GetTaskId () == TaskId::Camp) {
@@ -356,7 +356,7 @@ void Bot::CheckRadioQueue () {
     break;
 
   case RadioChat::StormTheFront:
-    if (((game.IsNullEntity (enemy_) && SeesEntity (radio_entity_->v.origin)) || distance_sq < ystl::sqrf (1024.0f)) &&
+    if (((game.IsNullEntity (enemy_.current) && SeesEntity (radio_entity_->v.origin)) || distance_sq < ystl::sqrf (1024.0f)) &&
         rg.chance (radio_percent_)) {
       PushRadioChat (RadioChat::RogerThat);
 
@@ -386,7 +386,7 @@ void Bot::CheckRadioQueue () {
     break;
 
   case RadioChat::TeamFallback:
-    if ((game.IsNullEntity (enemy_) && SeesEntity (radio_entity_->v.origin)) || distance_sq < ystl::sqrf (1024.0f)) {
+    if ((game.IsNullEntity (enemy_.current) && SeesEntity (radio_entity_->v.origin)) || distance_sq < ystl::sqrf (1024.0f)) {
       emotion_.fear += 0.5f;
 
       if (emotion_.fear > 1.0f) {
@@ -411,7 +411,7 @@ void Bot::CheckRadioQueue () {
         see_enemy_timer_.start ();
 
         // if bot has no enemy
-        if (last_enemy_origin_.empty ()) {
+        if (enemy_.last_origin.empty ()) {
           float nearest_distance_sq = kInfiniteDistance;
 
           // take nearest enemy to ordering player
@@ -426,8 +426,8 @@ void Bot::CheckRadioQueue () {
             if (current_distance_sq < nearest_distance_sq) {
               nearest_distance_sq = current_distance_sq;
 
-              last_enemy_ = enemy;
-              last_enemy_origin_ = enemy->v.origin;
+              enemy_.last = enemy;
+              enemy_.last_origin = enemy->v.origin;
             }
           }
         }
@@ -577,7 +577,7 @@ void Bot::CheckRadioQueue () {
     break;
 
   case RadioChat::GetInPositionAndWaitForGo:
-    if (!is_creature_ && ((game.IsNullEntity (enemy_) && SeesEntity (radio_entity_->v.origin)) || distance_sq < ystl::sqrf (1024.0f))) {
+    if (!is_creature_ && ((game.IsNullEntity (enemy_.current) && SeesEntity (radio_entity_->v.origin)) || distance_sq < ystl::sqrf (1024.0f))) {
       PushRadioChat (RadioChat::RogerThat);
 
       if (GetTaskId () == TaskId::Camp) {
@@ -595,7 +595,7 @@ void Bot::CheckRadioQueue () {
         see_enemy_timer_.start ();
 
         // if bot has no enemy
-        if (last_enemy_origin_.empty ()) {
+        if (enemy_.last_origin.empty ()) {
           float nearest_distance_sq = kInfiniteDistance;
 
           // take nearest enemy to ordering player
@@ -610,8 +610,8 @@ void Bot::CheckRadioQueue () {
             if (enemy_distance_sq < nearest_distance_sq) {
               nearest_distance_sq = enemy_distance_sq;
 
-              last_enemy_ = enemy;
-              last_enemy_origin_ = enemy->v.origin;
+              enemy_.last = enemy;
+              enemy_.last_origin = enemy->v.origin;
             }
           }
         }
@@ -796,7 +796,7 @@ void Bot::ExecuteChatterFrameEvents () {
   }
 
   // some stuff required by by chatter engine
-  if (has_flag (states_, Sense::SeeingEnemy) && !game.IsNullEntity (enemy_)) {
+  if (has_flag (states_, Sense::SeeingEnemy) && !game.IsNullEntity (enemy_.current)) {
     int has_friend_nearby = NumFriendsNear (pev->origin, 512.0f);
 
     if (!has_friend_nearby) {
@@ -804,16 +804,16 @@ void Bot::ExecuteChatterFrameEvents () {
       // and only one teammate holds the floor at a time
       RadioChat callout = RadioChat::Invalid;
 
-      if (has_flag (enemy_->v.weapons, ystl::bit (Weapon::C4))) {
+      if (has_flag (enemy_.current->v.weapons, ystl::bit (Weapon::C4))) {
         callout = RadioChat::SpotTheBomber;
       }
-      else if (team_ == Team::Terrorist && game.IsPlayerVip (enemy_)) {
+      else if (team_ == Team::Terrorist && game.IsPlayerVip (enemy_.current)) {
         callout = RadioChat::VIPSpotted;
       }
-      else if (game.GetPlayerTeam (enemy_) != team_ && IsGroupOfEnemies (enemy_->v.origin)) {
+      else if (game.GetPlayerTeam (enemy_.current) != team_ && IsGroupOfEnemies (enemy_.current->v.origin)) {
         callout = RadioChat::ScaredEmotion;
       }
-      else if (has_flag (enemy_->v.weapons, kSniperWeaponMask)) {
+      else if (has_flag (enemy_.current->v.weapons, kSniperWeaponMask)) {
         callout = RadioChat::SniperWarning;
       }
 

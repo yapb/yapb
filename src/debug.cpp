@@ -240,12 +240,12 @@ void DebugPanel::Update (Bot *bot) {
   Reset ();
 
   // EYES: enemy tracking and aim state
-  if (!game.IsNullEntity (bot->enemy_)) {
-    Set (DebugChannel::Eyes, 0, "Enemy: %s", bot->enemy_->v.netname.chars ());
-    Set (DebugChannel::Eyes, 1, "Dist: %.0f", bot->enemy_->v.origin.distance (bot->pev->origin));
+  if (!game.IsNullEntity (bot->enemy_.current)) {
+    Set (DebugChannel::Eyes, 0, "Enemy: %s", bot->enemy_.current->v.netname.chars ());
+    Set (DebugChannel::Eyes, 1, "Dist: %.0f", bot->enemy_.current->v.origin.distance (bot->pev->origin));
   }
-  else if (!game.IsNullEntity (bot->last_enemy_)) {
-    Set (DebugChannel::Eyes, 0, "Last enemy: %s", bot->last_enemy_->v.netname.chars ());
+  else if (!game.IsNullEntity (bot->enemy_.last)) {
+    Set (DebugChannel::Eyes, 0, "Last enemy: %s", bot->enemy_.last->v.netname.chars ());
   }
   else {
     Set (DebugChannel::Eyes, 0, "No enemy");

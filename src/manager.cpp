@@ -1742,15 +1742,15 @@ void Manager::HandleDeath (edict_t *killer, edict_t *victim) {
   // notice nearby to victim teammates, that attacker is near
   for (auto &notify : bots) {
     if (notify.difficulty_ >= Difficulty::Hard && killer_team != victim_team && notify.see_enemy_timer_.greater_than (2.0f) &&
-        notify.is_alive_ && notify.team_ == victim_team && game.IsNullEntity (notify.enemy_) && game.IsNullEntity (notify.last_enemy_) &&
+        notify.is_alive_ && notify.team_ == victim_team && game.IsNullEntity (notify.enemy_.current) && game.IsNullEntity (notify.enemy_.last) &&
         util.IsVisible (killer->v.origin, notify.Ent ())) {
 
       // make bot look at last enemy position
       notify.actual_reaction_time_ = 0.0f;
       notify.see_enemy_timer_.start ();
-      notify.enemy_ = killer;
-      notify.last_enemy_ = killer;
-      notify.last_enemy_origin_ = killer->v.origin;
+      notify.enemy_.current = killer;
+      notify.enemy_.last = killer;
+      notify.enemy_.last_origin = killer->v.origin;
     }
 
     if (notify.Ent () == killer) {
@@ -1787,12 +1787,9 @@ void Manager::HandleDeath (edict_t *killer, edict_t *victim) {
     for (auto &bot : bots) {
       auto ve = victim_bot->Ent ();
 
-      if (bot.enemy_ == ve || bot.last_enemy_ == ve) {
-        bot.enemy_ = nullptr;
+      if (bot.enemy_.current == ve || bot.enemy_.last == ve) {
+        bot.enemy_.Forget ();
         bot.enemy_origin_.clear ();
-
-        bot.last_enemy_ = nullptr;
-        bot.last_enemy_origin_.clear ();
       }
     }
     victim_bot->hostages_.clear ();
@@ -1903,13 +1900,11 @@ void Bot::NewRound () {
   ResetCollision ();
   ResetDoubleJump ();
 
-  enemy_ = nullptr;
+  enemy_.Forget ();
   last_victim_ = nullptr;
-  last_enemy_ = nullptr;
-  last_enemy_origin_.clear ();
   last_victim_origin_.clear ();
   tracking_edict_ = nullptr;
-  nav_look_at_.clear ();
+  look_.nav.clear ();
   nav_look_at_node_ = kInvalidNodeIndex;
   vertical_move_hold_.invalidate ();
   danger_glance_node_ = kInvalidNodeIndex;
@@ -1917,12 +1912,11 @@ void Bot::NewRound () {
   danger_glance_gap_.invalidate ();
 
   // clear stale look targets from previous round, else during freezetime bot aims at outdated position
-  look_at_.clear ();
-  look_at_safe_.clear ();
-  look_at_predict_.clear ();
+  look_.main.clear ();
+  look_.safe.clear ();
+  look_.predict.clear ();
 
   entity_.clear ();
-  enemy_body_part_set_ = nullptr;
   next_tracking_timer_.invalidate ();
   last_predict_index_ = kInvalidNodeIndex;
   last_predict_length_ = kInfiniteDistanceLong;

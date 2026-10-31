@@ -148,7 +148,7 @@ bool Bot::CheckBodyParts (edict_t *target) {
   // this function checks visibility of a bot target
 
   // darkness blocks acquiring a new target, never drops a tracked one
-  const bool dark_hidden = target != enemy_ && IsEnemyInDarkAreaCached (target);
+  const bool dark_hidden = target != enemy_.current && IsEnemyInDarkAreaCached (target);
 
   if (IsEnemyHidden (target) || IsEnemyInvincible (target) || IsEnemyNoTarget (target) || dark_hidden) {
     enemy_parts_ = Visibility::None;
@@ -422,13 +422,13 @@ void Bot::TrackEnemies () {
   else {
     states_ &= ~Sense::SeeingEnemy;
 
-    enemy_ = nullptr;
-    enemy_body_part_set_ = nullptr;
+    enemy_.current = nullptr;
+    enemy_.aim_lock = nullptr;
   }
 
   // recover from knife, if has anything to fire at enemy
   if (has_flag (states_, Sense::SeeingEnemy) && UsesKnife () && !IsKnifeMode () && HasAnyAmmo () && IsOnFloor ()) {
-    auto enemy = enemy_;
+    auto enemy = enemy_.current;
 
     if (!game.IsNullEntity (enemy)) {
       const auto distance_sq = pev->origin.distance_sq (enemy->v.origin);
@@ -447,8 +447,8 @@ float Bot::EnemyMemorySpan () const {
 
   float closeness = 0.0f;
 
-  if (!last_enemy_origin_.empty ()) {
-    closeness = ystl::clamp (1.0f - last_enemy_origin_.distance (pev->origin) / 2048.0f, 0.0f, 1.0f);
+  if (!enemy_.last_origin.empty ()) {
+    closeness = ystl::clamp (1.0f - enemy_.last_origin.distance (pev->origin) / 2048.0f, 0.0f, 1.0f);
   }
   return ystl::clamp (3.0f + 3.0f * skill + 1.5f * aggression + 2.0f * closeness, 3.0f, 8.0f);
 }
@@ -484,7 +484,7 @@ int Bot::TeammatesEngaging (edict_t *enemy) const {
   int engaged = 0;
 
   for (auto &mate : bots) {
-    if (&mate != this && mate.is_alive_ && mate.team_ == team_ && mate.enemy_ == enemy) {
+    if (&mate != this && mate.is_alive_ && mate.team_ == team_ && mate.enemy_.current == enemy) {
       ++engaged;
     }
   }
@@ -522,24 +522,24 @@ bool Bot::LookupEnemies () {
   float nearest_distance_sq = ystl::sqrf (view_distance_);
 
   // clear suspected flag
-  if (!game.IsNullEntity (enemy_) && has_flag (states_, Sense::SeeingEnemy)) {
+  if (!game.IsNullEntity (enemy_.current) && has_flag (states_, Sense::SeeingEnemy)) {
     states_ &= ~Sense::SuspectEnemy;
   }
-  else if (game.IsNullEntity (enemy_) && see_enemy_timer_.less_than (EnemyMemorySpan ()) && game.IsAliveEntity (last_enemy_)) {
+  else if (game.IsNullEntity (enemy_.current) && see_enemy_timer_.less_than (EnemyMemorySpan ()) && game.IsAliveEntity (enemy_.last)) {
     states_ |= Sense::SuspectEnemy;
 
-    const bool deny_last_enemy = pev->velocity.length_sq2d () > 0.0f && last_enemy_origin_.distance_sq (pev->origin) < ystl::sqrf (256.0f) &&
+    const bool deny_last_enemy = pev->velocity.length_sq2d () > 0.0f && enemy_.last_origin.distance_sq (pev->origin) < ystl::sqrf (256.0f) &&
                                  shoot_time_ + 1.5f > game.Time ();
 
     if (!has_flag (aim_flags_, AimFlags::Enemy | AimFlags::PredictPath | AimFlags::Danger) && !deny_last_enemy &&
-        SeesEntity (last_enemy_origin_, true)) {
+        SeesEntity (enemy_.last_origin, true)) {
 
       aim_flags_ |= AimFlags::LastEnemy;
     }
   }
 
-  if (!game.IsNullEntity (enemy_)) {
-    player = enemy_;
+  if (!game.IsNullEntity (enemy_.current)) {
+    player = enemy_.current;
 
     // is player is alive
     if (!enemy_update_timer_.elapsed () && player->v.origin.distance_sq (pev->origin) < nearest_distance_sq && game.IsAliveEntity (player) &&
@@ -615,7 +615,7 @@ bool Bot::LookupEnemies () {
       // see if bot can see the player
       if (SeesEnemy (player)) {
         // a fresh target has to be noticed first, the current enemy already is
-        if (cv_notice_model && player != enemy_ && !IsEnemyNoticed (player)) {
+        if (cv_notice_model && player != enemy_.current && !IsEnemyNoticed (player)) {
           continue;
         }
 
@@ -640,20 +640,21 @@ bool Bot::LookupEnemies () {
       float focus_score = 0.0f;
 
       for (auto &mate : bots) {
-        if (&mate == this || !mate.is_alive_ || mate.team_ != team_ || game.IsNullEntity (mate.enemy_) || mate.enemy_ == new_enemy) {
+        if (&mate == this || !mate.is_alive_ || mate.team_ != team_ || game.IsNullEntity (mate.enemy_.current) ||
+            mate.enemy_.current == new_enemy) {
           continue;
         }
 
-        if (mate.pev->origin.distance_sq (pev->origin) >= ystl::sqrf (900.0f) || !SeesEnemy (mate.enemy_) ||
-            !ShouldSwitchFocus (new_enemy, mate.enemy_)) {
+        if (mate.pev->origin.distance_sq (pev->origin) >= ystl::sqrf (900.0f) || !SeesEnemy (mate.enemy_.current) ||
+            !ShouldSwitchFocus (new_enemy, mate.enemy_.current)) {
           continue;
         }
 
         // several mates may offer a target, take the most threatening one
-        const float score = EngagementScore (mate.enemy_);
+        const float score = EngagementScore (mate.enemy_.current);
 
         if (focus == nullptr || score > focus_score) {
-          focus = mate.enemy_;
+          focus = mate.enemy_.current;
           focus_score = score;
         }
       }
@@ -677,13 +678,13 @@ bool Bot::LookupEnemies () {
     states_ |= Sense::SeeingEnemy;
 
     // if enemy is still visible and in field of view, keep it keep track of when we last saw an enemy
-    if (new_enemy == enemy_) {
+    if (new_enemy == enemy_.current) {
       see_enemy_timer_.start ();
 
       // zero out reaction time
       actual_reaction_time_ = 0.0f;
-      last_enemy_ = new_enemy;
-      last_enemy_origin_ = new_enemy->v.origin;
+      enemy_.last = new_enemy;
+      enemy_.last_origin = new_enemy->v.origin;
 
       // keep the shared team contact fresh while the enemy stays in sight
       bots.ReportTeamContact (team_, new_enemy, new_enemy->v.origin, 1);
@@ -707,10 +708,10 @@ bool Bot::LookupEnemies () {
 
       // zero out reaction time
       actual_reaction_time_ = 0.0f;
-      enemy_ = new_enemy;
-      last_enemy_ = new_enemy;
-      enemy_body_part_set_ = nullptr;
-      last_enemy_origin_ = new_enemy->v.origin;
+      enemy_.current = new_enemy;
+      enemy_.last = new_enemy;
+      enemy_.aim_lock = nullptr;
+      enemy_.last_origin = new_enemy->v.origin;
       enemy_reachable_timer_.invalidate ();
 
       // broadcast the fresh contact to the rest of the team
@@ -739,11 +740,11 @@ bool Bot::LookupEnemies () {
           continue;
         }
 
-        if (other.see_enemy_timer_.greater_than (2.0f) && game.IsNullEntity (other.last_enemy_) && util.IsVisible (pev->origin, other.Ent ()) &&
+        if (other.see_enemy_timer_.greater_than (2.0f) && game.IsNullEntity (other.enemy_.last) && util.IsVisible (pev->origin, other.Ent ()) &&
             other.IsInViewCone (pev->origin)) {
 
-          other.last_enemy_ = new_enemy;
-          other.last_enemy_origin_ = new_enemy->v.origin;
+          other.enemy_.last = new_enemy;
+          other.enemy_.last_origin = new_enemy->v.origin;
           other.see_enemy_timer_.start ();
           other.states_ |= (Sense::SuspectEnemy | Sense::HearingEnemy);
           other.aim_flags_ |= AimFlags::LastEnemy;
@@ -752,13 +753,13 @@ bool Bot::LookupEnemies () {
       return true;
     }
   }
-  else if (!game.IsNullEntity (enemy_)) {
-    new_enemy = enemy_;
-    last_enemy_ = new_enemy;
+  else if (!game.IsNullEntity (enemy_.current)) {
+    new_enemy = enemy_.current;
+    enemy_.last = new_enemy;
 
     if (!game.IsAliveEntity (new_enemy)) {
-      enemy_ = nullptr;
-      enemy_body_part_set_ = nullptr;
+      enemy_.current = nullptr;
+      enemy_.aim_lock = nullptr;
 
       // shoot at dying players if no new enemy to give some more human-like illusion
       if (see_enemy_timer_.less_than (0.1f)) {
@@ -790,9 +791,9 @@ bool Bot::LookupEnemies () {
         states_ |= Sense::SuspectEnemy;
         aim_flags_ |= AimFlags::LastEnemy;
 
-        enemy_ = new_enemy;
-        last_enemy_ = new_enemy;
-        last_enemy_origin_ = new_enemy->v.origin;
+        enemy_.current = new_enemy;
+        enemy_.last = new_enemy;
+        enemy_.last_origin = new_enemy->v.origin;
 
         return true;
       };
@@ -814,8 +815,8 @@ bool Bot::LookupEnemies () {
   }
 
   // check if bots should reload
-  if ((aim_flags_ <= AimFlags::PredictPath && see_enemy_timer_.greater_than (3.0f) && game.IsNullEntity (last_enemy_) &&
-        game.IsNullEntity (enemy_) && GetTaskId () != TaskId::ShootBreakable && GetTaskId () != TaskId::PlantBomb &&
+  if ((aim_flags_ <= AimFlags::PredictPath && see_enemy_timer_.greater_than (3.0f) && game.IsNullEntity (enemy_.last) &&
+        game.IsNullEntity (enemy_.current) && GetTaskId () != TaskId::ShootBreakable && GetTaskId () != TaskId::PlantBomb &&
         GetTaskId () != TaskId::DefuseBomb) ||
       game_state.IsRoundOver ()) {
 
@@ -906,12 +907,12 @@ ystl::Vector Bot::GetEnemyBodyOffset () {
 
   // without visibility data reuse the last known enemy origin
   if (!enemy_parts_) {
-    if (enemy_origin_.empty () && !last_enemy_origin_.empty () && !game.IsNullEntity (last_enemy_) && has_flag (states_, Sense::SuspectEnemy)) {
-      return last_enemy_origin_ + GetBodyOffsetError (last_enemy_, last_enemy_origin_.distance (pev->origin));
+    if (enemy_origin_.empty () && !enemy_.last_origin.empty () && !game.IsNullEntity (enemy_.last) && has_flag (states_, Sense::SuspectEnemy)) {
+      return enemy_.last_origin + GetBodyOffsetError (enemy_.last, enemy_.last_origin.distance (pev->origin));
     }
-    return enemy_origin_.empty () ? last_enemy_origin_ : enemy_origin_;
+    return enemy_origin_.empty () ? enemy_.last_origin : enemy_origin_;
   }
-  const float distance = enemy_->v.origin.distance (pev->origin);
+  const float distance = enemy_.current->v.origin.distance (pev->origin);
 
   // work on a local copy so we don't corrupt visibility state for other code
   auto vis_parts = enemy_parts_;
@@ -926,13 +927,13 @@ ystl::Vector Bot::GetEnemyBodyOffset () {
     vis_parts &= ~Visibility::Head;
   }
 
-  ystl::Vector spot = enemy_->v.origin;
+  ystl::Vector spot = enemy_.current->v.origin;
 
   // velocity-based lead prediction for non-sniper non-knife at distance
   ystl::Vector compensation = nullptr;
 
   if (!UsesSniper () && !UsesKnife () && distance > kSprayDistance) {
-    compensation = (enemy_->v.velocity - pev->velocity) * frame_interval_ * 1.8f;
+    compensation = (enemy_.current->v.velocity - pev->velocity) * frame_interval_ * 1.8f;
     compensation.z = 0.0f;
   }
 
@@ -941,7 +942,7 @@ ystl::Vector Bot::GetEnemyBodyOffset () {
     return ystl::Vector { e->v.origin.x, e->v.origin.y, e->v.absmin.z + e->v.size.z * 0.81f };
   };
 
-  if (game.IsPlayerEntity (enemy_)) {
+  if (game.IsPlayerEntity (enemy_.current)) {
     // now take in account different parts of enemy body
     if (has_flag (vis_parts, Visibility::Head) && has_flag (vis_parts, Visibility::Body)) {
       auto headshot_pct = difficulty_data_->headshot_pct;
@@ -956,40 +957,40 @@ ystl::Vector Bot::GetEnemyBodyOffset () {
       }
 
       // re-roll head or body choice on a slow timer to keep aim steady
-      if (enemy_body_part_set_ != enemy_) {
+      if (enemy_.aim_lock != enemy_.current) {
         if (head_roll_timer_.elapsed ()) {
           head_roll_timer_.start (rg (0.5f, 1.0f));
-          enemy_body_part_set_ = rg.chance (headshot_pct) ? enemy_ : nullptr;
+          enemy_.aim_lock = rg.chance (headshot_pct) ? enemy_.current : nullptr;
         }
       }
       else if (recoil_high || should_pause) {
-        enemy_body_part_set_ = nullptr; // break head lock for the duration of the spray
+        enemy_.aim_lock = nullptr; // break head lock for the duration of the spray
       }
 
-      if (enemy_body_part_set_ == enemy_) {
-        spot = head_origin (enemy_);
+      if (enemy_.aim_lock == enemy_.current) {
+        spot = head_origin (enemy_.current);
 
         if (UsesSniper ()) {
           spot.z -= pev->view_ofs.z * 0.15f;
         }
       }
       else {
-        spot = enemy_->v.origin;
+        spot = enemy_.current->v.origin;
 
         // expert aims high on body (toward neck), use enemy's size rather than bot's own view offset
         if (difficulty_ == Difficulty::Expert) {
-          spot.z += enemy_->v.size.z * 0.1f;
+          spot.z += enemy_.current->v.size.z * 0.1f;
         }
       }
     }
     else if (has_flag (vis_parts, Visibility::Body)) {
-      spot = enemy_->v.origin;
+      spot = enemy_.current->v.origin;
     }
     else if (has_flag (vis_parts, Visibility::Other)) {
       spot = enemy_origin_;
     }
     else if (has_flag (vis_parts, Visibility::Head)) {
-      spot = head_origin (enemy_);
+      spot = head_origin (enemy_.current);
     }
   }
   spot += compensation;
@@ -1000,7 +1001,7 @@ ystl::Vector Bot::GetEnemyBodyOffset () {
   }
 
   // weapon/stance bias applies to the whole enemy, not just the head
-  if (game.IsPlayerEntity (enemy_)) {
+  if (game.IsPlayerEntity (enemy_.current)) {
     spot += GetAimBias (distance);
   }
 
@@ -1016,15 +1017,15 @@ ystl::Vector Bot::GetEnemyBodyOffset () {
     recoil_compensation_ = 0.0f;
   }
 
-  last_enemy_origin_ = spot;
+  enemy_.last_origin = spot;
 
   // add some error to unskilled bots
   if (difficulty_ < Difficulty::Normal) {
-    spot += GetBodyOffsetError (enemy_, distance);
+    spot += GetBodyOffsetError (enemy_.current, distance);
   }
 
   // every bot's eye lags behind a target that sweeps across its view
-  spot += GetAimFocusOffset (enemy_, distance);
+  spot += GetAimFocusOffset (enemy_.current, distance);
   return spot;
 }
 
@@ -1082,20 +1083,20 @@ bool Bot::IsFriendInLineOfFire (float distance) const {
 }
 
 void Bot::FocusEnemy () {
-  if (game.IsNullEntity (enemy_)) {
+  if (game.IsNullEntity (enemy_.current)) {
     return;
   }
 
   // aim for the head and/or body
-  look_at_ = GetEnemyBodyOffset ();
+  look_.main = GetEnemyBodyOffset ();
 
   if (!enemy_surprise_timer_.elapsed ()) {
     return;
   }
-  const float distance_sq = look_at_.distance_sq2d (GetEyesPos ()); // how far away is the enemy scum?
+  const float distance_sq = look_.main.distance_sq2d (GetEyesPos ()); // how far away is the enemy scum?
 
   const float dot = util.ViewDot (Ent (), enemy_origin_);
-  const float enemy_dot = util.ViewDot (enemy_, pev->origin);
+  const float enemy_dot = util.ViewDot (enemy_.current, pev->origin);
 
   if (distance_sq < ystl::sqrf (128.0f) && !UsesSniper ()) {
     if (UsesKnife ()) {
@@ -1146,13 +1147,13 @@ void Bot::FocusEnemy () {
 
 void Bot::AttackMovement () {
   // no enemy? no need to do strafing
-  if (game.IsNullEntity (enemy_)) {
+  if (game.IsNullEntity (enemy_.current)) {
     return;
   }
 
   // use enemy as dest origin if with knife
   if (UsesKnife () || is_creature_) {
-    dest_origin_ = enemy_->v.origin;
+    dest_origin_ = enemy_.current->v.origin;
   }
 
   if (last_used_nodes_timer_.elapsed_time () < -frame_interval_) {
@@ -1160,7 +1161,7 @@ void Bot::AttackMovement () {
   }
 
   // use actual distance to enemy, not to aim point (which has error/compensation offset)
-  const auto distance_sq = pev->origin.distance_sq (enemy_->v.origin);
+  const auto distance_sq = pev->origin.distance_sq (enemy_.current->v.origin);
 
   auto approach = 0;
 
@@ -1181,7 +1182,7 @@ void Bot::AttackMovement () {
       approach = 49;
     }
   }
-  const bool is_enemy_cone = IsInViewCone (enemy_->v.origin);
+  const bool is_enemy_cone = IsInViewCone (enemy_.current->v.origin);
 
   // only take cover when bomb is not planted and enemy can see the bot or the bot is vip
   if (!game.Is (GameFlags::CSDM) && !IsKnifeMode ()) {
@@ -1210,8 +1211,8 @@ void Bot::AttackMovement () {
     }
     else if (UsesRifle () || UsesSubmachine () || UsesHeavy ()) {
       const auto rand = rg (1, 100);
-      const bool enemy_weapon_is_sniper = has_flag (enemy_->v.weapons, kSniperWeaponMask);
-      const auto group_of_enemies = distance_sq < ystl::sqrf (768.0f) && IsGroupOfEnemies (enemy_->v.origin, 384.0f);
+      const bool enemy_weapon_is_sniper = has_flag (enemy_.current->v.weapons, kSniperWeaponMask);
+      const auto group_of_enemies = distance_sq < ystl::sqrf (768.0f) && IsGroupOfEnemies (enemy_.current->v.origin, 384.0f);
 
       if (distance_sq < ystl::sqrf (768.0f)) {
         fight_style_ = Fight::Strafe;
@@ -1288,8 +1289,8 @@ void Bot::AttackMovement () {
 
     // to start strafing, we have to first figure out if the target is on the left side or right side
     if (strafe_set_timer_.elapsed ()) {
-      const ystl::Vector dir_to_point = (pev->origin - enemy_->v.origin).normalize2d ();
-      const ystl::Vector right_side = enemy_->v.v_angle.right ().normalize2d ();
+      const ystl::Vector dir_to_point = (pev->origin - enemy_.current->v.origin).normalize2d ();
+      const ystl::Vector right_side = enemy_.current->v.v_angle.right ().normalize2d ();
 
       if ((dir_to_point | right_side) < 0.0f) {
         dodge_strafe_dir_ = Dodge::Right;
@@ -1393,7 +1394,7 @@ void Bot::AttackMovement () {
 
         // skilled bots duck at long range for accuracy, noobs don't think of it
         if (difficulty_ >= Difficulty::Normal) {
-          const int enemy_nearest_index = graph.GetNearest (enemy_->v.origin);
+          const int enemy_nearest_index = graph.GetNearest (enemy_.current->v.origin);
 
           if (vistab.VisibleBothSides (current_node_index_, enemy_nearest_index, VisIndex::Crouch)) {
             duck_timer_.start (frame_interval_ * 3.0f);
@@ -1743,9 +1744,9 @@ void Bot::CheckGrenadesThrow () {
 
   // check if throwing a grenade is a good thing to do
   const auto throwing_condition =
-    is_grenade_mode ? last_enemy_origin_.empty ()
+    is_grenade_mode ? enemy_.last_origin.empty ()
                     : (preventible_tasks || IsInNarrowPlace () || cv_ignore_enemies || is_using_grenade_ || reload_data_.is_reloading ||
-                        (IsKnifeMode () && !game_state.IsBombPlanted ()) || !grenade_check_timer_.elapsed () || last_enemy_origin_.empty ());
+                        (IsKnifeMode () && !game_state.IsBombPlanted ()) || !grenade_check_timer_.elapsed () || enemy_.last_origin.empty ());
 
   if (throwing_condition) {
     clear_throw_states (states_);
@@ -1757,7 +1758,7 @@ void Bot::CheckGrenadesThrow () {
 
   const auto sense_condition = is_grenade_mode ? false : !has_flag (states_, Sense::SuspectEnemy | Sense::HearingEnemy);
 
-  if (!game.IsAliveEntity (last_enemy_) || sense_condition) {
+  if (!game.IsAliveEntity (enemy_.last) || sense_condition) {
     clear_throw_states (states_);
     return;
   }
@@ -1781,7 +1782,7 @@ void Bot::CheckGrenadesThrow () {
     }
     else if (grenade_to_throw == Weapon::Smoke) {
       // reduce cancel chance in tactical situations
-      if (zones_.bomb || health_value_ < 50.0f || has_flag (last_enemy_->v.weapons, kSniperWeaponMask)) {
+      if (zones_.bomb || health_value_ < 50.0f || has_flag (enemy_.last->v.weapons, kSniperWeaponMask)) {
         cancel_prob = difficulty_ >= Difficulty::Normal ? 15 : 25;
       }
       else {
@@ -1793,23 +1794,23 @@ void Bot::CheckGrenadesThrow () {
       return;
     }
   }
-  float distance_sq = last_enemy_origin_.distance_sq2d (pev->origin);
+  float distance_sq = enemy_.last_origin.distance_sq2d (pev->origin);
 
   // don't throw grenades at anything that isn't on the ground!
-  if (!(last_enemy_->v.flags & (FL_ONGROUND | FL_PARTIALGROUND)) && !last_enemy_->v.waterlevel && last_enemy_origin_.z > pev->absmax.z) {
+  if (!(enemy_.last->v.flags & (FL_ONGROUND | FL_PARTIALGROUND)) && !enemy_.last->v.waterlevel && enemy_.last_origin.z > pev->absmax.z) {
     distance_sq = kInfiniteDistance;
   }
 
   // too high to throw?
-  if (last_enemy_->v.origin.z > pev->origin.z + 500.0f) {
+  if (enemy_.last->v.origin.z > pev->origin.z + 500.0f) {
     distance_sq = kInfiniteDistance;
   }
 
   // special condition if we're have valid current enemy
   if (!is_grenade_mode &&
-      (has_flag (states_, Sense::SeeingEnemy) && game.IsAliveEntity (enemy_) && ((enemy_->v.button | enemy_->v.oldbuttons) & IN_ATTACK) &&
-        util.IsVisible (pev->origin, enemy_)) &&
-      util.IsInViewCone (pev->origin, enemy_)) {
+      (has_flag (states_, Sense::SeeingEnemy) && game.IsAliveEntity (enemy_.current) &&
+        ((enemy_.current->v.button | enemy_.current->v.oldbuttons) & IN_ATTACK) && util.IsVisible (pev->origin, enemy_.current)) &&
+      util.IsInViewCone (pev->origin, enemy_.current)) {
 
     // do not throw away grenades if anyone is attacking us
     distance_sq = kInfiniteDistance;
@@ -1831,12 +1832,12 @@ void Bot::CheckGrenadesThrow () {
     // care about different grenades
     switch (grenade_to_throw) {
     case Weapon::Explosive:
-      if (mp_friendlyfire && NumFriendsNear (last_enemy_->v.origin, 256.0f) > 0) {
+      if (mp_friendlyfire && NumFriendsNear (enemy_.last->v.origin, 256.0f) > 0) {
         allow_throwing = false;
       }
       else {
-        const auto radius = ystl::max (192.0f, last_enemy_->v.velocity.length2d ());
-        const ystl::Vector pos = last_enemy_->v.velocity.get2d () + last_enemy_->v.origin;
+        const auto radius = ystl::max (192.0f, enemy_.last->v.velocity.length2d ());
+        const ystl::Vector pos = enemy_.last->v.velocity.get2d () + enemy_.last->v.origin;
 
         auto predicted = graph.GetNearestInRadius (radius, pos, 12);
 
@@ -1879,8 +1880,8 @@ void Bot::CheckGrenadesThrow () {
       break;
 
     case Weapon::Flashbang: {
-      const auto radius = ystl::max (192.0f, last_enemy_->v.velocity.length2d ());
-      const ystl::Vector pos = last_enemy_->v.velocity.get2d () + last_enemy_->v.origin;
+      const auto radius = ystl::max (192.0f, enemy_.last->v.velocity.length2d ());
+      const ystl::Vector pos = enemy_.last->v.velocity.get2d () + enemy_.last->v.origin;
 
       auto predicted = graph.GetNearestInRadius (radius, pos, 8);
 
@@ -1928,10 +1929,10 @@ void Bot::CheckGrenadesThrow () {
     }
 
     case Weapon::Smoke:
-      if (allow_throwing && !game.IsNullEntity (last_enemy_)) {
+      if (allow_throwing && !game.IsNullEntity (enemy_.last)) {
         ystl::Vector smoke_target {};
-        const ystl::Vector to_enemy = (last_enemy_->v.origin - pev->origin).normalize ();
-        const float distance_to_enemy = last_enemy_->v.origin.distance (pev->origin);
+        const ystl::Vector to_enemy = (enemy_.last->v.origin - pev->origin).normalize ();
+        const float distance_to_enemy = enemy_.last->v.origin.distance (pev->origin);
 
         // context-aware smoke placement
         if (zones_.bomb && (has_c4_ || GetTaskId () == TaskId::PlantBomb)) {
@@ -1944,7 +1945,7 @@ void Bot::CheckGrenadesThrow () {
           const float smoke_distance = distance_to_enemy * rg (0.25f, 0.35f);
           smoke_target = pev->origin + to_enemy * smoke_distance;
         }
-        else if (has_flag (last_enemy_->v.weapons, kSniperWeaponMask)) {
+        else if (has_flag (enemy_.last->v.weapons, kSniperWeaponMask)) {
           // sniper threat: smoke at mid-range to block sightline (45-55% distance)
           const float smoke_distance = distance_to_enemy * rg (0.45f, 0.55f);
           smoke_target = pev->origin + to_enemy * smoke_distance;
@@ -2014,9 +2015,9 @@ void Bot::CheckGrenadesThrow () {
 
 bool Bot::IsEnemyInSight (ystl::Vector &end_pos) {
   Trace::Result aim_hit_tr {};
-  trace.Model (GetEyesPos (), GetEyesPos () + pev->v_angle.forward () * kInfiniteDistance, 0, enemy_, &aim_hit_tr);
+  trace.Model (GetEyesPos (), GetEyesPos () + pev->v_angle.forward () * kInfiniteDistance, 0, enemy_.current, &aim_hit_tr);
 
-  if (aim_hit_tr.hit != enemy_) {
+  if (aim_hit_tr.hit != enemy_.current) {
     return false;
   }
   end_pos = aim_hit_tr.end_pos;
@@ -2028,7 +2029,7 @@ bool Bot::IsEnemyNoticeable (float range) {
   if (IsOnLadder ()) {
     return false;
   }
-  const float speed_sq = enemy_->v.velocity.length_sq ();
+  const float speed_sq = enemy_.current->v.velocity.length_sq ();
 
   // sprinting enemies give themselves away at any distance
   if (speed_sq > ystl::sqrf (200.0f)) {
@@ -2047,7 +2048,7 @@ bool Bot::IsEnemyNoticeable (float range) {
   };
 
   const bool walking = speed_sq > ystl::sqrf (30.0f);
-  const bool crouching = (enemy_->v.flags & FL_DUCKING) == FL_DUCKING;
+  const bool crouching = (enemy_.current->v.flags & FL_DUCKING) == FL_DUCKING;
   const auto odds = kOdds[walking][crouching];
 
   // obvious up close, fading with distance
@@ -2082,7 +2083,7 @@ bool Bot::IsEnemyNoticeable (float range) {
 }
 
 bool Bot::IsEnemyThreat () {
-  if (game.IsNullEntity (enemy_) || has_flag (states_, Sense::SuspectEnemy) || GetTaskId () == TaskId::SeekCover) {
+  if (game.IsNullEntity (enemy_.current) || has_flag (states_, Sense::SuspectEnemy) || GetTaskId () == TaskId::SeekCover) {
     return false;
   }
 
@@ -2106,7 +2107,7 @@ bool Bot::IsEnemyThreat () {
   };
 
   // if enemy is near or facing us directly
-  if (is_on_attack_distance (enemy_, 256.0f) || (!UsesKnife () && IsInViewCone (enemy_->v.origin))) {
+  if (is_on_attack_distance (enemy_.current, 256.0f) || (!UsesKnife () && IsInViewCone (enemy_.current->v.origin))) {
     return true;
   }
   return false;
@@ -2120,14 +2121,14 @@ bool Bot::ReactOnEnemy () {
   }
 
   // enemy could have disconnected between isenemythreat and here
-  if (game.IsNullEntity (enemy_)) {
+  if (game.IsNullEntity (enemy_.current)) {
     is_enemy_reachable_ = false;
     return false;
   }
 
   // special case for creatures
   if (is_creature_) {
-    is_enemy_reachable_ = pev->origin.distance_sq2d (enemy_->v.origin) < ystl::sqrf (128.0f);
+    is_enemy_reachable_ = pev->origin.distance_sq2d (enemy_.current->v.origin) < ystl::sqrf (128.0f);
 
     if (is_enemy_reachable_) {
       nav_timer_.start ();
@@ -2136,7 +2137,7 @@ bool Bot::ReactOnEnemy () {
   }
 
   if (enemy_reachable_timer_.elapsed ()) {
-    const auto line_dist = enemy_->v.origin.distance (pev->origin);
+    const auto line_dist = enemy_.current->v.origin.distance (pev->origin);
 
     if (IsEnemyNoticeable (line_dist)) {
       is_enemy_reachable_ = true;
@@ -2147,7 +2148,7 @@ bool Bot::ReactOnEnemy () {
       if (own_index == kInvalidNodeIndex) {
         own_index = FindNearestNode ();
       }
-      const auto enemy_index = graph.GetNearest (enemy_->v.origin);
+      const auto enemy_index = graph.GetNearest (enemy_.current->v.origin);
       const auto path_dist = planner.PreciseDistance (own_index, enemy_index);
 
       is_enemy_reachable_ = (path_dist - line_dist <= 112.0f) && !IsOnLadder ();
@@ -2170,10 +2171,10 @@ bool Bot::GetThruWallChance (int pct) const {
 
 bool Bot::LastEnemyShootable () {
   // fire at remembered spot only if it can be penetrated
-  if (!has_flag (aim_flags_, AimFlags::LastEnemy) || last_enemy_origin_.empty () || game.IsNullEntity (last_enemy_)) {
+  if (!has_flag (aim_flags_, AimFlags::LastEnemy) || enemy_.last_origin.empty () || game.IsNullEntity (enemy_.last)) {
     return false;
   }
-  return util.ViewDot (Ent (), last_enemy_origin_) >= 0.90f && IsPenetrableObstacleCached (last_enemy_origin_);
+  return util.ViewDot (Ent (), enemy_.last_origin) >= 0.90f && IsPenetrableObstacleCached (enemy_.last_origin);
 }
 
 } // namespace bot

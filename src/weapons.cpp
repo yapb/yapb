@@ -350,7 +350,7 @@ bool Bot::NeedToPauseFiring (float distance) {
 
   // check for shielded enemy, pause briefly to avoid wasting ammo
   if (has_flag (aim_flags_, AimFlags::Enemy) && !enemy_origin_.empty ()) {
-    if (util.ViewDot (Ent (), enemy_origin_) > 0.92f && IsEnemyBehindShield (enemy_)) {
+    if (util.ViewDot (Ent (), enemy_origin_) > 0.92f && IsEnemyBehindShield (enemy_.current)) {
 
       float shield_pause_duration = rg (0.3f, 0.7f);
       fire_pause_ = normalize_fire_pause (game.Time () + shield_pause_duration - frame_interval_, 0.3f);
@@ -525,13 +525,13 @@ void Bot::HandleWeapons (float distance, int, Weapon id, int choosen) {
 
   // better shield gun usage
   if (HasShield () && shield_check_timer_.elapsed () && GetTaskId () != TaskId::Camp) {
-    const bool has_enemy = !game.IsNullEntity (enemy_);
+    const bool has_enemy = !game.IsNullEntity (enemy_.current);
 
     if (distance >= 750.0f && !IsShieldDrawn ()) {
       pev->button |= IN_ATTACK2; // draw the shield
     }
-    else if (IsShieldDrawn () || reload_data_.is_reloading || (has_enemy && (enemy_->v.button & IN_RELOAD)) ||
-             (has_enemy && !SeesEntity (enemy_->v.origin))) {
+    else if (IsShieldDrawn () || reload_data_.is_reloading || (has_enemy && (enemy_.current->v.button & IN_RELOAD)) ||
+             (has_enemy && !SeesEntity (enemy_.current->v.origin))) {
 
       pev->button |= IN_ATTACK2; // draw out the shield
     }
@@ -648,7 +648,7 @@ void Bot::FireWeapons () {
   if (is_using_grenade_) {
     return;
   }
-  const float distance = look_at_.distance (GetEyesPos ()); // how far away is the enemy?
+  const float distance = look_.main.distance (GetEyesPos ()); // how far away is the enemy?
 
   // or if friend in line of fire, stop this too but do not update shoot time
   if (IsFriendInLineOfFire (distance)) {
@@ -671,14 +671,14 @@ void Bot::FireWeapons () {
 
   // use knife if near and good difficulty (l33t dude!)
   if (!game.Is (GameFlags::ZombieMod) && cv_stab_close_enemies && rg.chance (ystl::max (25, Skill ())) && health_value_ > 80.0f &&
-      !game.IsNullEntity (enemy_) && distance < 100.0f && !IsGroupOfEnemies (pev->origin) && GetTaskId () != TaskId::Camp) {
+      !game.IsNullEntity (enemy_.current) && distance < 100.0f && !IsGroupOfEnemies (pev->origin) && GetTaskId () != TaskId::Camp) {
 
     // the less the enemy is looking at us, the more likely we go for the knife (re-roll on enemy change or after a while, enemy may turn)
-    if (stab_unaware_enemy_ != enemy_ || stab_unaware_timer_.elapsed ()) {
-      const float enemy_dot = util.ViewDot (enemy_, pev->origin);
+    if (stab_unaware_enemy_ != enemy_.current || stab_unaware_timer_.elapsed ()) {
+      const float enemy_dot = util.ViewDot (enemy_.current, pev->origin);
 
       stab_unaware_ = rg.chance (static_cast<int> (ystl::clamp (45.0f * (1.0f - enemy_dot), 0.0f, 90.0f)));
-      stab_unaware_enemy_ = enemy_;
+      stab_unaware_enemy_ = enemy_.current;
       stab_unaware_timer_.start (rg (1.0f, 2.0f));
     }
 
@@ -1314,7 +1314,7 @@ void Bot::CheckBurstMode (float distance) {
 }
 
 void Bot::CheckSilencer () {
-  if ((current_weapon_ == Weapon::USP || current_weapon_ == Weapon::M4A1) && !HasShield () && game.IsNullEntity (enemy_)) {
+  if ((current_weapon_ == Weapon::USP || current_weapon_ == Weapon::M4A1) && !HasShield () && game.IsNullEntity (enemy_.current)) {
     const int prob = (personality_ == Personality::Rusher ? 35 : 65);
 
     // aggressive bots don't like the silencer
@@ -1779,7 +1779,7 @@ bool Bot::HandleCtHostagePickup (edict_t *ent) {
 bool Bot::HandleCtBombPickup (const ystl::Vector &origin) {
   // handle planted c4 pickup logic for ct team
 
-  if (game.IsAliveEntity (enemy_)) {
+  if (game.IsAliveEntity (enemy_.current)) {
     return false;
   }
 

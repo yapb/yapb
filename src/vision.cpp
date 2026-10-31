@@ -130,7 +130,7 @@ void Bot::UpdateLookAngles () {
 
   // plugin-set look target wins over the ai one
   if (!ForcedLookAt ().empty ()) {
-    look_at_ = ForcedLookAt ();
+    look_.main = ForcedLookAt ();
     SetAimDirection ();
 
     return;
@@ -142,12 +142,12 @@ void Bot::UpdateLookAngles () {
   look_update_time_ += delta;
 
   // no valid look target yet: hold current view direction instead of aiming at garbage/empty vector
-  if (look_at_.empty ()) {
-    look_at_ = GetEyesPos () + pev->v_angle.forward () * 500.0f;
+  if (look_.main.empty ()) {
+    look_.main = GetEyesPos () + pev->v_angle.forward () * 500.0f;
   }
 
   // adjust all body and view angles to face an absolute vector
-  ystl::Vector direction = (look_at_ - GetEyesPos ()).angles ();
+  ystl::Vector direction = (look_.main - GetEyesPos ()).angles ();
   direction.x = -direction.x; // invert for engine
 
   direction.clamp_angles ();
@@ -208,7 +208,7 @@ void Bot::UpdateLookAngles () {
 
   // prevent reverse-facing turn when navigating without priority targets
   auto adjust_yaw_for_navigation = [&] () {
-    const auto look_delta = look_at_ - GetEyesPos ();
+    const auto look_delta = look_.main - GetEyesPos ();
 
     // on slope transitions target can become almost vertical; avoid unstable yaw corrections there
     if (look_delta.length_sq2d () < ystl::sqrf (48.0f)) {
@@ -234,7 +234,7 @@ void Bot::UpdateLookAngles () {
   }
 
   // freeze pitch when the target is almost straight above or below
-  if (!engaging && (look_at_ - GetEyesPos ()).length_sq2d () < ystl::sqrf (48.0f)) {
+  if (!engaging && (look_.main - GetEyesPos ()).length_sq2d () < ystl::sqrf (48.0f)) {
     angle_diff_pitch = 0.0f;
   }
 
@@ -346,19 +346,19 @@ void Bot::SetAimDirection () {
 
   // last victim: look at last kill position briefly (stop early to avoid snap-back)
   auto try_to_look_at_last_target = [&] (bool &target_set) {
-    if (game.IsNullEntity (enemy_) && difficulty_ >= Difficulty::Normal && !forget_last_victim_timer_.elapsed () &&
+    if (game.IsNullEntity (enemy_.current) && difficulty_ >= Difficulty::Normal && !forget_last_victim_timer_.elapsed () &&
         !last_victim_origin_.empty ()) {
 
-      look_at_ = last_victim_origin_ + pev->view_ofs;
+      look_.main = last_victim_origin_ + pev->view_ofs;
       target_set = true;
     }
   };
 
   if (has_flag (flags, AimFlags::Override)) {
-    look_at_ = look_at_safe_;
+    look_.main = look_.safe;
   }
   else if (has_flag (flags, AimFlags::Grenade)) {
-    look_at_ = throw_;
+    look_.main = throw_;
 
     const float distance = throw_.distance (pev->origin);
     const float height_diff = throw_.z - pev->origin.z;
@@ -378,27 +378,27 @@ void Bot::SetAimDirection () {
         coord_correction = base_correction;
       }
     }
-    look_at_.z += coord_correction * 0.5f;
+    look_.main.z += coord_correction * 0.5f;
   }
   else if (has_flag (flags, AimFlags::Enemy)) {
     FocusEnemy ();
   }
   else if (has_flag (flags, AimFlags::Flash) && blind_.timer.elapsed () && ForcedLookAt ().empty ()) {
-    look_at_ = avoid_flash_look_;
+    look_.main = avoid_flash_look_;
   }
   else if (has_flag (flags, AimFlags::Entity)) {
-    look_at_ = entity_;
+    look_.main = entity_;
 
     // do not look at hostages legs
     if (pickup_type_ == Pickup::Hostage) {
-      look_at_.z += 48.0f;
+      look_.main.z += 48.0f;
     }
     else if (pickup_type_ == Pickup::Weapon) {
-      look_at_.z += 72.0f;
+      look_.main.z += 72.0f;
     }
   }
   else if (has_flag (flags, AimFlags::LastEnemy)) {
-    look_at_ = last_enemy_origin_;
+    look_.main = enemy_.last_origin;
 
     // did bot just see enemy (or is holding a thru-wall engagement) and is quite aggressive?
     if (!thru_wall_hold_timer_.elapsed () || see_enemy_timer_.less_than (2.0f - actual_reaction_time_ + emotion_.base_aggression)) {
@@ -412,7 +412,7 @@ void Bot::SetAimDirection () {
   else if (has_flag (flags, AimFlags::PredictPath)) {
     bool change_predicted_enemy = true;
 
-    if (next_tracking_timer_.elapsed () && tracking_edict_ == last_enemy_ && game.IsAliveEntity (last_enemy_)) {
+    if (next_tracking_timer_.elapsed () && tracking_edict_ == enemy_.last && game.IsAliveEntity (enemy_.last)) {
       change_predicted_enemy = false;
     }
 
@@ -423,7 +423,7 @@ void Bot::SetAimDirection () {
       aim_flags_ &= ~AimFlags::PredictPath;
 
       tracking_edict_ = nullptr;
-      look_at_predict_.clear ();
+      look_.predict.clear ();
     };
 
     auto path_length = last_predict_length_;
@@ -438,7 +438,7 @@ void Bot::SetAimDirection () {
         float time_since_cache = game.Time () - predict_cache_.timestamp;
         float max_enemy_move = time_since_cache * 320.0f;
 
-        if (last_enemy_origin_.distance_sq (predict_cache_.enemy_origin) > ystl::sqrf (max_enemy_move * 1.5f)) {
+        if (enemy_.last_origin.distance_sq (predict_cache_.enemy_origin) > ystl::sqrf (max_enemy_move * 1.5f)) {
           predict_cache_.is_valid = false;
           return false;
         }
@@ -469,10 +469,10 @@ void Bot::SetAimDirection () {
 
     if (change_predicted_enemy) {
       if (is_predicted_index_applicable ()) {
-        look_at_predict_ = graph[predict_node].origin;
+        look_.predict = graph[predict_node].origin;
 
         next_tracking_timer_.start (0.75f);
-        tracking_edict_ = last_enemy_;
+        tracking_edict_ = enemy_.last;
       }
       else {
         do_fail_predict ();
@@ -484,11 +484,11 @@ void Bot::SetAimDirection () {
       }
     }
 
-    if (!look_at_predict_.empty ()) {
-      look_at_ = look_at_predict_;
+    if (!look_.predict.empty ()) {
+      look_.main = look_.predict;
 
       // watch predicted direction at eye level, no staring into the sky
-      look_at_.z = GetEyesPos ().z;
+      look_.main.z = GetEyesPos ().z;
     }
   }
   else if (has_flag (flags, AimFlags::Camp)) {
@@ -498,7 +498,7 @@ void Bot::SetAimDirection () {
     try_to_look_at_last_target (target_set);
 
     if (!target_set) {
-      look_at_ = look_at_safe_;
+      look_.main = look_.safe;
     }
   }
   else if (has_flag (flags, AimFlags::Nav)) {
@@ -559,7 +559,7 @@ void Bot::SetAimDirection () {
       }
 
       if (graph.Exists (danger_index)) {
-        look_at_ = graph[danger_index].origin + kStandingEyeOffset;
+        look_.main = graph[danger_index].origin + kStandingEyeOffset;
         aim_flags_ |= AimFlags::Danger;
 
         target_set = true;
@@ -587,8 +587,8 @@ void Bot::SetAimDirection () {
               target_index = next_path_index_x2;
             }
           }
-          look_at_ = graph[target_index].origin + pev->view_ofs;
-          look_at_.z = GetEyesPos ().z; // keep the nav lookahead level, node z steps cause pitch jitter on slopes
+          look_.main = graph[target_index].origin + pev->view_ofs;
+          look_.main.z = GetEyesPos ().z; // keep the nav lookahead level, node z steps cause pitch jitter on slopes
           target_set = true;
         }
       }
@@ -603,13 +603,13 @@ void Bot::SetAimDirection () {
           if (next_path.origin.z > path_origin_.z + 26.0f) {
 
             // ascending: look up at next ladder node
-            look_at_ = next_path.origin + pev->view_ofs;
+            look_.main = next_path.origin + pev->view_ofs;
             target_set = true;
           }
           else if (next_path.origin.z < path_origin_.z - 26.0f) {
 
             // descending: look down at next ladder node
-            look_at_ = next_path.origin + pev->view_ofs;
+            look_.main = next_path.origin + pev->view_ofs;
             target_set = true;
           }
         }
@@ -625,13 +625,13 @@ void Bot::SetAimDirection () {
           ystl::Vector forward {};
           move_angles_.angle_vectors (&forward, nullptr, nullptr);
 
-          look_at_ = pev->origin + forward * 48.0f;
-          look_at_.z = pev->origin.z - 24.0f;
+          look_.main = pev->origin + forward * 48.0f;
+          look_.main.z = pev->origin.z - 24.0f;
         }
         else {
           // ascending: look toward destination
-          look_at_ = dest_origin_;
-          look_at_.z = ystl::max (dest_origin_.z, pev->origin.z) + 16.0f;
+          look_.main = dest_origin_;
+          look_.main.z = ystl::max (dest_origin_.z, pev->origin.z) + 16.0f;
         }
         target_set = true;
       }
@@ -639,24 +639,24 @@ void Bot::SetAimDirection () {
 
     // persist last valid target across toggles, else fall back
     if (target_set) {
-      nav_look_at_ = look_at_;
+      look_.nav = look_.main;
       nav_look_at_node_ = current_node_index_;
     }
-    else if (!nav_look_at_.empty () && nav_look_at_node_ == current_node_index_) {
-      look_at_ = nav_look_at_;
+    else if (!look_.nav.empty () && nav_look_at_node_ == current_node_index_) {
+      look_.main = look_.nav;
     }
     else {
-      look_at_ = dest_origin;
+      look_.main = dest_origin;
 
       if (!vertical_move) {
-        look_at_.z = GetEyesPos ().z;
+        look_.main.z = GetEyesPos ().z;
       }
     }
     try_to_look_at_last_target (target_set);
   }
 
-  if (look_at_.empty ()) {
-    look_at_ = dest_origin_;
+  if (look_.main.empty ()) {
+    look_.main = dest_origin_;
   }
 }
 

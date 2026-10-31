@@ -105,7 +105,7 @@ struct NavigateHook {
     return bot.loosed_bomb_node_index_;
   }
   static void SetEnemyOrigin (Bot &bot, const ystl::Vector &pos) {
-    bot.last_enemy_origin_ = pos;
+    bot.enemy_.last_origin = pos;
   }
   static void SetAggression (Bot &bot, float aggression, float fear) {
     bot.emotion_.aggression = aggression;
@@ -447,7 +447,7 @@ struct NavigateHook {
     bot.jump_finished_ = value;
   }
   static void SetEnemy (Bot &bot, edict_t *ent) {
-    bot.enemy_ = ent;
+    bot.enemy_.current = ent;
   }
   static void SetStates (Bot &bot, Sense states) {
     bot.states_ = states;

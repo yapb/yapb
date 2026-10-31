@@ -314,7 +314,7 @@ TEST_CASE ("unit/message_items") {
   SendLongs (bot->Ent (), kDamage, { 5, 20, 0 });
   CHECK (bot->last_damage_type_ == 0);
   CHECK (bot->emotion_.aggression == 0.1f);
-  CHECK (bot->last_enemy_ == foe);
+  CHECK (bot->enemy_.last == foe);
 
   // status icons flip the zone flags, unknown icons are skipped
   SendLongs (bot->Ent (), kStatusIcon, { 1 });

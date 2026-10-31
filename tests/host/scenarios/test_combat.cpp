@@ -246,7 +246,7 @@ struct CombatHook {
     bot.fire_hurts_friend_ = value;
   }
   static void SetEnemyBodyPart (Bot &bot, edict_t *ent) {
-    bot.enemy_body_part_set_ = ent;
+    bot.enemy_.aim_lock = ent;
   }
   static void StartThruHold (Bot &bot, float value) {
     bot.thru_wall_hold_timer_.start (value);
@@ -558,11 +558,11 @@ TEST_CASE ("unit/combat_senses") {
   bot->uses_nvg_ = false;
 
   // darkness blocks acquiring a new target but never drops a tracked one
-  bot->enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
   CHECK (!CombatHook::BodyParts (*bot, foe_near));
-  bot->enemy_ = foe_near;
+  bot->enemy_.current = foe_near;
   CHECK (CombatHook::BodyParts (*bot, foe_near));
-  bot->enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
 
   foe_near->v.origin = ystl::Vector (250.0f, 0.0f, 0.0f);
 
@@ -695,13 +695,13 @@ TEST_CASE ("unit/combat_fire") {
 
   // model traces never connect in an empty world (no callers in prod)
   ystl::Vector end_pos {};
-  bot->enemy_ = foe;
+  bot->enemy_.current = foe;
   CHECK (!CombatHook::InSight (*bot, end_pos));
 
   // remembered shots need the flag, the spot and the foe
   CHECK (!CombatHook::Shootable (*bot));
-  bot->last_enemy_ = foe;
-  bot->last_enemy_origin_ = foe->v.origin;
+  bot->enemy_.last = foe;
+  bot->enemy_.last_origin = foe->v.origin;
   CHECK (!CombatHook::Shootable (*bot));
 
   // friendlies are safe with the cvar off...
@@ -726,11 +726,11 @@ TEST_CASE ("unit/combat_fire") {
   foe->v.velocity = ystl::Vector (300.0f, 0.0f, 0.0f);
   CHECK (CombatHook::Noticeable (*bot, 1500.0f));
 
-  bot->enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
   CHECK (!CombatHook::Threat (*bot));
 
   CombatHook::SetStates (*bot, Sense::SuspectEnemy);
-  bot->enemy_ = foe;
+  bot->enemy_.current = foe;
   CHECK (!CombatHook::Threat (*bot));
   CombatHook::SetStates (*bot, Sense::Invalid);
 
@@ -745,12 +745,12 @@ TEST_CASE ("unit/combat_fire") {
   CHECK (CombatHook::Threat (*bot));
 
   // reactions: nothing without an enemy...
-  bot->enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
   CHECK (!CombatHook::React (*bot));
 
   // ...creatures lunge up close...
   CombatHook::SetCreature (*bot, true);
-  bot->enemy_ = foe;
+  bot->enemy_.current = foe;
   CHECK (CombatHook::React (*bot));
   CHECK (CombatHook::NavStarted (*bot));
   CombatHook::SetCreature (*bot, false);
@@ -794,9 +794,9 @@ TEST_CASE ("unit/combat_watch") {
   CombatHook::BodyAngles (*bot);
 
   // a preset, live, faced enemy sticks through the lookup...
-  bot->enemy_ = foe;
+  bot->enemy_.current = foe;
   CHECK (CombatHook::Lookup (*bot));
-  CHECK (bot->enemy_ == foe);
+  CHECK (bot->enemy_.current == foe);
 
   // ...and tracking raises the seeing flag for it
   CombatHook::Track (*bot);
@@ -806,11 +806,11 @@ TEST_CASE ("unit/combat_watch") {
   foe->v.health = 0.0f;
   foe->v.deadflag = DEAD_DEAD;
   clients.Update ();
-  bot->enemy_ = nullptr;
-  bot->last_enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
+  bot->enemy_.last = nullptr;
   CombatHook::Track (*bot);
   CHECK (CombatHook::States (*bot) == Sense::Invalid);
-  CHECK (bot->enemy_ == nullptr);
+  CHECK (bot->enemy_.current == nullptr);
   foe->v.health = 100.0f;
   foe->v.deadflag = DEAD_NO;
   clients.Update ();
@@ -834,7 +834,7 @@ TEST_CASE ("unit/combat_watch") {
   CHECK (CombatHook::GrenadeVelocity (*bot, "models/w_hegrenade.mdl") == nullptr);
 
   // aim bias blends head/chest smoothly by distance, per weapon
-  bot->enemy_ = foe;
+  bot->enemy_.current = foe;
   bot->weapon_type_ = WeaponType::Rifle;
   bot->pev->flags &= ~FL_DUCKING;
   bot->pev->velocity.clear ();
@@ -916,7 +916,7 @@ TEST_CASE ("scenario/combat_engagement") {
     engine.AdvanceTime (0.1f);
     bots.Frame ();
 
-    spotted = spotted || (bot->enemy_ == foe);
+    spotted = spotted || (bot->enemy_.current == foe);
     attacked = attacked || (bot->GetTaskId () == TaskId::Attack);
     fired = fired || (bot->pev->button & IN_ATTACK) != 0;
     wanted = wanted || CombatHook::WantsToFire (*bot);
@@ -1029,7 +1029,7 @@ TEST_CASE ("unit/combat_attack_move") {
   bot->pev->maxspeed = 270.0f;
   bot->pev->health = 100.0f;
   bot->team_ = Team::Terrorist;
-  bot->enemy_ = foe;
+  bot->enemy_.current = foe;
   clients.Update ();
   clients[foe].team = Team::CT;
   CombatHook::SetStates (*bot, Sense::SeeingEnemy);
@@ -1086,7 +1086,7 @@ TEST_CASE ("unit/combat_knife_close_stay") {
   bot->pev->maxspeed = 270.0f;
   bot->pev->health = 100.0f;
   bot->team_ = Team::Terrorist;
-  bot->enemy_ = foe;
+  bot->enemy_.current = foe;
   clients.Update ();
   clients[foe].team = Team::CT;
 
@@ -1170,7 +1170,7 @@ TEST_CASE ("unit/combat_bulwark") {
   cv_check_darkness.Revert ();
 
   // direct hit reports the body spot (lines 180, 261)
-  bot->enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
   edict_t *wall = engine.SpawnEntity ("func_wall");
   HOST_REQUIRE (wall != nullptr);
   int line_calls = 0;
@@ -1308,7 +1308,7 @@ TEST_CASE ("unit/combat_bulwark") {
   // hitbox path answers from the stomach and head (lines 163, 275-291)
   game.AddGameFlag (GameFlags::HasStudioModels);
   foe->v.origin = ystl::Vector (300.0f, 0.0f, 0.0f);
-  bot->enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
   CHECK (CombatHook::BodyParts (*bot, foe));
   CHECK (CombatHook::Hitboxes (*bot, foe));
   CHECK (!!(CombatHook::EnemyParts (*bot) & static_cast<int> (Visibility::Body)));
@@ -1316,9 +1316,9 @@ TEST_CASE ("unit/combat_bulwark") {
 
   // null error has no offset, memory grows with closeness
   CHECK (CombatHook::BodyError (*bot, nullptr, 500.0f).empty ());
-  bot->last_enemy_origin_.clear ();
+  bot->enemy_.last_origin.clear ();
   const float far_memory = CombatHook::Memory (*bot);
-  bot->last_enemy_origin_ = bot->pev->origin;
+  bot->enemy_.last_origin = bot->pev->origin;
   const float near_memory = CombatHook::Memory (*bot);
   CHECK (near_memory >= far_memory);
   CHECK (far_memory >= 3.0f && near_memory <= 8.0f);
@@ -1391,11 +1391,11 @@ TEST_CASE ("unit/combat_lurk") {
   }
   bot->pev->flags |= FL_ONGROUND;
   CombatHook::SetStates (*bot, Sense::SeeingEnemy);
-  bot->enemy_ = foe;
+  bot->enemy_.current = foe;
   CombatHook::Track (*bot);
   CHECK (has_flag (CombatHook::States (*bot), Sense::SeeingEnemy));
   CombatHook::SetStates (*bot, Sense::Invalid);
-  bot->enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
   bot->weapon_type_ = WeaponType::Rifle;
   bot->current_weapon_ = Weapon::AK47;
 
@@ -1416,9 +1416,9 @@ TEST_CASE ("unit/combat_lurk") {
   CombatHook::InvalidateEnemyIgnore (*bot);
 
   // suspect memory raises hearing when the foe hides
-  bot->enemy_ = nullptr;
-  bot->last_enemy_ = foe;
-  bot->last_enemy_origin_ = foe->v.origin;
+  bot->enemy_.current = nullptr;
+  bot->enemy_.last = foe;
+  bot->enemy_.last_origin = foe->v.origin;
   CombatHook::StartSee (*bot);
   CombatHook::SetAimFlags (*bot, AimFlags::Invalid);
   bot->pev->velocity = ystl::Vector (100.0f, 0.0f, 0.0f);
@@ -1427,9 +1427,9 @@ TEST_CASE ("unit/combat_lurk") {
   engine.AdvanceTime (0.2f);
   CHECK (CombatHook::Lookup (*bot) || has_flag (CombatHook::States (*bot), Sense::SuspectEnemy) || true);
   bot->pev->velocity = ystl::Vector (0.0f, 0.0f, 0.0f);
-  bot->enemy_ = nullptr;
-  bot->last_enemy_ = nullptr;
-  bot->last_enemy_origin_.clear ();
+  bot->enemy_.current = nullptr;
+  bot->enemy_.last = nullptr;
+  bot->enemy_.last_origin.clear ();
   CombatHook::SetAimFlags (*bot, AimFlags::Invalid);
   CombatHook::SetStates (*bot, Sense::Invalid);
 
@@ -1438,7 +1438,7 @@ TEST_CASE ("unit/combat_lurk") {
   foe->v.origin = ystl::Vector (5000.0f, 0.0f, 0.0f);
   clients.Update ();
   CombatHook::InvalidateEnemyUpdate (*bot);
-  bot->enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
   CHECK (!CombatHook::Lookup (*bot));
   foe->v.origin = ystl::Vector (300.0f, 0.0f, 0.0f);
   clients.Update ();
@@ -1455,10 +1455,10 @@ TEST_CASE ("unit/combat_lurk") {
   CombatHook::BodyAngles (*bot);
   CombatHook::SetViewDistance (*bot, 4096.0f);
   CombatHook::InvalidateEnemyUpdate (*bot);
-  bot->enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
   CHECK (CombatHook::BehindShield (*bot, foe));
   CHECK (CombatHook::Lookup (*bot));
-  CHECK (bot->enemy_ == foe);
+  CHECK (bot->enemy_.current == foe);
   foe->v.weaponanim = 0;
   foe->v.viewmodel = string_t (0);
   cv_use_engine_pvs_check.Revert ();
@@ -1494,13 +1494,13 @@ TEST_CASE ("unit/combat_notice") {
 
   // a fresh foe is not adopted on the first sighting
   cv_notice_model.Set (1);
-  bot->enemy_ = nullptr;
-  bot->last_enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
+  bot->enemy_.last = nullptr;
   CombatHook::SetAimFlags (*bot, AimFlags::Invalid);
   CombatHook::SetStates (*bot, Sense::Invalid);
   CombatHook::InvalidateEnemyUpdate (*bot);
   CHECK (!CombatHook::Lookup (*bot));
-  CHECK (bot->enemy_ == nullptr);
+  CHECK (bot->enemy_.current == nullptr);
 
   // steady sight fills the meter, adoption follows once it is full
   int steps = 0;
@@ -1512,11 +1512,11 @@ TEST_CASE ("unit/combat_notice") {
   }
   CHECK (steps > 1);
   CHECK (steps < 60);
-  CHECK (bot->enemy_ == foe);
+  CHECK (bot->enemy_.current == foe);
 
   // with the model off a visible foe is adopted on sight again
   cv_notice_model.Set (0);
-  bot->enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
   CombatHook::InvalidateEnemyUpdate (*bot);
   CHECK (CombatHook::Lookup (*bot));
   cv_notice_model.Revert ();
@@ -1550,8 +1550,8 @@ TEST_CASE ("unit/combat_pointblank") {
   CombatHook::BodyAngles (*bot);
 
   auto reset_search = [&] {
-    bot->enemy_ = nullptr;
-    bot->last_enemy_ = nullptr;
+    bot->enemy_.current = nullptr;
+    bot->enemy_.last = nullptr;
     CombatHook::SetAimFlags (*bot, AimFlags::Invalid);
     CombatHook::SetStates (*bot, Sense::Invalid);
     CombatHook::InvalidateEnemyUpdate (*bot);
@@ -1568,7 +1568,7 @@ TEST_CASE ("unit/combat_pointblank") {
     CombatHook::InvalidateEnemyUpdate (*bot);
     ++close_steps;
   }
-  CHECK (bot->enemy_ == foe);
+  CHECK (bot->enemy_.current == foe);
   CHECK (close_steps <= 3);
 
   // a foe that is shooting at us is noticed at once, even far away
@@ -1584,7 +1584,7 @@ TEST_CASE ("unit/combat_pointblank") {
     CombatHook::InvalidateEnemyUpdate (*bot);
     ++fire_steps;
   }
-  CHECK (bot->enemy_ == foe);
+  CHECK (bot->enemy_.current == foe);
   CHECK (fire_steps <= 1);
   foe->v.button = 0;
 
@@ -1691,20 +1691,20 @@ TEST_CASE ("unit/combat_barrage") {
   CombatHook::Rng (*bot).clear_forced ();
 
   // without parts the last spot is reused when suspecting
-  bot->enemy_ = nullptr;
-  bot->last_enemy_ = foe;
-  bot->last_enemy_origin_ = foe->v.origin;
+  bot->enemy_.current = nullptr;
+  bot->enemy_.last = foe;
+  bot->enemy_.last_origin = foe->v.origin;
   CombatHook::SetStates (*bot, Sense::SuspectEnemy);
   ystl::Vector reuse = CombatHook::EnemyOffset (*bot);
   CHECK (!reuse.empty ());
-  bot->last_enemy_origin_.clear ();
-  bot->last_enemy_ = nullptr;
+  bot->enemy_.last_origin.clear ();
+  bot->enemy_.last = nullptr;
   CombatHook::SetStates (*bot, Sense::Invalid);
   ystl::Vector fallback = CombatHook::EnemyOffset (*bot);
   CHECK (fallback.empty ());
 
   // long rifles drop the head, close snipers do too
-  bot->enemy_ = foe;
+  bot->enemy_.current = foe;
   bot->current_weapon_ = Weapon::AK47;
   bot->weapon_type_ = WeaponType::Rifle;
   bot->pev->weapons = ystl::to_underlying (kPrimaryWeaponMask);
@@ -1730,7 +1730,7 @@ TEST_CASE ("unit/combat_barrage") {
   bot->pev->punchangle.x = 0.0f;
 
   // experts hold the head better than noobs at the same range
-  bot->enemy_ = foe;
+  bot->enemy_.current = foe;
   bot->weapon_type_ = WeaponType::Rifle;
   bot->pev->flags &= ~FL_DUCKING;
 
@@ -1765,13 +1765,13 @@ TEST_CASE ("unit/combat_barrage") {
   engine.AdvanceTime (0.2f);
   mp_friendlyfire.Revert ();
 
-  bot->enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
   CombatHook::Focus (*bot);
   CHECK (!CombatHook::WantsToFire (*bot));
 
   // remembered spots need the flag, the spot and penetration
-  bot->last_enemy_ = foe;
-  bot->last_enemy_origin_ = foe->v.origin;
+  bot->enemy_.last = foe;
+  bot->enemy_.last_origin = foe->v.origin;
   CombatHook::SetAimFlags (*bot, AimFlags::Invalid);
   CHECK (!CombatHook::Shootable (*bot));
   CombatHook::SetAimFlags (*bot, AimFlags::LastEnemy);
@@ -1826,12 +1826,12 @@ TEST_CASE ("unit/combat_vantage") {
   CombatHook::BodyAngles (*bot);
 
   // no enemy needs no strafing
-  bot->enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
   CombatHook::AttackMove (*bot);
   CHECK (CombatHook::MoveSpeed (*bot) == 0.0f);
 
   // suspect contact holds, vip and reloads back off
-  bot->enemy_ = foe;
+  bot->enemy_.current = foe;
   bot->current_weapon_ = Weapon::AK47;
   bot->weapon_type_ = WeaponType::Rifle;
   bot->pev->weapons = ystl::to_underlying (kPrimaryWeaponMask);
@@ -2017,13 +2017,13 @@ TEST_CASE ("unit/combat_siege") {
   CHECK (CombatHook::GrenadeVelocity (*bot, "flashbang.mdl") == nullptr);
 
   // empty hands and empty spots never throw
-  bot->last_enemy_origin_.clear ();
-  bot->last_enemy_ = nullptr;
+  bot->enemy_.last_origin.clear ();
+  bot->enemy_.last = nullptr;
   CombatHook::CheckNades (*bot);
   CHECK (!has_flag (CombatHook::States (*bot), Sense::ThrowExplosive));
 
-  bot->last_enemy_origin_ = foe->v.origin;
-  bot->last_enemy_ = foe;
+  bot->enemy_.last_origin = foe->v.origin;
+  bot->enemy_.last = foe;
   CombatHook::SetStates (*bot, Sense::Invalid);
   CombatHook::CheckNades (*bot);
   CHECK (!has_flag (CombatHook::States (*bot), Sense::ThrowExplosive));
@@ -2042,8 +2042,8 @@ TEST_CASE ("unit/combat_siege") {
 
   // good arcs arm the explosive
   engine.AdvanceTime (0.7f);
-  bot->last_enemy_origin_ = ystl::Vector (500.0f, 0.0f, 0.0f);
-  bot->last_enemy_ = foe;
+  bot->enemy_.last_origin = ystl::Vector (500.0f, 0.0f, 0.0f);
+  bot->enemy_.last = foe;
   foe->v.origin = ystl::Vector (500.0f, 0.0f, 0.0f);
   foe->v.velocity = ystl::Vector (0.0f, 0.0f, 0.0f);
   foe->v.flags |= FL_ONGROUND;
@@ -2088,8 +2088,8 @@ TEST_CASE ("unit/combat_ambush") {
   cv_use_engine_pvs_check.Set (0);
 
   // dying foes draw a final burst when freshly seen
-  bot->enemy_ = foe;
-  bot->last_enemy_ = foe;
+  bot->enemy_.current = foe;
+  bot->enemy_.last = foe;
   foe->v.health = 0.0f;
   foe->v.deadflag = DEAD_DEAD;
   clients.Update ();
@@ -2099,15 +2099,15 @@ TEST_CASE ("unit/combat_ambush") {
   foe->v.health = 100.0f;
   foe->v.deadflag = DEAD_NO;
   clients.Update ();
-  bot->enemy_ = nullptr;
-  bot->last_enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
+  bot->enemy_.last = nullptr;
 
   // thru-wall holds keep the engagement without re-rolling
   cv_shoots_thru_walls.Set (3);
   CombatHook::SetSeenThru (*bot, 100);
   CombatHook::Rng (*bot).force_chance (true);
   CombatHook::Rng (*bot).force_int (50);
-  bot->enemy_ = foe;
+  bot->enemy_.current = foe;
   foe->v.origin = ystl::Vector (100.0f, 500.0f, 0.0f);
   clients.Update ();
   CombatHook::BodyAngles (*bot);
@@ -2129,9 +2129,9 @@ TEST_CASE ("unit/combat_ambush") {
   foe->v.health = 0.0f;
   foe->v.deadflag = DEAD_DEAD;
   clients.Update ();
-  bot->enemy_ = nullptr;
-  bot->last_enemy_ = nullptr;
-  bot->last_enemy_origin_.clear ();
+  bot->enemy_.current = nullptr;
+  bot->enemy_.last = nullptr;
+  bot->enemy_.last_origin.clear ();
   CombatHook::SetAimFlags (*bot, AimFlags::Invalid);
   CombatHook::StartSee (*bot);
   engine.AdvanceTime (3.2f);
@@ -2171,7 +2171,7 @@ TEST_CASE ("unit/combat_obscure") {
   edict_t *wall = engine.SpawnEntity ("func_wall");
   HOST_REQUIRE (wall != nullptr);
   game.AddGameFlag (GameFlags::HasStudioModels);
-  bot->enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
   int hull_calls = 0;
   engine.AdvanceTime (0.2f);
   engine.SetTraceLineHook ([wall, foe, &hull_calls] (const float *v1, const float *v2, int no_monsters, edict_t *skip, TraceResult *out) {
@@ -2297,7 +2297,7 @@ TEST_CASE ("unit/combat_obscure") {
   engine.AdvanceTime (0.6f);
   cv_use_engine_pvs_check.Set (0);
   CombatHook::InvalidateEnemyUpdate (*bot);
-  bot->enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
   CHECK (CombatHook::Lookup (*bot) || !CombatHook::Lookup (*bot));
   cv_use_engine_pvs_check.Revert ();
   cv_attack_monsters.Revert ();
@@ -2305,8 +2305,8 @@ TEST_CASE ("unit/combat_obscure") {
   // chatter and teammate alerts fire on fresh contacts
   bot->has_c4_ = true;
   bot->has_hostage_ = false;
-  bot->enemy_ = nullptr;
-  bot->last_enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
+  bot->enemy_.last = nullptr;
   CombatHook::StartSee (*bot);
   engine.AdvanceTime (3.2f);
   CombatHook::SetOldButtons (*bot, 0);
@@ -2325,8 +2325,8 @@ TEST_CASE ("unit/combat_obscure") {
   // snipers hold the dead, the living reload the zoom
   bot->current_weapon_ = Weapon::AWP;
   bot->weapon_type_ = WeaponType::Sniper;
-  bot->enemy_ = foe;
-  bot->last_enemy_ = foe;
+  bot->enemy_.current = foe;
+  bot->enemy_.last = foe;
   foe->v.health = 0.0f;
   foe->v.deadflag = DEAD_DEAD;
   clients.Update ();
@@ -2336,8 +2336,8 @@ TEST_CASE ("unit/combat_obscure") {
   foe->v.health = 100.0f;
   foe->v.deadflag = DEAD_NO;
   clients.Update ();
-  bot->enemy_ = nullptr;
-  bot->last_enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
+  bot->enemy_.last = nullptr;
   bot->current_weapon_ = Weapon::AK47;
   bot->weapon_type_ = WeaponType::Rifle;
 
@@ -2345,8 +2345,8 @@ TEST_CASE ("unit/combat_obscure") {
   foe->v.health = 0.0f;
   foe->v.deadflag = DEAD_DEAD;
   clients.Update ();
-  bot->enemy_ = nullptr;
-  bot->last_enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
+  bot->enemy_.last = nullptr;
   bot->current_weapon_ = Weapon::AWP;
   bot->weapon_type_ = WeaponType::Sniper;
   bot->pev->fov = 80.0f;
@@ -2397,8 +2397,8 @@ TEST_CASE ("unit/combat_focus_fire") {
   CHECK (CombatHook::ShouldSwitch (*a, far_foe, near_foe));
 
   // two mates already on the closer target saturate it
-  b->enemy_ = near_foe;
-  c->enemy_ = near_foe;
+  b->enemy_.current = near_foe;
+  c->enemy_.current = near_foe;
   CHECK (!CombatHook::ShouldSwitch (*a, far_foe, near_foe));
 
   bots.Destroy ();
@@ -2469,9 +2469,9 @@ TEST_CASE ("unit/combat_scores") {
 
   // mates on the same target count, empty selectors never switch
   CHECK (CombatHook::Engaging (*a, foe) == 0);
-  b->enemy_ = foe;
+  b->enemy_.current = foe;
   CHECK (CombatHook::Engaging (*a, foe) == 1);
-  c->enemy_ = foe;
+  c->enemy_.current = foe;
   CHECK (CombatHook::Engaging (*a, foe) == 2);
 
   CHECK (!CombatHook::ShouldSwitch (*a, nullptr, foe));
@@ -2507,7 +2507,7 @@ TEST_CASE ("unit/combat_aim") {
   CombatHook::Focus (*bot);
   CHECK (CombatHook::WantsFire (*bot));
 
-  bot->enemy_ = foe;
+  bot->enemy_.current = foe;
 
   // surprised bots only track, never pull the trigger yet
   CombatHook::SetWantsFire (*bot, false);

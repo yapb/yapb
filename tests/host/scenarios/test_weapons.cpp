@@ -203,10 +203,10 @@ struct WeaponsHook {
     return bot.ValidateExistingPickup (game_state.GetInterestingEntities (), radius_sq);
   }
   static void SetLook (Bot &bot, const ystl::Vector &value) {
-    bot.look_at_ = value;
+    bot.look_.main = value;
   }
   static void SetEnemy (Bot &bot, edict_t *value) {
-    bot.enemy_ = value;
+    bot.enemy_.current = value;
   }
   static void SetEnemyOrigin (Bot &bot, const ystl::Vector &value) {
     bot.enemy_origin_ = value;
@@ -643,7 +643,7 @@ TEST_CASE ("unit/weapons_fire") {
   bot->weapon_type_ = WeaponType::Rifle;
   bot->pev->weapons = ystl::to_underlying (kPrimaryWeaponMask);
   bot->ammo_in_clip_[static_cast<int> (Weapon::AK47)] = 30;
-  bot->enemy_ = foe;
+  bot->enemy_.current = foe;
   bot->pev->button = 0;
   WeaponsHook::SetShootTime (*bot, 0.0f);
   WeaponsHook::SetWantsFire (*bot, true);

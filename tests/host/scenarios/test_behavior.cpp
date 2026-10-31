@@ -89,7 +89,7 @@ struct BehaviorHook {
     return bot.heard_enemy_;
   }
   static edict_t *LastEnemy (Bot &bot) {
-    return bot.last_enemy_;
+    return bot.enemy_.last;
   }
   static int SoundMemoryCount (Bot &bot) {
     int count = 0;
@@ -213,12 +213,12 @@ struct BehaviorHook {
     bot.TakeBlind (alpha);
   }
   static void SetEnemy (Bot &bot, edict_t *ent) {
-    bot.enemy_ = ent;
+    bot.enemy_.current = ent;
     bot.enemy_origin_ = ent->v.origin;
     bot.aim_flags_ |= AimFlags::Enemy;
   }
   static edict_t *Enemy (Bot &bot) {
-    return bot.enemy_;
+    return bot.enemy_.current;
   }
   static void RefreshModel (Bot &bot, char *model) {
     bot.RefreshCreatureStatus (model);
@@ -248,12 +248,12 @@ struct BehaviorHook {
     return bot.is_using_grenade_;
   }
   static void SetLastEnemy (Bot &bot, edict_t *ent) {
-    bot.last_enemy_ = ent;
-    bot.last_enemy_origin_ = ent->v.origin;
+    bot.enemy_.last = ent;
+    bot.enemy_.last_origin = ent->v.origin;
   }
   static void ClearLastEnemy (Bot &bot) {
-    bot.last_enemy_ = nullptr;
-    bot.last_enemy_origin_.clear ();
+    bot.enemy_.last = nullptr;
+    bot.enemy_.last_origin.clear ();
   }
   static void Predict (Bot &bot) {
     bot.UpdatePredictedIndex ();
@@ -400,7 +400,7 @@ struct BehaviorHook {
     return bot.breakable_entity_;
   }
   static void ClearEnemy (Bot &bot) {
-    bot.enemy_ = nullptr;
+    bot.enemy_.current = nullptr;
   }
   static void SetAim (Bot &bot, AimFlags flags) {
     bot.aim_flags_ = flags;
@@ -715,7 +715,7 @@ TEST_CASE ("unit/behavior_senses") {
   bot->pev->deadflag = DEAD_DEAD;
   cond->last_victim_ = human;
   cond->emotion_.aggression = 0.0f;
-  cond->last_enemy_ = human;
+  cond->enemy_.last = human;
   human->v.health = 0.0f;
   human->v.deadflag = DEAD_DEAD;
   human2->v.health = 0.0f;
@@ -724,7 +724,7 @@ TEST_CASE ("unit/behavior_senses") {
   BehaviorHook::Conditions (*cond);
   CHECK (cond->emotion_.aggression == 0.1f); // enemy-team victim credited
   CHECK (cond->last_victim_ == nullptr);
-  CHECK (cond->last_enemy_ == nullptr); // dead and cold, forgotten
+  CHECK (cond->enemy_.last == nullptr); // dead and cold, forgotten
   CHECK (cond->num_enemies_left_ == 0);
   CHECK (cond->num_friends_left_ == 0);
 
@@ -943,7 +943,7 @@ TEST_CASE ("unit/behavior_damage") {
   BehaviorHook::Damage (*bot, nullptr, 25, 0, 8);
   CHECK (bot->last_damage_type_ == 8);
   CHECK (BehaviorHook::DamageTimestamp (*bot) == game.Time ());
-  CHECK (bot->enemy_ == nullptr);
+  CHECK (bot->enemy_.current == nullptr);
   BehaviorHook::SetCreature (*bot, false);
 
   // enemy fire feeds aggression, clears camp and remembers the shooter...
@@ -956,8 +956,8 @@ TEST_CASE ("unit/behavior_damage") {
   CHECK (bot->emotion_.aggression == 0.1f);
   CHECK (bot->emotion_.fear == 0.5f);
   CHECK (bot->GetTaskId () != TaskId::Camp);
-  CHECK (bot->last_enemy_ == foe);
-  CHECK (bot->last_enemy_origin_ == foe->v.origin);
+  CHECK (bot->enemy_.last == foe);
+  CHECK (bot->enemy_.last_origin == foe->v.origin);
   CHECK (bot->see_enemy_timer_.started ());
 
   // ...and lands in the practice storage through the node map
@@ -987,10 +987,10 @@ TEST_CASE ("unit/behavior_damage") {
   // team kills mark the killer as the enemy on the spot
   cv_tkpunish.Set (1);
   clients[foe].team = Team::Terrorist;
-  bot->enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
   BehaviorHook::Damage (*bot, foe, 20, 0, 4);
-  CHECK (bot->enemy_ == foe);
-  CHECK (bot->last_enemy_ == foe);
+  CHECK (bot->enemy_.current == foe);
+  CHECK (bot->enemy_.last == foe);
   CHECK (bot->actual_reaction_time_ == 0.0f);
   clients[foe].team = Team::CT;
 
@@ -3156,7 +3156,7 @@ TEST_CASE ("unit/behavior_teleport") {
   telhos->v.origin = ystl::Vector (100.0f, 0.0f, 0.0f);
   bot->pev->origin = ystl::Vector (1100.0f, 0.0f, 0.0f); // inside straggler range, past follow range
   bot->has_hostage_ = false;
-  bot->enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
   bot->emotion_.aggression = 0.0f; // keep the endgame-rush path out of the way
   BehaviorHook::SetStates (*bot, Sense::Invalid);
   bot->ClearTasks ();
@@ -3171,11 +3171,11 @@ TEST_CASE ("unit/behavior_teleport") {
 
   // ...and halting while an enemy is in sight is never an option...
   bot->pev->origin = ystl::Vector (1100.0f, 0.0f, 0.0f);
-  bot->enemy_ = game.CreateFakeClient ("EscortFoe");
+  bot->enemy_.current = game.CreateFakeClient ("EscortFoe");
   bot->ClearTasks ();
   BehaviorHook::HostageEscort (*bot);
   CHECK (bot->GetTaskId () != TaskId::Pause);
-  bot->enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
 
   // ...a hostage that never catches up is eventually abandoned...
   bot->ClearTasks ();
@@ -3484,8 +3484,8 @@ TEST_CASE ("unit/behavior_team_awareness") {
   a->is_alive_ = true;
   a->emotion_.teamwork = 1.0f; // always react when the contact is valid
   a->pev->origin = ystl::Vector (0.0f, 0.0f, 0.0f);
-  a->enemy_ = nullptr;
-  a->last_enemy_ = nullptr;
+  a->enemy_.current = nullptr;
+  a->enemy_.last = nullptr;
   a->has_c4_ = false;
   a->has_hostage_ = false;
 
@@ -3501,20 +3501,20 @@ TEST_CASE ("unit/behavior_team_awareness") {
   // a live contact is investigated
   bots.ReportTeamContact (Team::Terrorist, foe, foe->v.origin, 1);
   BehaviorHook::TeamAwareness (*a);
-  CHECK (a->last_enemy_ == foe);
+  CHECK (a->enemy_.last == foe);
 
   // a corpse is not worth converging on
   foe->v.health = 0.0f;
   foe->v.deadflag = DEAD_DEAD;
 
-  a->last_enemy_ = nullptr;
+  a->enemy_.last = nullptr;
   a->ClearTasks ();
   a->StartTask (TaskId::Normal, TaskPri::kNormal, kInvalidNodeIndex, 0.0f, true);
   a->team_cooldowns_.contact.invalidate ();
 
   bots.ReportTeamContact (Team::Terrorist, foe, foe->v.origin, 1);
   BehaviorHook::TeamAwareness (*a);
-  CHECK (a->last_enemy_ == nullptr);
+  CHECK (a->enemy_.last == nullptr);
   CHECK (a->GetTaskId () != TaskId::MoveTo);
 
   bots.Destroy ();

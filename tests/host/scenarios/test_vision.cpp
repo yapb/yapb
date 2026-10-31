@@ -22,13 +22,13 @@ struct VisionHook {
     bot.aim_flags_ = flags;
   }
   static void SetLookAt (Bot &bot, const ystl::Vector &pos) {
-    bot.look_at_ = pos;
+    bot.look_.main = pos;
   }
   static ystl::Vector LookAt (Bot &bot) {
-    return bot.look_at_;
+    return bot.look_.main;
   }
   static void SetLookAtSafe (Bot &bot, const ystl::Vector &pos) {
-    bot.look_at_safe_ = pos;
+    bot.look_.safe = pos;
   }
   static void SetEntity (Bot &bot, const ystl::Vector &pos) {
     bot.entity_ = pos;
@@ -49,7 +49,7 @@ struct VisionHook {
     bot.emotion_.aggression = value;
   }
   static void SetEnemyOrigin (Bot &bot, const ystl::Vector &pos) {
-    bot.last_enemy_origin_ = pos;
+    bot.enemy_.last_origin = pos;
   }
   static float MemorySpan (Bot &bot) {
     return bot.EnemyMemorySpan ();
@@ -440,7 +440,7 @@ TEST_CASE ("unit/vision_aim") {
   CHECK (VisionHook::LookAt (*bot) == ystl::Vector (7.0f, 8.0f, 9.0f));
 
   VisionHook::SetAimFlags (*bot, AimFlags::LastEnemy);
-  bot->last_enemy_origin_ = ystl::Vector (21.0f, 22.0f, 23.0f);
+  bot->enemy_.last_origin = ystl::Vector (21.0f, 22.0f, 23.0f);
   VisionHook::AimDirection (*bot);
   CHECK (VisionHook::LookAt (*bot) == ystl::Vector (21.0f, 22.0f, 23.0f));
 

@@ -51,7 +51,7 @@ struct TasksHook {
     return static_cast<int> (bot.aim_flags_);
   }
   static ystl::Vector LookSafe (Bot &bot) {
-    return bot.look_at_safe_;
+    return bot.look_.safe;
   }
   static float MoveSpeed (Bot &bot) {
     return bot.move_speed_;
@@ -69,13 +69,13 @@ struct TasksHook {
     return bot.HasAnyAmmoInClip ();
   }
   static void SetEnemy (Bot &bot, edict_t *ent) {
-    bot.enemy_ = ent;
+    bot.enemy_.current = ent;
   }
   static void SetLastEnemy (Bot &bot, edict_t *ent) {
-    bot.last_enemy_ = ent;
+    bot.enemy_.last = ent;
   }
   static void SetLastEnemyOrigin (Bot &bot, const ystl::Vector &pos) {
-    bot.last_enemy_origin_ = pos;
+    bot.enemy_.last_origin = pos;
   }
   static void SetTargetEntity (Bot &bot, edict_t *ent) {
     bot.target_entity_ = ent;
@@ -331,7 +331,7 @@ TEST_CASE ("unit/tasks_core") {
 
   // ...and a running enemy outranks everything below attack
   TasksHook::SetStates (*bot, Sense::SeeingEnemy);
-  bot->enemy_ = foe;
+  bot->enemy_.current = foe;
   foe->v.velocity = ystl::Vector (300.0f, 0.0f, 0.0f);
   TasksHook::Filter (*bot);
   CHECK (bot->GetTaskId () == TaskId::Attack);
@@ -576,11 +576,11 @@ TEST_CASE ("unit/tasks_duty") {
   CHECK (bot->GetTaskId () != TaskId::PickupItem);
 
   // hunts drop without a named enemy, teammates included
-  bot->enemy_ = human;
+  bot->enemy_.current = human;
   bot->StartTask (TaskId::Hunt, 89.0f, kInvalidNodeIndex, 0.0f, true);
   TasksHook::Execute (*bot);
   CHECK (bot->GetTaskId () != TaskId::Hunt);
-  bot->enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
 
   bots.Destroy ();
 }
@@ -1040,7 +1040,7 @@ TEST_CASE ("unit/tasks_desires") {
   bot->has_c4_ = false;
   bot->has_hostage_ = false;
   bot->is_vip_ = false;
-  bot->enemy_ = nullptr;
+  bot->enemy_.current = nullptr;
   bot->personality_ = Personality::Normal;
   TasksHook::SetCurrentNode (*bot, 1);
   TasksHook::SetLastEnemy (*bot, foe);
@@ -1099,7 +1099,7 @@ TEST_CASE ("unit/tasks_desires") {
   bot->pickup_item_ = nullptr;
   TasksHook::SetLastEnemy (*bot, foe_bot->Ent ());
   TasksHook::SetLastEnemyOrigin (*bot, ystl::Vector (500.0f, 0.0f, 0.0f));
-  bot->enemy_ = foe_bot->Ent ();
+  bot->enemy_.current = foe_bot->Ent ();
   TasksHook::SetStates (*bot, Sense::Invalid);
   bot->health_value_ = 50.0f;
   bot->pev->max_health = 100.0f;

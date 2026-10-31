@@ -236,7 +236,7 @@ public:
     auto bot = GetBot (entity);
 
     if (bot) {
-      return EntIndex (bot->enemy_);
+      return EntIndex (bot->enemy_.current);
     }
     return 0;
   }
@@ -246,7 +246,7 @@ public:
     auto bot = GetBot (entity);
 
     if (bot) {
-      return EntIndex (bot->last_enemy_);
+      return EntIndex (bot->enemy_.last);
     }
     return 0;
   }
@@ -276,7 +276,7 @@ public:
     auto bot = GetBot (entity);
 
     if (bot) {
-      return bot->last_enemy_origin_;
+      return bot->enemy_.last_origin;
     }
     return nullptr;
   }

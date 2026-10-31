@@ -173,7 +173,7 @@ void Bot::CheckBreakable (edict_t *touch) {
   if (!game.HasBreakables ()) {
     return;
   }
-  const bool has_enemy = !game.IsNullEntity (enemy_);
+  const bool has_enemy = !game.IsNullEntity (enemy_.current);
 
   // do not track breakables while fighting
   if (has_enemy) {
@@ -230,7 +230,7 @@ void Bot::CheckBreakable (edict_t *touch) {
 void Bot::CheckBreakablesAround () {
   if (!buying_finished_ || is_creature_ || GetTaskId () == TaskId::ShootBreakable || !cv_destroy_breakables_around || UsesKnife () ||
       UsesSniper () || IsOnLadder () || rg.chance (25) || !game.HasBreakables () || see_enemy_timer_.less_than (4.0f) ||
-      !game.IsNullEntity (enemy_) || has_flag (aim_flags_, AimFlags::PredictPath | AimFlags::Danger) || !HasPrimaryWeapon () ||
+      !game.IsNullEntity (enemy_.current) || has_flag (aim_flags_, AimFlags::PredictPath | AimFlags::Danger) || !HasPrimaryWeapon () ||
       !IsBreakableAllowed ()) {
     return;
   }
@@ -634,7 +634,7 @@ void Bot::UpdateTeamAwareness () {
   // lone, un-engaged bots head for the last enemy contact a teammate shared, so the team converges
 
   if (!is_alive_ || is_creature_ || game.Is (GameFlags::FreeForAll) || game_state.IsRoundOver () || !team_cooldowns_.contact.elapsed () ||
-      has_c4_ || has_hostage_ || !game.IsNullEntity (enemy_) || !game.IsNullEntity (last_enemy_)) {
+      has_c4_ || has_hostage_ || !game.IsNullEntity (enemy_.current) || !game.IsNullEntity (enemy_.last)) {
 
     return;
   }
@@ -671,8 +671,8 @@ void Bot::UpdateTeamAwareness () {
     return;
   }
 
-  last_enemy_ = contact_entity;
-  last_enemy_origin_ = contact_origin;
+  enemy_.last = contact_entity;
+  enemy_.last_origin = contact_origin;
   states_ |= (Sense::SuspectEnemy | Sense::HearingEnemy);
   aim_flags_ |= AimFlags::LastEnemy;
 
@@ -699,7 +699,7 @@ void Bot::UpdateTeamCohesion () {
   // team players regroup with the nearest living teammate instead of wandering off alone
 
   if (!is_alive_ || is_creature_ || game.Is (GameFlags::FreeForAll) || game_state.IsRoundOver () || !team_cooldowns_.cohesion.elapsed () ||
-      has_c4_ || has_hostage_ || !game.IsNullEntity (enemy_) || !game.IsNullEntity (last_enemy_) || GetTaskId () != TaskId::Normal) {
+      has_c4_ || has_hostage_ || !game.IsNullEntity (enemy_.current) || !game.IsNullEntity (enemy_.last) || GetTaskId () != TaskId::Normal) {
 
     return;
   }
@@ -755,7 +755,7 @@ void Bot::UpdateBombGuard () {
   // idle bots respond to the planted bomb: CTs cover the defuser, Ts hold it or rush a defuser
 
   if ((team_ != Team::CT && team_ != Team::Terrorist) || !is_alive_ || is_creature_ || !game_state.IsBombPlanted () ||
-      (team_ == Team::CT && !bomb_known_) || !team_cooldowns_.bomb_guard.elapsed () || !game.IsNullEntity (enemy_) ||
+      (team_ == Team::CT && !bomb_known_) || !team_cooldowns_.bomb_guard.elapsed () || !game.IsNullEntity (enemy_.current) ||
       has_flag (states_, Sense::SeeingEnemy)) {
 
     return;
@@ -815,7 +815,7 @@ void Bot::UpdateHostageEscort () {
 
   // hold position for a moment so a rescued hostage that trailed off can catch up
   if (team_ != Team::CT || !game.MapIs (MapFlags::HostageRescue) || has_hostage_ || hostages_.empty () || ShouldRushEndgameTime () ||
-      (team_cooldowns_.hostage_giveup.started () && team_cooldowns_.hostage_giveup.elapsed ()) || !game.IsNullEntity (enemy_) ||
+      (team_cooldowns_.hostage_giveup.started () && team_cooldowns_.hostage_giveup.elapsed ()) || !game.IsNullEntity (enemy_.current) ||
       has_flag (states_, Sense::SeeingEnemy) || GetTaskId () == TaskId::Pause) {
     return;
   }
@@ -888,19 +888,19 @@ void Bot::OverrideConditions () {
   float reach_enemy_knife_distance_sq = ystl::sqrf (128.0f);
 
   // special handling, if we have a knife in our hands
-  if (IsKnifeMode () && (game.IsPlayerEntity (enemy_) || (cv_attack_monsters && game.IsMonsterEntity (enemy_)))) {
-    const auto distance_sq2d = pev->origin.distance_sq2d (enemy_->v.origin);
-    const auto nearest_to_enemy_point = graph.GetNearest (enemy_->v.origin);
+  if (IsKnifeMode () && (game.IsPlayerEntity (enemy_.current) || (cv_attack_monsters && game.IsMonsterEntity (enemy_.current)))) {
+    const auto distance_sq2d = pev->origin.distance_sq2d (enemy_.current->v.origin);
+    const auto nearest_to_enemy_point = graph.GetNearest (enemy_.current->v.origin);
 
     if (nearest_to_enemy_point != kInvalidNodeIndex && nearest_to_enemy_point != current_node_index_) {
-      reach_enemy_knife_distance_sq = graph[nearest_to_enemy_point].origin.distance_sq (enemy_->v.origin);
+      reach_enemy_knife_distance_sq = graph[nearest_to_enemy_point].origin.distance_sq (enemy_.current->v.origin);
       reach_enemy_knife_distance_sq += ystl::sqrf (48.0f);
     }
 
     // do nodes movement if enemy is not reachable with a knife
     if (distance_sq2d > reach_enemy_knife_distance_sq && has_flag (states_, Sense::SeeingEnemy)) {
       if (nearest_to_enemy_point != kInvalidNodeIndex && nearest_to_enemy_point != current_node_index_ &&
-          ystl::abs (graph[nearest_to_enemy_point].origin.z - enemy_->v.origin.z) < 16.0f) {
+          ystl::abs (graph[nearest_to_enemy_point].origin.z - enemy_.current->v.origin.z) < 16.0f) {
 
         const float task_time = game.Time () + distance_sq2d / ystl::sqrf (move_speed_) * 2.0f;
 
@@ -956,7 +956,7 @@ void Bot::OverrideConditions () {
 }
 
 void Bot::UpdatePredictedIndex () {
-  if (!is_alive_ || last_enemy_origin_.empty () || !vistab.IsReady () || !game.IsAliveEntity (last_enemy_)) {
+  if (!is_alive_ || enemy_.last_origin.empty () || !vistab.IsReady () || !game.IsAliveEntity (enemy_.last)) {
     return; // do not run task if no last enemy
   }
 
@@ -973,10 +973,10 @@ void Bot::UpdatePredictedIndex () {
   };
 
   const auto &bot_origin = pev->origin;
-  const auto &last_enemy_origin = last_enemy_origin_;
+  const auto &last_enemy_origin = enemy_.last_origin;
   const auto current_node_index = current_node_index_;
 
-  if (last_enemy_origin.empty () || !vistab.IsReady () || !game.IsAliveEntity (last_enemy_)) {
+  if (last_enemy_origin.empty () || !vistab.IsReady () || !game.IsAliveEntity (enemy_.last)) {
     wipe_predict ();
     return;
   }
@@ -1055,9 +1055,9 @@ void Bot::RefreshEnemyPredict () {
   }
 
   // watch a visible spot while the enemy is still a live suspect
-  if (has_flag (states_, Sense::SuspectEnemy) && game.IsNullEntity (enemy_) && !game.IsNullEntity (last_enemy_) &&
-      !last_enemy_origin_.empty ()) {
-    const auto distance_to_last_enemy_sq = last_enemy_origin_.distance_sq (pev->origin);
+  if (has_flag (states_, Sense::SuspectEnemy) && game.IsNullEntity (enemy_.current) && !game.IsNullEntity (enemy_.last) &&
+      !enemy_.last_origin.empty ()) {
+    const auto distance_to_last_enemy_sq = enemy_.last_origin.distance_sq (pev->origin);
 
     if (distance_to_last_enemy_sq < ystl::sqrf (2048.0f)) {
       aim_flags_ |= AimFlags::PredictPath;
@@ -1066,7 +1066,7 @@ void Bot::RefreshEnemyPredict () {
       pev->velocity.length_sq2d () > 0.0f && distance_to_last_enemy_sq < ystl::sqrf (256.0f) && shoot_time_ + 1.5f > game.Time ();
 
     if (!has_flag (aim_flags_, AimFlags::Enemy | AimFlags::PredictPath | AimFlags::Danger) && !deny_last_enemy &&
-        SeesEntity (last_enemy_origin_, true)) {
+        SeesEntity (enemy_.last_origin, true)) {
       aim_flags_ |= AimFlags::LastEnemy;
     }
   }
@@ -1112,13 +1112,13 @@ void Bot::SetConditions () {
   num_enemies_left_ = NumEnemiesNear (pev->origin, kInfiniteDistance);
 
   // check if our current enemy is still valid
-  if (!game.IsNullEntity (last_enemy_)) {
-    if (!game.IsAliveEntity (last_enemy_) && shoot_at_dead_timer_.elapsed ()) {
-      last_enemy_ = nullptr;
+  if (!game.IsNullEntity (enemy_.last)) {
+    if (!game.IsAliveEntity (enemy_.last) && shoot_at_dead_timer_.elapsed ()) {
+      enemy_.last = nullptr;
     }
   }
   else {
-    last_enemy_ = nullptr;
+    enemy_.last = nullptr;
   }
 
   // dynamic hearing rate: fast during combat, slow when idle
@@ -1140,12 +1140,11 @@ void Bot::SetConditions () {
     states_ &= ~Sense::HearingEnemy;
 
     // clear the last enemy pointers if time has passed or enemy far away
-    if (!last_enemy_origin_.empty ()) {
-      const auto distance_sq = pev->origin.distance_sq (last_enemy_origin_);
+    if (!enemy_.last_origin.empty ()) {
+      const auto distance_sq = pev->origin.distance_sq (enemy_.last_origin);
 
-      if (distance_sq >= ystl::sqrf (2048.0f) || (game.IsNullEntity (enemy_) && see_enemy_timer_.greater_than (10.0f))) {
-        last_enemy_origin_.clear ();
-        last_enemy_ = nullptr;
+      if (distance_sq >= ystl::sqrf (2048.0f) || (game.IsNullEntity (enemy_.current) && see_enemy_timer_.greater_than (10.0f))) {
+        enemy_.ForgetLast ();
 
         aim_flags_ &= ~AimFlags::LastEnemy;
       }
@@ -1341,7 +1340,7 @@ void Bot::SlowFrame () {
         if (bomb_position.distance_sq (pev->origin) >= ystl::sqrf (96.0f)) {
           near_bomb_timer_.invalidate ();
 
-          if ((bomb_known_ || force_bomb) && game.IsNullEntity (enemy_) && !has_flag (states_, Sense::SeeingEnemy) &&
+          if ((bomb_known_ || force_bomb) && game.IsNullEntity (enemy_.current) && !has_flag (states_, Sense::SeeingEnemy) &&
               (GetTaskId () != TaskId::MoveTo || position_.distance_sq (bomb_position) > ystl::sqrf (64.0f))) {
             position_ = bomb_position;
             ClearSearchNodes ();
@@ -1514,10 +1513,10 @@ void Bot::LogicDuringFreezetime () {
     auto ent = players.random ();
 
     if (ent) {
-      look_at_ = ent->v.origin + ent->v.view_ofs;
+      look_.main = ent->v.origin + ent->v.view_ofs;
 
       if (buying_finished_ && game.GetPlayerTeam (ent) != team_) {
-        enemy_ = ent;
+        enemy_.current = ent;
         enemy_origin_ = ent->v.origin;
       }
     }
@@ -1543,7 +1542,7 @@ void Bot::ExecuteTasks () {
 void Bot::CheckSpawnConditions () {
   // this function is called instead of ai when buying finished, but freezetime is not yet left
 
-  if (!game.IsNullEntity (enemy_)) {
+  if (!game.IsNullEntity (enemy_.current)) {
     return;
   }
 
@@ -1675,7 +1674,7 @@ void Bot::Logic () {
   if (CanRunHeavyWeight ()) {
     SetConditions ();
   }
-  else if (!game.IsNullEntity (enemy_)) {
+  else if (!game.IsNullEntity (enemy_.current)) {
     TrackEnemies ();
   }
   ExecuteChatterFrameEvents ();
@@ -2023,14 +2022,14 @@ void Bot::TakeDamage (edict_t *inflictor, int damage, int armor, int bits) {
 
   if (is_creature_) {
     // creatures should remember the direction of damage, even if attacker is not visible
-    if (game.IsPlayerEntity (inflictor) && game.GetRealPlayerTeam (inflictor) != team_ && game.IsNullEntity (enemy_)) {
+    if (game.IsPlayerEntity (inflictor) && game.GetRealPlayerTeam (inflictor) != team_ && game.IsNullEntity (enemy_.current)) {
       if (SeesEnemy (inflictor)) {
-        enemy_ = inflictor;
+        enemy_.current = inflictor;
         enemy_origin_ = inflictor->v.origin;
       }
       else {
-        last_enemy_ = inflictor;
-        last_enemy_origin_ = inflictor->v.origin;
+        enemy_.last = inflictor;
+        enemy_.last_origin = inflictor->v.origin;
         see_enemy_timer_.start ();
       }
     }
@@ -2048,11 +2047,11 @@ void Bot::TakeDamage (edict_t *inflictor, int damage, int armor, int bits) {
       // alright, die you team killer!!!
       actual_reaction_time_ = 0.0f;
       see_enemy_timer_.start ();
-      enemy_ = inflictor;
+      enemy_.current = inflictor;
 
-      last_enemy_ = enemy_;
-      last_enemy_origin_ = enemy_->v.origin;
-      enemy_origin_ = enemy_->v.origin;
+      enemy_.last = enemy_.current;
+      enemy_.last_origin = enemy_.current->v.origin;
+      enemy_origin_ = enemy_.current->v.origin;
 
       PushChatMessage (Chat::TeamAttack);
       PushRadioChat (RadioChat::FriendlyFire);
@@ -2078,9 +2077,9 @@ void Bot::TakeDamage (edict_t *inflictor, int damage, int armor, int bits) {
       }
       ClearTask (TaskId::Camp);
 
-      if (game.IsNullEntity (enemy_) && team_ != inflictor_team) {
-        last_enemy_ = inflictor;
-        last_enemy_origin_ = inflictor->v.origin;
+      if (game.IsNullEntity (enemy_.current) && team_ != inflictor_team) {
+        enemy_.last = inflictor;
+        enemy_.last_origin = inflictor->v.origin;
 
         // shout out where the shots come from, so mates converge on the shooter
         bots.ReportTeamContact (team_, inflictor, inflictor->v.origin, 1);
@@ -2118,7 +2117,7 @@ void Bot::TakeBlind (int alpha) {
   if (blind_.timer.elapsed ()) {
     return;
   }
-  enemy_ = nullptr;
+  enemy_.current = nullptr;
 
   if (difficulty_ <= Difficulty::Normal) {
     blind_.move_speed = 0.0f;
@@ -2156,7 +2155,7 @@ void Bot::DropWeaponForUser (edict_t *user, bool discard_c4) {
   if (game.IsAliveEntity (user) && money_amount_ >= 2000 && HasPrimaryWeapon () &&
       user->v.origin.distance_sq (pev->origin) <= ystl::sqrf (450.0f)) {
     aim_flags_ |= AimFlags::Entity;
-    look_at_ = user->v.origin;
+    look_.main = user->v.origin;
 
     if (discard_c4 && has_c4_) {
       SelectWeaponById (Weapon::C4);
@@ -2370,10 +2369,10 @@ void Bot::UpdateHearing () {
   Noise best_sound_type {};
 
   // do not hear to other enemies if just tracked old one
-  if (!UsesKnife () && next_tracking_timer_.elapsed () && last_enemy_ == tracking_edict_ && game.IsAliveEntity (last_enemy_)) {
+  if (!UsesKnife () && next_tracking_timer_.elapsed () && enemy_.last == tracking_edict_ && game.IsAliveEntity (enemy_.last)) {
 
-    heard_enemy_ = last_enemy_;
-    last_enemy_origin_ = last_enemy_->v.origin;
+    heard_enemy_ = enemy_.last;
+    enemy_.last_origin = enemy_.last->v.origin;
 
     // still register the contact, otherwise the heard state is silently consumed
     heard_sound_timer_.start ();
@@ -2451,7 +2450,7 @@ void Bot::UpdateHearing () {
     heard_sound_timer_.start ();
     states_ |= Sense::HearingEnemy;
 
-    if (rg.chance (10) && game.IsNullEntity (enemy_) && game.IsNullEntity (last_enemy_) && see_enemy_timer_.greater_than (7.0f) &&
+    if (rg.chance (10) && game.IsNullEntity (enemy_.current) && game.IsNullEntity (enemy_.last) && see_enemy_timer_.greater_than (7.0f) &&
         bots.TryTeamSpeech (team_, 6.0f, SpeechTopic::Social, SpeechPriority::Social)) {
       PushRadioChat (RadioChat::HeardTheEnemy);
     }
@@ -2468,27 +2467,27 @@ void Bot::UpdateHearing () {
     };
 
     // didn't bot already have an enemy ? take this one
-    if (last_enemy_origin_.empty () || game.IsNullEntity (last_enemy_)) {
-      last_enemy_ = heard_enemy_;
-      last_enemy_origin_ = get_heard_origin_with_error ();
+    if (enemy_.last_origin.empty () || game.IsNullEntity (enemy_.last)) {
+      enemy_.last = heard_enemy_;
+      enemy_.last_origin = get_heard_origin_with_error ();
     }
 
     // bot had an enemy, check if it's the heard one
     else {
-      if (heard_enemy_ == last_enemy_) {
+      if (heard_enemy_ == enemy_.last) {
         // bot sees enemy ? then bail out !
         if (has_flag (states_, Sense::SeeingEnemy)) {
           return;
         }
-        last_enemy_origin_ = get_heard_origin_with_error ();
+        enemy_.last_origin = get_heard_origin_with_error ();
       }
       else if (heard_enemy_ != nullptr) {
         // if bot had an enemy but the heard one is nearer, take it instead
-        const float distance_sq = last_enemy_origin_.distance_sq (pev->origin);
+        const float distance_sq = enemy_.last_origin.distance_sq (pev->origin);
 
         if (distance_sq > heard_enemy_->v.origin.distance_sq (pev->origin) && see_enemy_timer_.greater_than (1.0f)) {
-          last_enemy_ = heard_enemy_;
-          last_enemy_origin_ = get_heard_origin_with_error ();
+          enemy_.last = heard_enemy_;
+          enemy_.last_origin = get_heard_origin_with_error ();
         }
         else {
           return;
@@ -2498,9 +2497,9 @@ void Bot::UpdateHearing () {
 
     // check if heard enemy can be seen
     if (CheckBodyPartsWithOffsets (heard_enemy_)) {
-      enemy_ = heard_enemy_;
-      last_enemy_ = heard_enemy_;
-      last_enemy_origin_ = enemy_origin_;
+      enemy_.current = heard_enemy_;
+      enemy_.last = heard_enemy_;
+      enemy_.last_origin = enemy_origin_;
 
       states_ |= Sense::SeeingEnemy;
       see_enemy_timer_.start ();
@@ -2508,7 +2507,7 @@ void Bot::UpdateHearing () {
 
     // check if heard enemy can be shoot through some obstacle
     else {
-      if (cv_shoots_thru_walls && last_enemy_ == heard_enemy_ && thru_wall_hold_timer_.elapsed () && thru_wall_reroll_timer_.elapsed () &&
+      if (cv_shoots_thru_walls && enemy_.last == heard_enemy_ && thru_wall_hold_timer_.elapsed () && thru_wall_reroll_timer_.elapsed () &&
           see_enemy_timer_.less_than (3.0f) && IsPenetrableObstacleCached (heard_enemy_->v.origin)) {
 
         // roll at most once per backoff interval, so the chance is per-attempt, not per-tick
@@ -2666,7 +2665,7 @@ void Bot::RefreshCreatureStatus (char *infobuffer) {
 
     // if bot is on infected team, and zombie mode is active, assume bot is a creature/zombie
     is_on_infected_team_ = game.GetRealPlayerTeam (Ent ()) == infected_team;
-    infected_enemy_team_ = game.GetRealPlayerTeam (enemy_) == infected_team;
+    infected_enemy_team_ = game.GetRealPlayerTeam (enemy_.current) == infected_team;
 
     // do not process next if already infected
     if (is_on_infected_team_ || infected_enemy_team_) {

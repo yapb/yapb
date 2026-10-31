@@ -652,14 +652,14 @@ TEST_CASE ("unit/manager_teams") {
   killer->is_alive_ = true;
   victim->is_alive_ = true;
   watcher->is_alive_ = true;
-  watcher->enemy_ = victim->Ent ();
-  watcher->last_enemy_ = victim->Ent ();
+  watcher->enemy_.current = victim->Ent ();
+  watcher->enemy_.last = victim->Ent ();
 
   bots.HandleDeath (killer->Ent (), victim->Ent ());
   CHECK (killer->last_victim_ == victim->Ent ());
   CHECK (!victim->is_alive_);
-  CHECK (watcher->enemy_ == nullptr);
-  CHECK (watcher->last_enemy_ == nullptr);
+  CHECK (watcher->enemy_.current == nullptr);
+  CHECK (watcher->enemy_.last == nullptr);
 
   // human killer: victim still goes down
   victim->is_alive_ = true;
