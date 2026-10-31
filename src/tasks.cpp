@@ -1973,6 +1973,13 @@ void Bot::TaskPickupItem () {
 
   switch (pickup_type_) {
   case Pickup::DroppedC4:
+    // the c4 rests above a step right on top of us and cannot be walked into: hand it over
+    // instead of the whole team stalling underneath it (deliberate cheat, jump reach excluded)
+    if (dest.distance_sq2d (pev->origin) < ystl::sqrf (48.0f) && dest.z - pev->origin.z > sv_stepsize.As<float> ()) {
+      MDLL_Touch (pickup_item_, Ent ());
+    }
+    break;
+
   case Pickup::None:
   case Pickup::Items:
     break;
