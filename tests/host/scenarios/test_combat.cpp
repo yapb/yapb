@@ -2568,4 +2568,70 @@ TEST_CASE ("unit/combat_aim") {
   bots.Destroy ();
 }
 
+TEST_CASE ("unit/enemy_state") {
+  // DropEntity only compares pointers, real edicts keep the test honest
+  edict_t dummy_a {};
+  edict_t dummy_b {};
+  edict_t *a = &dummy_a;
+  edict_t *b = &dummy_b;
+
+  EnemyState e {};
+  CHECK (!e.Has ());
+
+  // a full re-arm: current, memory, origin and aim lock
+  auto arm = [&] {
+    e.current = a;
+    e.last = b;
+    e.last_origin = ystl::Vector (1.0f, 2.0f, 3.0f);
+    e.aim_lock = a;
+  };
+
+  // clear drops only the engaged target, memory stays
+  arm ();
+  e.Clear ();
+  CHECK (!e.Has ());
+  CHECK (e.aim_lock == nullptr);
+  CHECK (e.last == b);
+  CHECK (!e.last_origin.empty ());
+
+  // forget last drops only the memory
+  arm ();
+  e.ForgetLast ();
+  CHECK (e.current == a);
+  CHECK (e.last == nullptr);
+  CHECK (e.last_origin.empty ());
+
+  // dropping a freed entity clears only the references to it
+  arm ();
+  e.DropEntity (b);
+  CHECK (e.current == a);
+  CHECK (e.aim_lock == a);
+  CHECK (e.last == nullptr);
+  CHECK (e.last_origin.empty ());
+
+  arm ();
+  e.DropEntity (a);
+  CHECK (e.current == nullptr);
+  CHECK (e.aim_lock == nullptr);
+  CHECK (e.last == b); // a different enemy is not touched
+  CHECK (!e.last_origin.empty ());
+
+  // all three may point at the same freed entity: everything clears at once
+  arm ();
+  e.last = a; // last now points at the same entity as current and aim lock
+  e.DropEntity (a);
+  CHECK (e.current == nullptr);
+  CHECK (e.aim_lock == nullptr);
+  CHECK (e.last == nullptr);
+  CHECK (e.last_origin.empty ());
+
+  // forget wipes everything
+  arm ();
+  e.Forget ();
+  CHECK (!e.Has ());
+  CHECK (e.last == nullptr);
+  CHECK (e.last_origin.empty ());
+  CHECK (e.aim_lock == nullptr);
+}
+
 } // namespace bot
