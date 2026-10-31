@@ -189,8 +189,8 @@ TEST_CASE ("unit/message_dispatch") {
   CHECK (bot->money_amount_ == 1500);
 
   // ...short frames never reach the handlers...
-  for (const auto id : { kTextMsg, kVGUIMenu, kShowMenu, kWeaponList, kCurWeapon, kAmmo, kDamage, kStatusIcon, kScreenFade,
-                         kBarTime, kItemStatus, kNVGToggle, kFlashBat, kTeamInfo, kScoreInfo, kScoreAttrib, kDeathMsg, kHLTV, kResetHUD }) {
+  for (const auto id : { kTextMsg, kVGUIMenu, kShowMenu, kWeaponList, kCurWeapon, kAmmo, kDamage, kStatusIcon, kScreenFade, kBarTime,
+         kItemStatus, kNVGToggle, kFlashBat, kTeamInfo, kScoreInfo, kScoreAttrib, kDeathMsg, kHLTV, kResetHUD }) {
     SendLongs (bot->Ent (), id, {});
     SendLongs (nullptr, id, {});
   }
