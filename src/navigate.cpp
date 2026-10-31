@@ -651,22 +651,22 @@ void Bot::IgnoreCollision () {
 
   last_coll_timer_.start (0.65f);
   first_collide_timer_.invalidate ();
-  stuck_accumulated_time_ = 0.0f;
+  stuck_.accumulated = 0.0f;
   check_terrain_ = false;
 }
 
 void Bot::DoPlayerAvoidance (const ystl::Vector &) {
-  avoid_in_narrow_ = false;
+  avoid_.in_narrow = false;
 
   if (IsOnLadder () || pev->solid == SOLID_NOT || cv_has_team_semiclip || game.Is (GameFlags::FreeForAll) || HasUninterruptibleTask ()) {
     return; // no player avoiding when with semiclip plugin
   }
 
   // validate existing hindrance is still alive
-  if (!game.IsNullEntity (hindrance_) && !game.IsAliveEntity (hindrance_)) {
-    hindrance_ = nullptr;
-    avoid_strafe_dir_ = 0.0f;
-    avoid_commit_timer_.invalidate ();
+  if (!game.IsNullEntity (avoid_.hindrance) && !game.IsAliveEntity (avoid_.hindrance)) {
+    avoid_.hindrance = nullptr;
+    avoid_.strafe_dir = 0.0f;
+    avoid_.commit.invalidate ();
   }
 
   edict_t *new_hindrance = nullptr;
@@ -735,13 +735,15 @@ void Bot::DoPlayerAvoidance (const ystl::Vector &) {
   // hold the committed slide across hindrance swaps in a crowd, only losing
   // everybody releases it (recomputing on every swap jitters side to side)
   if (new_hindrance == nullptr) {
-    avoid_strafe_dir_ = 0.0f;
-    avoid_commit_timer_.invalidate ();
+    avoid_.strafe_dir = 0.0f;
+    avoid_.commit.invalidate ();
+    avoid_.stalled = false;
+    avoid_.stall_timer.invalidate ();
   }
-  hindrance_ = new_hindrance;
+  avoid_.hindrance = new_hindrance;
 
   // found somebody?
-  if (game.IsNullEntity (hindrance_)) {
+  if (game.IsNullEntity (avoid_.hindrance)) {
     return;
   }
 
@@ -755,14 +757,14 @@ void Bot::DoPlayerAvoidance (const ystl::Vector &) {
   predict += right * strafe_speed_ * interval;
   predict += pev->velocity * interval;
 
-  const auto moved_distance_sq = hindrance_->v.origin.distance_sq (predict);
-  const auto next_frame_distance_sq = pev->origin.distance_sq (hindrance_->v.origin + hindrance_->v.velocity * interval);
+  const auto moved_distance_sq = avoid_.hindrance->v.origin.distance_sq (predict);
+  const auto next_frame_distance_sq = pev->origin.distance_sq (avoid_.hindrance->v.origin + avoid_.hindrance->v.velocity * interval);
 
   // if we're stuck with a hindrance, probably we're in bad place, find path to single goal for both bots
   if (IsStuckState ()) {
-    auto other = bots[hindrance_];
+    auto other = bots[avoid_.hindrance];
 
-    if (other != nullptr && !other->IsStuckState ()) {
+    if (other != nullptr && !other->IsStuckState () && avoid_.goal_copy_timer.elapsed ()) {
       Task ()->data = other->Task ()->data;
       prev_goal_index_ = other->prev_goal_index_;
       chosen_goal_index_ = other->chosen_goal_index_;
@@ -778,6 +780,8 @@ void Bot::DoPlayerAvoidance (const ystl::Vector &) {
       }
 
       if (graph.Exists (dest_index)) {
+        avoid_.goal_copy_timer.start (kCopyGoalRepath);
+        ++avoid_.goal_copy_repaths;
         FindPath (current_node_index_, dest_index, path_type_);
       }
     }
@@ -791,12 +795,12 @@ void Bot::DoPlayerAvoidance (const ystl::Vector &) {
     dir = repulsion_force.normalize2d ();
   }
   else if (distance_sq > ystl::sqrf (8.0f)) {
-    const ystl::Vector hind_predict = hindrance_->v.origin + hindrance_->v.velocity * interval;
+    const ystl::Vector hind_predict = avoid_.hindrance->v.origin + avoid_.hindrance->v.velocity * interval;
     dir = (predict - hind_predict).normalize2d ();
   }
 
   // vertical awareness - check height difference
-  const float height_diff = hindrance_->v.origin.z - pev->origin.z;
+  const float height_diff = avoid_.hindrance->v.origin.z - pev->origin.z;
 
   // adjust avoidance distance based on vertical separation
   float avoid_distance_near = 64.0f;
@@ -808,8 +812,9 @@ void Bot::DoPlayerAvoidance (const ystl::Vector &) {
   }
 
   // is player that near now or in future that we need to steer away?
-  if (moved_distance_sq <= ystl::sqrf (avoid_distance_near) ||
-      (distance_sq <= ystl::sqrf (avoid_distance_far) && next_frame_distance_sq < distance_sq)) {
+  // once pinned, terrain owns movement, so steering must not reset the collision probes every frame
+  if (!avoid_.stalled && (moved_distance_sq <= ystl::sqrf (avoid_distance_near) ||
+                           (distance_sq <= ystl::sqrf (avoid_distance_far) && next_frame_distance_sq < distance_sq))) {
     // a choke is where the bot hull cannot move sideways, measured against the movement heading
     const auto hull = IsDucking () ? head_hull : human_hull;
 
@@ -823,9 +828,9 @@ void Bot::DoPlayerAvoidance (const ystl::Vector &) {
     const bool blocked_left = on_floor && side_blocked (-right);
     const bool blocked_right = on_floor && side_blocked (right);
     const bool in_narrow = blocked_left && blocked_right;
-    const auto to_hindrance = hindrance_->v.origin - pev->origin;
+    const auto to_hindrance = avoid_.hindrance->v.origin - pev->origin;
     const bool hindrance_ahead = (to_hindrance.get2d () | forward.get2d ()) > 0.0f || distance_sq <= ystl::sqrf (8.0f);
-    avoid_in_narrow_ = in_narrow;
+    avoid_.in_narrow = in_narrow;
 
     auto clear_side = [&] () -> float {
       if (blocked_right) {
@@ -835,30 +840,56 @@ void Bot::DoPlayerAvoidance (const ystl::Vector &) {
     };
 
     if (in_narrow) {
-      const bool head_on = (hindrance_->v.velocity.get2d () | forward.get2d ()) < -10.0f;
+      const bool head_on = (avoid_.hindrance->v.velocity.get2d () | forward.get2d ()) < -10.0f;
       const float queue_distance = ystl::min (avoid_distance_near, 48.0f);
 
       // stop behind the bot ahead, never strafe into walls or back into the crowd
       strafe_speed_ = 0.0f;
-      avoid_strafe_dir_ = 0.0f;
-      avoid_commit_timer_.invalidate ();
+      avoid_.strafe_dir = 0.0f;
+      avoid_.commit.invalidate ();
+
+      const bool backing_out = head_on && distance_sq <= ystl::sqrf (avoid_distance_near);
+      const bool queued = hindrance_ahead && !backing_out && distance_sq <= ystl::sqrf (queue_distance);
+
+      // only a continuous queue counts towards the timeout
+      if (!queued) {
+        avoid_.queue_timer.invalidate ();
+      }
 
       if (hindrance_ahead) {
-        if (head_on && distance_sq <= ystl::sqrf (avoid_distance_near)) {
+        if (backing_out) {
           // opposite directions in a one-lane choke: back out instead of stalling
           move_speed_ = -pev->maxspeed;
-          avoid_commit_timer_.start (0.35f + static_cast<float> (Entindex () % 4) * 0.05f);
+          avoid_.commit.start (0.35f + static_cast<float> (Entindex () % 4) * 0.05f);
         }
-        else if (distance_sq <= ystl::sqrf (queue_distance)) {
-          move_speed_ = 0.0f;
-          avoid_commit_timer_.start (0.45f + static_cast<float> (Entindex () % 4) * 0.1f);
+        else if (queued) {
+          if (!avoid_.yield_timer.elapsed ()) {
+            // yielding: keep backing out so the pinned bot can pass
+            move_speed_ = -pev->maxspeed;
+          }
+          else {
+            if (!avoid_.queue_timer.started ()) {
+              avoid_.queue_timer.start (kAvoidQueueTimeout);
+            }
+
+            if (avoid_.queue_timer.elapsed ()) {
+              // waited long enough behind the bot ahead, back out and yield the choke
+              avoid_.yield_timer.start (kAvoidYieldTime);
+              avoid_.queue_timer.invalidate ();
+              move_speed_ = -pev->maxspeed;
+            }
+            else {
+              move_speed_ = 0.0f;
+            }
+          }
+          avoid_.commit.start (0.45f + static_cast<float> (Entindex () % 4) * 0.1f);
         }
       }
     }
     else {
       // if we already committed to an avoidance direction, keep it until commitment expires
-      if (!avoid_commit_timer_.elapsed ()) {
-        strafe_speed_ = avoid_strafe_dir_;
+      if (!avoid_.commit.elapsed ()) {
+        strafe_speed_ = avoid_.strafe_dir;
       }
       else {
         if (!dir.empty ()) {
@@ -872,18 +903,18 @@ void Bot::DoPlayerAvoidance (const ystl::Vector &) {
             if ((desired > 0.0f && blocked_right) || (desired < 0.0f && blocked_left)) {
               desired = clear_side ();
             }
-            avoid_strafe_dir_ = desired;
+            avoid_.strafe_dir = desired;
           }
-          else if (ystl::fzero (avoid_strafe_dir_)) {
-            avoid_strafe_dir_ = clear_side ();
+          else if (ystl::fzero (avoid_.strafe_dir)) {
+            avoid_.strafe_dir = clear_side ();
           }
         }
-        else if (ystl::fzero (avoid_strafe_dir_)) {
-          avoid_strafe_dir_ = clear_side ();
+        else if (ystl::fzero (avoid_.strafe_dir)) {
+          avoid_.strafe_dir = clear_side ();
         }
 
-        avoid_commit_timer_.start (0.4f);
-        strafe_speed_ = avoid_strafe_dir_;
+        avoid_.commit.start (0.4f);
+        strafe_speed_ = avoid_.strafe_dir;
       }
 
       // only back off if hindrance is approaching us (closing distance), not just moving
@@ -894,8 +925,7 @@ void Bot::DoPlayerAvoidance (const ystl::Vector &) {
       }
     }
 
-    // reset collision state so checkterrain doesn't consider us stuck from avoidance movement
-    first_collide_timer_.invalidate ();
+    // reset probing state, but keep the blocker latch running: a real blocker must still latch while we steer
     ResetCollision ();
   }
   // when the steer condition flickers for a frame, hold the committed slide and
@@ -957,30 +987,46 @@ bool Bot::DetectStuckStatus (const ystl::Vector &dir_normal) {
       }
       button_push_timer_.start (1.5f);
       door_hit_timer_.start (1.5f);
+      door_handover_.start (1.0f);
       first_collide_timer_.invalidate ();
       return false;
     }
   }
 
-  // check if moved enough previously
+  // instant: wants to move fast but barely moved at all
   if (moved_distance_ < kMinMovedDistance && prev_speed_ > 20.0f) {
     prev_timer_.start (0.0f);
-    stuck_timer_.start (kStuckLatchDuration);
+    stuck_.latch.start (kStuckLatchDuration);
+    stuck_.anchor = true;
+    stuck_.origin = pev->origin;
 
     if (!first_collide_timer_.started ()) {
       first_collide_timer_.start (0.2f);
     }
-    stuck_accumulated_time_ = 0.0f;
+    stuck_.accumulated = 0.0f;
     return true;
   }
 
-  // cumulative stuck timeout: if bot consistently moves very slowly while trying to go
-  if (move_speed_ > 20.0f && moved_distance_ < kStuckMoveThreshold) {
-    stuck_accumulated_time_ += frame_interval_;
+  // rolling average of horizontal speed smooths out per-frame jitter
+  const float speed2d = pev->velocity.length2d ();
+  stuck_.avg_speed += (speed2d - stuck_.avg_speed) * ystl::min (1.0f, frame_interval_ * 6.0f);
 
-    if (stuck_accumulated_time_ >= kStuckMaxDuration) {
-      stuck_timer_.start (kStuckLatchDuration);
-      stuck_accumulated_time_ = 0.0f;
+  // an escaped bot sheds the stuck state once it crawls clear of the stuck spot
+  if (IsStuckState () && stuck_.anchor && pev->origin.distance2d (stuck_.origin) > kStuckUnstuckDistance) {
+    stuck_.latch.invalidate ();
+    stuck_.anchor = false;
+    stuck_.accumulated = 0.0f;
+  }
+
+  // wants to move, but the rolling speed stays at a crawl long enough to be stuck
+  if (move_speed_ > 20.0f && stuck_.avg_speed < kStuckSpeedThreshold) {
+    stuck_.accumulated += frame_interval_;
+
+    if (stuck_.accumulated >= kStuckMaxDuration) {
+      stuck_.latch.start (kStuckLatchDuration);
+      stuck_.anchor = true;
+      stuck_.origin = pev->origin;
+      stuck_.accumulated = 0.0f;
 
       if (!first_collide_timer_.started ()) {
         first_collide_timer_.start (0.2f);
@@ -989,7 +1035,7 @@ bool Bot::DetectStuckStatus (const ystl::Vector &dir_normal) {
     }
   }
   else {
-    stuck_accumulated_time_ = 0.0f;
+    stuck_.accumulated = 0.0f;
   }
 
   if (can_probe_blocker) {
@@ -998,7 +1044,9 @@ bool Bot::DetectStuckStatus (const ystl::Vector &dir_normal) {
         first_collide_timer_.start (0.2f);
       }
       else if (first_collide_timer_.elapsed ()) {
-        stuck_timer_.start (kStuckLatchDuration);
+        stuck_.latch.start (kStuckLatchDuration);
+        stuck_.anchor = true;
+        stuck_.origin = pev->origin;
         return true;
       }
     }
@@ -1040,11 +1088,11 @@ void Bot::ComputeCollisionWeights (const ystl::Vector &dir_normal, CollisionWeig
   };
 
   // refresh strafe direction periodically for human-like movement
-  if (avoid_strafe_change_timer_.elapsed ()) {
+  if (avoid_.strafe_change_timer.elapsed ()) {
 
     // randomly choose new strafe direction and time until next change
     terrain_strafe_dir_ = rg.chance (50) ? 1.0f : -1.0f;
-    avoid_strafe_change_timer_.start (rg (0.55f, 0.85f));
+    avoid_.strafe_change_timer.start (rg (0.55f, 0.85f));
   }
 
   bool dest_visible = false;
@@ -1271,23 +1319,45 @@ void Bot::CheckTerrain (const ystl::Vector &dir_normal) {
 
   constexpr float kProbeTestTime = 0.625f;
 
-  // in a crowded choke player avoidance owns movement, terrain probing only shakes the bot
-  if (avoid_in_narrow_) {
+  // right after leaving a ladder or a door the engine still owns movement, skip probing
+  if (!ladder_handover_.elapsed () || !door_handover_.elapsed ()) {
     first_collide_timer_.invalidate ();
     ResetCollision ();
     return;
   }
 
-  // skip terrain response while player avoidance handles movement
-  if (!game.IsNullEntity (hindrance_) && !avoid_commit_timer_.elapsed ()) {
+  // in a crowded choke player avoidance owns movement, terrain probing only shakes the bot
+  if (avoid_.in_narrow) {
+    first_collide_timer_.invalidate ();
+    ResetCollision ();
+    return;
+  }
+
+  // skip terrain response while player avoidance handles movement, unless avoidance keeps the bot pinned
+  if (!game.IsNullEntity (avoid_.hindrance) && !avoid_.commit.elapsed () && !avoid_.stalled) {
 
     // still detect stuck status, but allow jump/duck responses during player avoidance
-    if (DetectStuckStatus (dir_normal) && collision_state_ == CollisionState::Probing) {
-      const auto state = collide_moves_[coll_state_index_];
-
-      if (state == CollisionState::Jump || state == CollisionState::Duck) {
-        ExecuteCollisionResponse ();
+    if (DetectStuckStatus (dir_normal)) {
+      if (!avoid_.stall_timer.started ()) {
+        avoid_.stall_timer.start (kAvoidStallTime);
       }
+      else if (avoid_.stall_timer.elapsed ()) {
+        // avoidance renews its own commitment while the bot is pinned, hand the movement back to terrain
+        avoid_.stalled = true;
+        avoid_.commit.invalidate ();
+        avoid_.stall_timer.invalidate ();
+      }
+
+      if (collision_state_ == CollisionState::Probing) {
+        const auto state = collide_moves_[coll_state_index_];
+
+        if (state == CollisionState::Jump || state == CollisionState::Duck) {
+          ExecuteCollisionResponse ();
+        }
+      }
+    }
+    else {
+      avoid_.stall_timer.invalidate ();
     }
     return;
   }
@@ -1300,6 +1370,9 @@ void Bot::CheckTerrain (const ystl::Vector &dir_normal) {
 
   // detect if bot is stuck
   if (!DetectStuckStatus (dir_normal)) {
+    // free again, avoidance may hold movement once more
+    avoid_.stalled = false;
+
     // not stuck - maintain collision memory or reset
     if (probe_timer_.remaining_time () < -kProbeTestTime) {
       ResetCollision ();
@@ -1386,7 +1459,17 @@ void Bot::CheckTerrain (const ystl::Vector &dir_normal) {
         probe_timer_.start (kProbeTestTime);
       }
       else {
+        // all probes failed: back off sideways and force a repath instead of cycling again
+        const float side = stuck_.side ? 1.0f : -1.0f;
+        stuck_.side = !stuck_.side;
+
+        // drive it through the movement inputs, the engine recomputes velocity from them
+        move_speed_ = -pev->maxspeed;
+        strafe_speed_ = side * pev->maxspeed * 0.5f;
+
         ResetCollision ();
+        nav_timer_.start ();
+
         return;
       }
     }
@@ -3756,7 +3839,7 @@ void Bot::SetPathOrigin () {
 }
 
 edict_t *Bot::IsBlockedForward (const ystl::Vector &normal, bool include_doors) {
-  // checks if bot is blocked in its movement direction (excluding doors and teammates/hostages)
+  // checks if bot is blocked in its movement direction (teammates block, doors only when include_doors, hostages never for CT)
 
   constexpr float kTraceDistance = 24.0f;
   constexpr float kSlopeThreshold = 0.9f;

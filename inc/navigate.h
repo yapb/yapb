@@ -188,6 +188,32 @@ public:
   }
 };
 
+// stuck detection: latched state, rolling speed, the 75u escape anchor and the idle repath timer
+struct StuckState {
+  ystl::CountdownTimer latch {}; // latched stuck state, no flap frame to frame
+  float accumulated {}; // cumulative time spent moving too little
+  float avg_speed {}; // rolling average of horizontal speed
+  ystl::Vector origin {}; // origin where the stuck state latched
+  bool anchor {}; // origin is valid
+  bool side {}; // alternate direction for the stuck pushback
+  ystl::CountdownTimer idle_repath {}; // force a repath after standing still for a while
+};
+
+// player avoidance: committed slide, choke queue and yield, pin escape and goal copy while stuck with a hindrance
+struct AvoidState {
+  edict_t *hindrance {}; // the hindrance
+  float strafe_dir {}; // committed player avoidance strafe direction
+  ystl::CountdownTimer commit {}; // time until which avoidance direction is committed
+  bool in_narrow {}; // player avoidance owns movement in a crowded choke
+  bool stalled {}; // pinned under avoidance, terrain probing takes over from it
+  ystl::CountdownTimer stall_timer {}; // stuck time accumulated under avoidance
+  ystl::CountdownTimer queue_timer {}; // time queued behind a hindrance in a choke
+  ystl::CountdownTimer yield_timer {}; // back out window after yielding a choke
+  ystl::CountdownTimer goal_copy_timer {}; // throttles goal copy repaths while stuck with a hindrance
+  int goal_copy_repaths {}; // goal copy repaths issued while stuck with a hindrance
+  ystl::CountdownTimer strafe_change_timer {}; // timer for terrain avoidance strafe direction change
+};
+
 // bot navigation data mixin
 class NavigateData {
   friend class DebugPanel;
@@ -244,6 +270,8 @@ protected:
   ystl::CountdownTimer last_coll_timer_ {}; // time until next collision check
   ystl::CountdownTimer door_open_timer_ {}; // time to next door open check
   ystl::CountdownTimer door_hit_timer_ {}; // specific time after hitting the door
+  ystl::CountdownTimer door_handover_ {}; // let the engine finish a door push before probing
+  ystl::CountdownTimer ladder_handover_ {}; // let the engine finish a ladder exit before probing
   ystl::IntervalTimer door_blocked_timer_ {}; // time when door was first blocked
   ystl::IntervalTimer nav_timer_ {}; // time node chosen by bot
   ystl::IntervalTimer last_used_nodes_timer_ {}; // last time bot followed nodes
@@ -254,7 +282,8 @@ protected:
   float jump_time_ {}; // time last jump happened
 
   bool move_to_goal_ {}; // bot currently moving to goal??
-  ystl::CountdownTimer stuck_timer_ {}; // latched stuck state, no flap frame to frame
+  StuckState stuck_ {};
+  bool was_on_ladder_ {}; // previous frame ladder state
   bool jump_finished_ {}; // has bot finished jumping
   bool check_terrain_ {}; // check for terrain
   bool bomb_search_overridden_ {}; // use normal node if applicable when near the bomb
@@ -272,16 +301,9 @@ protected:
 
   edict_t *lift_entity_ {}; // pointer to lift entity
   edict_t *avoid_grenade_ {}; // pointer to grenade entity to avoid
-  edict_t *hindrance_ {}; // the hindrance
-
-  float avoid_strafe_dir_ {}; // committed player avoidance strafe direction
-  ystl::CountdownTimer avoid_commit_timer_ {}; // time until which avoidance direction is committed
-  bool avoid_in_narrow_ {}; // player avoidance owns movement in a crowded choke
-
-  ystl::CountdownTimer avoid_strafe_change_timer_ {}; // timer for terrain avoidance strafe direction change
+  AvoidState avoid_ {};
   float terrain_strafe_dir_ {}; // current strafe direction for terrain avoidance (+1 or -1)
 
-  float stuck_accumulated_time_ {}; // cumulative time spent moving too little
   ystl::IntervalTimer combat_stuck_check_timer_ {}; // last frame combat strafe was verified
   ystl::Vector last_combat_strafe_origin_ {}; // position when combat strafe was last set
 
@@ -301,14 +323,19 @@ protected:
   ystl::CountdownTimer path_enqueue_timer_ {}; // throttles repeated path rebuilds
 
 public:
+  // is the bot currently queued behind a hindrance in a choke
+  bool IsAvoidQueued () const {
+    return avoid_.queue_timer.started ();
+  }
+
   // is the bot currently stuck
   bool IsStuckState () const {
-    return !stuck_timer_.elapsed ();
+    return !stuck_.latch.elapsed ();
   }
 
   // cumulative time the bot spent stuck
   float StuckTime () const {
-    return stuck_accumulated_time_;
+    return stuck_.accumulated;
   }
 
   // nodes left in the current path
