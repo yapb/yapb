@@ -422,6 +422,77 @@ TEST_CASE ("unit/config_files") {
   HOST_REQUIRE (conf.PickBotName () != nullptr);
 }
 
+namespace {
+
+struct IncludeFixture {
+  const char *name {};
+  const char *text {};
+
+  static ystl::String Load (ystl::StringRef path, ystl::StringRef, void *user) {
+    auto *files = static_cast<const IncludeFixture *> (user);
+
+    for (int i = 0; files[i].name != nullptr; ++i) {
+      if (path == files[i].name) {
+        return ystl::String (files[i].text);
+      }
+    }
+    return {};
+  }
+};
+
+} // namespace
+
+TEST_CASE ("unit/config_include") {
+  IncludeFixture files[] = {
+    { "common.cfg", "Shared {\n  Key = value\n}\n"          },
+    { "nested.cfg", "@include \"common.cfg\"\nNested = 1\n" },
+    { nullptr,      nullptr                                 },
+  };
+
+  // quoted target, merged into the outer document
+  ystl::ConfParser parser {};
+  parser.set_include_loader (&IncludeFixture::Load, files);
+  HOST_REQUIRE (parser.parse ("@include \"common.cfg\"\nOwn = 2\n", "root.cfg"));
+
+  const auto &doc = parser.document ();
+  HOST_REQUIRE (doc.find ("Shared") != nullptr);
+  CHECK (doc.find ("Shared")->find ("Key")->value () == "value");
+  CHECK (doc.find ("Own")->as_int () == 2);
+
+  // nested include via a bare path
+  ystl::ConfParser nested {};
+  nested.set_include_loader (&IncludeFixture::Load, files);
+  HOST_REQUIRE (nested.parse ("@include nested.cfg\n"));
+  CHECK (nested.document ().find ("Nested")->as_int () == 1);
+  CHECK (nested.document ().find ("Shared") != nullptr);
+
+  // a missing target fails the parse with an error
+  ystl::ConfParser missing {};
+  missing.set_include_loader (&IncludeFixture::Load, files);
+  CHECK (!missing.parse ("@include \"nope.cfg\"\n"));
+  CHECK (!missing.error ().empty ());
+
+  // a quoted target may contain spaces
+  IncludeFixture spaced[] = {
+    { "my file.cfg", "Spaced = 5\n" },
+    { nullptr,       nullptr        },
+  };
+  ystl::ConfParser spaced_parser {};
+  spaced_parser.set_include_loader (&IncludeFixture::Load, spaced);
+  HOST_REQUIRE (spaced_parser.parse ("@include \"my file.cfg\"\n"));
+  CHECK (spaced_parser.document ().find ("Spaced")->as_int () == 5);
+
+  // a recursive include stops at the depth limit instead of looping
+  IncludeFixture loop[] = {
+    { "loop.cfg", "@include loop.cfg\n" },
+    { nullptr,    nullptr               },
+  };
+  ystl::ConfParser loop_parser {};
+  loop_parser.set_include_loader (&IncludeFixture::Load, loop);
+  CHECK (!loop_parser.parse ("@include loop.cfg\n"));
+  CHECK (!loop_parser.error ().empty ());
+}
+
 TEST_CASE ("unit/config_clantags") {
   testhost::FakeEngine engine;
   testhost::FakeCSApi cs {};
