@@ -1060,6 +1060,20 @@ void Bot::ComputeCollisionWeights (const ystl::Vector &dir_normal, CollisionWeig
     if (dest_origin_.z >= pev->origin.z + 18.0f) {
       jump_weight += 5;
     }
+
+    // climbing out of a pit: the vertical face blocks the fixed-height probes,
+    // but the destination lip is still within jump reach
+    const float height_diff = dest_origin_.z - pev->origin.z;
+    if (height_diff >= 30.0f && height_diff <= 50.0f) {
+      const ystl::Vector lip_src = pev->origin + ystl::Vector (0.0f, 0.0f, height_diff);
+      const ystl::Vector lip_dst = lip_src + dir_normal * 32.0f;
+
+      trace.Line (lip_src, lip_dst, TraceIgnore::Everything, Ent (), &tr);
+
+      if (tr.fraction >= 1.0f) {
+        jump_weight += 25;
+      }
+    }
     dest_visible = SeesEntity (dest_origin_);
 
     if (dest_visible) {
