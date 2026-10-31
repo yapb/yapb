@@ -837,6 +837,15 @@ inline ConVar cv_smoke_grenade_checks {
   }
 };
 
+inline ConVar cv_notice_model {
+  {
+    .name = "notice_model",
+    .value = "1",
+    .info = "Visible enemies must fill a noticing meter (distance, motion, cover, skill) before a bot picks them as a new target.",
+    .bounded = true,
+  }
+};
+
 inline ConVar cv_smoke_grenade_radius {
   {
     .name = "smoke_grenade_radius",
@@ -1192,6 +1201,15 @@ inline ConVar cv_max_nodes_for_predict {
     .bounded = true,
     .min = 15.0f,
     .max = 256.0f,
+  }
+};
+
+inline ConVar cv_aim_drift {
+  {
+    .name = "aim_drift",
+    .value = "1",
+    .info = "Lets a bot that is not fighting slowly drift its view, so a standing bot looks alive.",
+    .bounded = true,
   }
 };
 

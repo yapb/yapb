@@ -188,6 +188,12 @@ private:
   // check if bot has clear line of sight to enemy
   bool SeesEnemy (edict_t *player);
 
+  // advance the noticing meter for a visible player and report whether it is filled
+  bool IsEnemyNoticed (edict_t *player);
+
+  // noticing speed per second for a visible player, from distance, motion, cover and skill
+  float NoticeRate (edict_t *player);
+
   // check if last known enemy position is shootable
   bool LastEnemyShootable ();
 
@@ -396,6 +402,9 @@ private:
 
   // get aiming error offset based on distance
   ystl::Vector GetBodyOffsetError (edict_t *target, float distance);
+
+  // aim focus error: grows while the target sweeps across the view, fades while it rests
+  ystl::Vector GetAimFocusOffset (edict_t *target, float distance);
 
   // get custom height adjustment for aiming
   ystl::Vector GetAimBias (float distance) const;
@@ -910,6 +919,9 @@ private:
 
   // donate c4 to human teammate
   void DonateC4ToHuman ();
+
+  // donate a primary weapon to a poor teammate
+  void DonateToPoorTeammate ();
 
   // inline helpers
 private:

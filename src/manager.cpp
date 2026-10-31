@@ -1652,6 +1652,11 @@ int Manager::GetPlayerPriority (edict_t *ent) {
   if (bot->has_c4_ || bot->is_vip_ || bot->has_hostage_ || has_flag (bot->current_travel_flags_, PathFlag::Jump)) {
     return bot->Entindex () + kHighPriority;
   }
+
+  // a bot queued behind someone in a choke has waited its turn, the one ahead yields instead
+  if (bot->IsAvoidQueued ()) {
+    return bot->Entindex () + kHighPriority;
+  }
   const auto task = bot->GetTaskId ();
 
   // higher priority if important task
@@ -1869,6 +1874,9 @@ void Bot::NewRound () {
 
   change_view_timer_.start (rg.chance (25) ? mp_freezetime.As<float> () : 0.0f);
   aim_error_timer_.start (0.0f);
+  aim_focus_deg_ = 0.0f;
+  aim_focus_dir_.clear ();
+  aim_focus_time_ = game.Time ();
 
   view_distance_ = Frustum::kMaxViewDistance;
   max_view_distance_ = Frustum::kMaxViewDistance;
@@ -2003,7 +2011,9 @@ void Bot::NewRound () {
   jump_finished_ = false;
   jump_knife_drawn_ = false;
   jump_knife_restore_timer_.invalidate ();
-  stuck_timer_.invalidate ();
+  stuck_.latch.invalidate ();
+  stuck_.anchor = false;
+  notice_progress_.clear ();
 
   say_text_buffer_.time_next_chat = game.Time ();
   say_text_buffer_.entity_index = -1;
@@ -2071,6 +2081,7 @@ void Bot::NewRound () {
   check_weapon_switch_ = true;
   check_knife_switch_ = true;
   buying_finished_ = false;
+  donate_done_ = false;
 
   radio_entity_ = nullptr;
   radio_order_ = RadioChat::InvalidSelect;
