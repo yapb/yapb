@@ -143,6 +143,12 @@ inline void MakeDirs (ystl::StringRef path) {
   ystl::File::make_path (dir.chars ());
 }
 
+// remove the sound/ test fixture the material-type tests leave behind
+inline void RemoveSoundMaterials () {
+  ystl::plat.remove_file ("sound/materials.txt");
+  ystl::plat.remove_directory ("sound");
+}
+
 // lightest hermetic prefix: engine tables only, no postload/cs load/lifecycle.
 // enough for graph math, traces, messages, cvar reads and timers
 // (levelInitialize does the same time-source binding on live servers).

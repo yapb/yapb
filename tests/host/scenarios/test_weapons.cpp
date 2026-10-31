@@ -574,7 +574,7 @@ TEST_CASE ("unit/weapons_fire") {
   engine.SetTraceLineHook (nullptr);
   engine.SetPointContentsHook (nullptr);
   engine.SetTraceTextureHook (nullptr);
-  ::remove ("sound/materials.txt");
+  testhost::RemoveSoundMaterials ();
   cv_shoots_thru_walls.Set (2);
 
   // firing pauses only for real recoil at range...
@@ -667,7 +667,7 @@ TEST_CASE ("unit/weapons_fire") {
 }
 
 TEST_CASE ("unit/weapons_materials") {
-  ::remove ("sound/materials.txt");
+  testhost::RemoveSoundMaterials ();
 
   testhost::FakeEngine engine;
   testhost::FakeCSApi cs {};
@@ -1341,7 +1341,7 @@ TEST_CASE ("unit/weapons_vault") {
   engine.SetTraceLineHook (nullptr);
   engine.SetPointContentsHook (nullptr);
   engine.SetTraceTextureHook (nullptr);
-  ::remove ("sound/materials.txt");
+  testhost::RemoveSoundMaterials ();
   cv_shoots_thru_walls.Set (2);
 
   bots.Destroy ();
@@ -2224,7 +2224,7 @@ TEST_CASE ("unit/weapons_onyx") {
   engine.SetTraceLineHook (nullptr);
   engine.SetPointContentsHook (nullptr);
   engine.SetTraceTextureHook (nullptr);
-  ::remove ("sound/materials.txt");
+  testhost::RemoveSoundMaterials ();
   cv_shoots_thru_walls.Set (2);
 
   // ...unaware stab re-rolls, dry guns call for help, empty hands take knife...

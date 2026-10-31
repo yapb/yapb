@@ -1025,7 +1025,7 @@ TEST_CASE ("unit/config_gamedef") {
 
   ystl::plat.remove_file (ConfFile ("gamedef").chars ());
   conf.LoadGameDefConfig ();
-  ystl::plat.remove_file (MaterialsFile ().chars ());
+  testhost::RemoveSoundMaterials ();
 
   bots.Destroy ();
 }
