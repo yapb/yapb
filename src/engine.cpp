@@ -1908,7 +1908,7 @@ void LightMeasure::UpdateLight (int style, char *value) {
 }
 
 template <typename S, typename M> bool LightMeasure::RecursiveLightPoint (const M *node, const ystl::Vector &start, const ystl::Vector &end) {
-  if (!node || node->contents < 0) {
+  if (!node || node->contents < 0 || !node->plane) {
     return false;
   }
 
@@ -1940,6 +1940,10 @@ template <typename S, typename M> bool LightMeasure::RecursiveLightPoint (const 
   }
 
   // check for impact on this node lightspot = mid; lightplane = plane;
+  if (!world_model_ || !world_model_->surfaces || !world_model_->texinfo || world_model_->numtexinfo <= 0 ||
+      node->firstsurface + node->numsurfaces > world_model_->numsurfaces) {
+    return false;
+  }
   auto surf = reinterpret_cast<S *> (world_model_->surfaces) + node->firstsurface;
 
   for (int i = 0; i < node->numsurfaces; ++i, ++surf) {
@@ -1947,6 +1951,11 @@ template <typename S, typename M> bool LightMeasure::RecursiveLightPoint (const 
       continue; // no lightmaps
     }
     const auto tex = surf->texinfo;
+
+    // reject null or out-of-range pointers (also catches engine surface layout mismatches)
+    if (!tex || tex < world_model_->texinfo || tex >= world_model_->texinfo + world_model_->numtexinfo) {
+      continue;
+    }
 
     // see where in lightmap space our intersection point is
     const int s = static_cast<int> ((mid | ystl::Vector (tex->vecs[0])) + tex->vecs[0][3]);
@@ -2003,7 +2012,7 @@ template <typename S, typename M> bool LightMeasure::LightPointProc (LightMeasur
 }
 
 float LightMeasure::GetLightLevel (const ystl::Vector &point) {
-  if (game.Is (GameFlags::Legacy)) {
+  if (game.Is (GameFlags::Legacy) || !cv_graph_light.As<bool> ()) {
     return kInvalidLightLevel;
   }
 

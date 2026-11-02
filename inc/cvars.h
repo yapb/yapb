@@ -1031,6 +1031,17 @@ inline ConVar cv_graph_fixcamp {
   }
 };
 
+inline ConVar cv_graph_light {
+  {
+    .name = "graph_light",
+    .value = "1",
+    .info = "Enables reading waypoint light levels from the BSP lightmap. Disable on custom engines or maps with crashing/invalid surfaces.",
+    .bounded = true,
+    .min = 0.0f,
+    .max = 1.0f,
+  }
+};
+
 inline ConVar cv_graph_url {
   {
     .name = "graph_url",
