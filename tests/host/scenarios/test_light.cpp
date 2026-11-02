@@ -72,6 +72,8 @@ TEST_CASE ("unit/engine_light [modern]") {
   model_t model {};
   model.nodes = &root;
   model.numnodes = 1;
+  model.texinfo = &texinfo;
+  model.numtexinfo = 1;
   model.surfaces = &surf;
   model.numsurfaces = 1;
   model.lightdata = &lightdata;
@@ -93,6 +95,11 @@ TEST_CASE ("unit/engine_light [modern]") {
   illum.EnableAnimation (true);
   illum.InitializeLightstyles ();
   CHECK (illum.GetLightLevel (probe) == 100.0f);
+
+  // malformed surfaces are skipped instead of dereferenced
+  surf.texinfo = nullptr;
+  CHECK (illum.GetLightLevel (probe) == kInvalidLightLevel);
+  surf.texinfo = &texinfo;
 
   // mid-gray sample stays proportional: 8 * 264 >> 8 = 8
   surf.samples = &gray;
