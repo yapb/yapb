@@ -901,6 +901,9 @@ DLL_GIVEFNPTRSTODLL GiveFnptrsToDll (enginefuncs_t *table, globalvars_t *glob) {
   memcpy (&engfuncs, table, sizeof (enginefuncs_t));
   globals = glob;
 
+  // Metamod may detach the plugin before the first server activation
+  ystl::timer_source.set_time_address (&globals->time);
+
   if (bot::game.Postload ()) {
     return;
   }
