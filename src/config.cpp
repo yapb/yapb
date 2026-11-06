@@ -2187,7 +2187,13 @@ const char *Config::Translate (ystl::StringRef input) {
   auto hash = HashLangString (input.chars ());
 
   if (language_.exists (hash)) {
-    return language_[hash].chars ();
+    auto &translated = language_[hash];
+
+    // translation files lose empty lines on load, restore them once and keep the result
+    if (input.find ("\n\n") != ystl::StringRef::InvalidIndex && translated.find ("\n\n") == ystl::String::InvalidIndex) {
+      translated = RestoreBlankLines (input, translated);
+    }
+    return translated.chars ();
   }
 
   // remember untranslated strings, so they can be listed with 'yb debug translate'
@@ -2221,6 +2227,53 @@ uint32_t Config::HashLangString (ystl::StringRef str) {
     ++count;
   }
   return count > 0 ? hash : 0;
+}
+
+ystl::String Config::RestoreBlankLines (ystl::StringRef original, ystl::StringRef translated) {
+  auto next_line = [] (ystl::StringRef text, size_t &pos) -> ystl::StringRef {
+    const auto end = text.find ('\n', pos);
+    const auto stop = end == ystl::StringRef::InvalidIndex ? text.size () : end;
+    const ystl::StringRef line { text.chars () + pos, stop - pos };
+
+    pos = stop + 1;
+    return line;
+  };
+
+  auto count_lines = [&] (ystl::StringRef text) {
+    size_t count = 0;
+
+    for (size_t pos = 0; pos < text.size ();) {
+        if (!next_line (text, pos).empty ()) {
+            ++count;
+        }
+    }
+    return count;
+};
+
+  // the line counts must match, otherwise the translation has its own layout
+  if (count_lines (original) != count_lines (translated)) {
+    return ystl::String { translated };
+  }
+  ystl::String result {};
+  size_t orig_pos = 0, tr_pos = 0;
+  bool first = true;
+
+  while (orig_pos <= original.size ()) {
+    if (!first) {
+      result += '\n';
+    }
+    first = false;
+
+    if (!next_line (original, orig_pos).empty ()) {
+      auto line = next_line (translated, tr_pos);
+
+      while (line.empty () && tr_pos < translated.size ()) {
+        line = next_line (translated, tr_pos);
+      }
+      result += line;
+    }
+  }
+  return result;
 }
 
 ystl::String Config::MakeTranslateLabel (ystl::StringRef original, uint32_t hash) {

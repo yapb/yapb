@@ -303,6 +303,9 @@ private:
   // derives a camelcase label from the original text, falling back to the hash
   static ystl::String MakeTranslateLabel (ystl::StringRef original, uint32_t hash);
 
+  // raw blocks have no empty lines, so put them back following the layout of the original text
+  static ystl::String RestoreBlankLines (ystl::StringRef original, ystl::StringRef translated);
+
 public:
   // checks whether chat banks contains messages
   bool HasChatBank (Chat chat_type) const {
