@@ -1038,6 +1038,9 @@ bool Game::LoadCsBinary () {
 }
 
 bool Game::Postload () {
+  // Metamod may detach the plugin before the first server activation
+  ystl::timer_source.set_time_address (&globals->time);
+
   // new engine lifecycle, everything must be precached and resolved again
   precached_ = false;
 
