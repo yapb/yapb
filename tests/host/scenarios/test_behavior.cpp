@@ -1589,6 +1589,8 @@ TEST_CASE ("unit/behavior_siege") {
   testhost::FakeEngine engine;
   testhost::FakeCSApi cs {};
 
+  cv_individual_play.Set (0); // preserve the legacy follow behavior this scenario exercises
+
   engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
   HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
   cs.reset ();
@@ -3468,6 +3470,8 @@ TEST_CASE ("unit/behavior_targeting") {
 TEST_CASE ("unit/behavior_team_awareness") {
   testhost::FakeEngine engine;
   testhost::FakeCSApi cs {};
+
+  cv_individual_play.Set (0); // this scenario verifies teammate-contact convergence
 
   BootBehavior (engine, cs);
 
