@@ -275,6 +275,17 @@ inline ConVar cv_user_follow_percent {
   }
 };
 
+inline ConVar cv_individual_play {
+  {
+    .name = "individual_play",
+    .value = "1",
+    .info = "If enabled, bots choose their own routes instead of regrouping or converging on teammate contacts.",
+    .bounded = true,
+    .min = 0.0f,
+    .max = 1.0f,
+  }
+};
+
 inline ConVar cv_user_max_followers {
   {
     .name = "user_max_followers",
