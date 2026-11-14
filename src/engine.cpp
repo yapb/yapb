@@ -808,6 +808,11 @@ bool Game::IsSoftwareRenderer () {
     return false;
   }
 
+  // spark always uses the hw layout, listenserver and dedicated alike
+  if (Is (GameFlags::Spark)) {
+    return false;
+  }
+
   // dedicated servers normally use "sw" structures, but an engine that
   // advertises HL25 extended BSP structures uses the HW layout.
   if (IsDedicatedServer ()) {
@@ -1078,6 +1083,12 @@ bool Game::Postload () {
   ystl::plat.set_app_name (product.name.chars ());
 
   DetectXashEngine ();
+
+  // spark advertises its engine/ABI through cvars so plugins do not have to
+  // guess the BSP layout from renderer modules or the HL25 flag
+  if (engfuncs.pfnCVarGetPointer ("spark_engine") != nullptr) {
+    game_flags_ |= GameFlags::Spark;
+  }
 
   // register bot cvars
   cvars.Register ();
@@ -1537,6 +1548,7 @@ void Game::PrintBotVersion () const {
     { GameFlags::Metamod,         "Metamod"    },
     { GameFlags::AnniversaryHL25, "HL25"       },
     { GameFlags::GoldClient,      "GoldClient" },
+    { GameFlags::Spark,           "Spark"      },
   };
   for (const FlagLabel &entry : kRuntimeFlags) {
     if (Is (entry.flag)) {
@@ -2034,6 +2046,13 @@ float LightMeasure::GetLightLevel (const ystl::Vector &point) {
   using LightProc = bool (*) (LightMeasure *, const ystl::Vector &, const ystl::Vector &);
 
   static const LightProc light_proc = [] () -> LightProc {
+    if (game.Is (GameFlags::Spark)) {
+      static ConVarRef spark_abi ("spark_abi");
+      if (spark_abi.Exists () && spark_abi.Value () >= 1.0f) {
+        return LightPointProc<msurface_spark_hw_t, mnode_hw_t>;
+      }
+      return LightPointProc<msurface_hw_hl25_t, mnode_hw_t>;
+    }
     if (game.IsSoftwareRenderer ()) {
       return LightPointProc<msurface_t, mnode_t>;
     }

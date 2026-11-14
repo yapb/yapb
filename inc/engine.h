@@ -45,7 +45,8 @@ enum class GameFlags : int32_t {
   Xash3DLegacy = ystl::bit (13), // old xash3d-branch
   ZombieMod = ystl::bit (14), // zombie mod is active
   HasStudioModels = ystl::bit (15), // game supports studio models, so we can use hitbox-based aiming
-  GoldClient = ystl::bit (16) // game is custom-built goldclient engine
+  GoldClient = ystl::bit (16), // game is custom-built goldclient engine
+  Spark = ystl::bit (17) // spark engine (spark_engine marker)
 };
 YSTL_ENABLE_ENUM_FLAGS (GameFlags);
 
