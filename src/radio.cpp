@@ -135,6 +135,19 @@ void Bot::InstantChatter (RadioChat type) const {
 void Bot::CheckRadioQueue () {
   // this function handling radio and reacting to it
 
+  // individual play ignores social regroup/follow orders, while still allowing a bot to escort
+  // a teammate carrying the bomb or VIP.
+  if (cv_individual_play && (radio_order_ == RadioChat::CoverMe || radio_order_ == RadioChat::FollowMe ||
+        radio_order_ == RadioChat::StickTogetherTeam)) {
+    const bool objective_carrier = !game.IsNullEntity (radio_entity_) &&
+      (has_flag (radio_entity_->v.weapons, ystl::bit (Weapon::C4)) || game.IsPlayerVip (radio_entity_));
+
+    if (!objective_carrier) {
+      radio_order_ = RadioChat::InvalidSelect;
+      return;
+    }
+  }
+
   // don't allow bot listen you if bot is busy
   if (radio_order_ != RadioChat::ReportInTeam &&
       (GetTaskId () == TaskId::DefuseBomb || GetTaskId () == TaskId::PlantBomb || has_hostage_ || has_c4_ || is_creature_)) {

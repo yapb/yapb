@@ -1788,6 +1788,7 @@ TEST_CASE ("unit/behavior_siege") {
   human->v.origin = ystl::Vector (950.0f, 0.0f, 0.0f);
   ter->pev->origin = ystl::Vector (900.0f, 0.0f, 0.0f);
   clients.Update ();
+  cv_individual_play.Set (0); // preserve the legacy follow behavior this scenario exercises
   cv_user_follow_percent.Set (100);
   BehaviorHook::SetKnifeCheck (*ter, true);
   BehaviorHook::Rng (*ter).force_chance (true);
@@ -3470,6 +3471,7 @@ TEST_CASE ("unit/behavior_team_awareness") {
   testhost::FakeCSApi cs {};
 
   BootBehavior (engine, cs);
+  cv_individual_play.Set (0); // this scenario verifies teammate-contact convergence
 
   bots.Addbot ("AwA", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   HOST_REQUIRE (testhost::PumpBots (engine, 1));

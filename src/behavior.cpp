@@ -633,7 +633,7 @@ void Bot::UpdateEmotions () {
 void Bot::UpdateTeamAwareness () {
   // lone, un-engaged bots head for the last enemy contact a teammate shared, so the team converges
 
-  if (!is_alive_ || is_creature_ || game.Is (GameFlags::FreeForAll) || game_state.IsRoundOver () || !team_cooldowns_.contact.elapsed () ||
+  if (cv_individual_play || !is_alive_ || is_creature_ || game.Is (GameFlags::FreeForAll) || game_state.IsRoundOver () || !team_cooldowns_.contact.elapsed () ||
       has_c4_ || has_hostage_ || !game.IsNullEntity (enemy_.current) || !game.IsNullEntity (enemy_.last)) {
 
     return;
@@ -698,7 +698,7 @@ void Bot::UpdateTeamAwareness () {
 void Bot::UpdateTeamCohesion () {
   // team players regroup with the nearest living teammate instead of wandering off alone
 
-  if (!is_alive_ || is_creature_ || game.Is (GameFlags::FreeForAll) || game_state.IsRoundOver () || !team_cooldowns_.cohesion.elapsed () ||
+  if (cv_individual_play || !is_alive_ || is_creature_ || game.Is (GameFlags::FreeForAll) || game_state.IsRoundOver () || !team_cooldowns_.cohesion.elapsed () ||
       has_c4_ || has_hostage_ || !game.IsNullEntity (enemy_.current) || !game.IsNullEntity (enemy_.last) || GetTaskId () != TaskId::Normal) {
 
     return;
@@ -1570,7 +1570,7 @@ void Bot::CheckSpawnConditions () {
       check_knife_switch_ = false;
     }
 
-    if (rg.chance (cv_user_follow_percent.As<int> ()) && game.IsNullEntity (target_entity_) && !is_leader_ && !has_c4_ && rg.chance (50)) {
+    if (!cv_individual_play && rg.chance (cv_user_follow_percent.As<int> ()) && game.IsNullEntity (target_entity_) && !is_leader_ && !has_c4_ && rg.chance (50)) {
       DecideFollowUser ();
     }
   }
