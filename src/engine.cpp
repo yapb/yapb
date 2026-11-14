@@ -813,10 +813,9 @@ bool Game::IsSoftwareRenderer () {
     return false;
   }
 
-  // dedicated servers normally use "sw" structures, but an engine that
-  // advertises HL25 extended BSP structures uses the HW layout.
+  // dedicated servers (except xash and spark, handled above) use "sw" structures
   if (IsDedicatedServer ()) {
-    return !Is (GameFlags::AnniversaryHL25);
+    return true;
   }
   auto model = illum.GetWorldModel ();
 
