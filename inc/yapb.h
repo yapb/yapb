@@ -255,6 +255,9 @@ private:
   // true when joining a teammate's target beats keeping our own
   bool ShouldSwitchFocus (edict_t *current, edict_t *candidate) const;
 
+  // true when a living enemy is much closer than the given distance
+  bool HasCloserThreat (float current_distance) const;
+
   // check if enemy is hiding behind cover
   bool IsEnemyHidden (edict_t *enemy);
 

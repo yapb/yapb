@@ -507,6 +507,29 @@ bool Bot::ShouldSwitchFocus (edict_t *current, edict_t *candidate) const {
   return candidate_value > current_value * 1.2f;
 }
 
+bool Bot::HasCloserThreat (float current_distance) const {
+  // a point-blank foe outranks a distant target; a small distance gap is not worth a switch
+  constexpr float kCloseThreatRange = 400.0f;
+  constexpr float kCloseThreatBias = 300.0f;
+
+  if (current_distance <= kCloseThreatRange + kCloseThreatBias) {
+    return false;
+  }
+  const float close_distance_sq = ystl::sqrf (kCloseThreatRange);
+
+  for (const auto &client : clients) {
+    if (!client.IsUsedAndAlive () || client.IsSameTeam (team_)) {
+      continue;
+    }
+    const float distance_sq = pev->origin.distance_sq (client.ent->v.origin);
+
+    if (distance_sq < close_distance_sq && current_distance - ystl::sqrtf (distance_sq) > kCloseThreatBias) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool Bot::LookupEnemies () {
   // this function tries to find the best suitable enemy for the bot
 
@@ -540,12 +563,18 @@ bool Bot::LookupEnemies () {
   if (!game.IsNullEntity (enemy_.current)) {
     player = enemy_.current;
 
-    // is player is alive
+    // a foe closing in deserves an early look, not the end of the scan window
+    if (!enemy_update_timer_.elapsed () && enemy_update_timer_.remaining_time () > 0.25f && has_flag (states_, Sense::SeeingEnemy) &&
+        HasCloserThreat (pev->origin.distance (player->v.origin))) {
+
+      enemy_update_timer_.start (0.25f);
+    }
+
+    // is player is alive; re-arming the timer here would keep the scan window from ever expiring
     if (!enemy_update_timer_.elapsed () && player->v.origin.distance_sq (pev->origin) < nearest_distance_sq && game.IsAliveEntity (player) &&
         SeesEnemy (player)) {
 
       new_enemy = player;
-      enemy_update_timer_.start (UsesKnife () ? 1.25f : 0.85f);
     }
   }
 

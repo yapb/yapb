@@ -103,6 +103,9 @@ struct CombatHook {
   static bool ShouldSwitch (Bot &bot, edict_t *current, edict_t *candidate) {
     return bot.ShouldSwitchFocus (current, candidate);
   }
+  static bool CloserThreat (Bot &bot, float distance) {
+    return bot.HasCloserThreat (distance);
+  }
   static void Track (Bot &bot) {
     bot.TrackEnemies ();
   }
@@ -1587,6 +1590,80 @@ TEST_CASE ("unit/combat_pointblank") {
   CHECK (bot->enemy_.current == foe);
   CHECK (fire_steps <= 1);
   foe->v.button = 0;
+
+  cv_notice_model.Revert ();
+  bots.Destroy ();
+}
+
+TEST_CASE ("unit/combat_retarget") {
+  testhost::FakeEngine engine;
+  testhost::FakeCSApi cs {};
+
+  BootCombat (engine, cs);
+
+  bots.Addbot ("RtB", Difficulty::Expert, Personality::Rusher, Team::Terrorist, Skin::Terror, true);
+  HOST_REQUIRE (testhost::PumpBots (engine, 1));
+
+  Bot *bot = testhost::FindBot ("RtB");
+  HOST_REQUIRE (bot != nullptr);
+
+  bot->pev->origin = ystl::Vector (100.0f, 0.0f, 0.0f);
+  bot->pev->view_ofs = ystl::Vector (0.0f, 0.0f, 28.0f);
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->pev->fov = 90.0f;
+  bot->pev->flags |= FL_ONGROUND;
+  bot->team_ = Team::Terrorist;
+
+  // the far foe sits off to the side so the near one does not shadow its traces
+  edict_t *far_foe = MakeFoe ("RtFar", ystl::Vector (1100.0f, 300.0f, 0.0f));
+  HOST_REQUIRE (far_foe != nullptr);
+  clients.Update ();
+  clients[far_foe].team = Team::CT;
+
+  CombatHook::BodyAngles (*bot);
+  CombatHook::SetViewDistance (*bot, 4096.0f);
+
+  // this case is about target polling, the noticing meter has its own coverage
+  cv_notice_model.Set (0);
+
+  auto reset_search = [&] {
+    bot->enemy_.current = nullptr;
+    bot->enemy_.last = nullptr;
+    CombatHook::SetAimFlags (*bot, AimFlags::Invalid);
+    CombatHook::SetStates (*bot, Sense::Invalid);
+    CombatHook::InvalidateEnemyUpdate (*bot);
+  };
+
+  // first contact: the far foe is adopted and the scan window opens
+  reset_search ();
+
+  int adopt_steps = 0;
+  while (adopt_steps < 10 && bot->enemy_.current != far_foe) {
+    CombatHook::Track (*bot);
+    engine.AdvanceTime (0.1f);
+    ++adopt_steps;
+  }
+  CHECK (bot->enemy_.current == far_foe);
+
+  // a much closer foe then steps into plain sight
+  edict_t *near_foe = MakeFoe ("RtNear", ystl::Vector (300.0f, 0.0f, 0.0f));
+  HOST_REQUIRE (near_foe != nullptr);
+  clients.Update ();
+  clients[near_foe].team = Team::CT;
+
+  // a distant lock only yields when the new threat is clearly closer
+  CHECK (CombatHook::CloserThreat (*bot, 750.0f));
+  CHECK (!CombatHook::CloserThreat (*bot, 500.0f));
+
+  // nobody resets the scan timer here: a point-blank foe must shorten the window on its own
+  int switch_steps = 0;
+  while (switch_steps < 30 && bot->enemy_.current != near_foe) {
+    engine.AdvanceTime (0.1f);
+    CombatHook::Track (*bot);
+    ++switch_steps;
+  }
+  CHECK (bot->enemy_.current == near_foe);
+  CHECK (switch_steps <= 5);
 
   cv_notice_model.Revert ();
   bots.Destroy ();
