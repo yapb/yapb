@@ -583,8 +583,11 @@ TEST_CASE ("unit/weapons_fire") {
   CHECK (!WeaponsHook::PauseFiring (*bot, 2000.0f));
 
   bot->SetNewDifficulty (Difficulty::Expert);
+  bot->weapon_type_ = WeaponType::Rifle;
   bot->pev->punchangle = ystl::Vector (-10.0f, 0.0f, 0.0f);
-  CHECK (WeaponsHook::PauseFiring (*bot, 2000.0f));
+  CHECK (!WeaponsHook::PauseFiring (*bot, 2000.0f)); // long-range burst starts
+  CHECK (!WeaponsHook::PauseFiring (*bot, 2000.0f));
+  CHECK (WeaponsHook::PauseFiring (*bot, 2000.0f)); // then the pause lands
   bot->pev->punchangle = ystl::Vector (0.0f, 0.0f, 0.0f);
   bot->SetNewDifficulty (Difficulty::Normal);
 
@@ -1750,7 +1753,13 @@ TEST_CASE ("unit/weapons_beacon") {
   bot->pev->punchangle = ystl::Vector (-10.0f, 0.0f, 0.0f);
   bot->pev->button = 0;
   WeaponsHook::Handle (*bot, 2000.0f, Weapon::AK47, ak_idx);
-  CHECK (!(bot->pev->button & IN_ATTACK));
+  CHECK (!!(bot->pev->button & IN_ATTACK)); // long-range burst keeps going
+  bot->pev->button = 0;
+  WeaponsHook::Handle (*bot, 2000.0f, Weapon::AK47, ak_idx);
+  CHECK (!!(bot->pev->button & IN_ATTACK));
+  bot->pev->button = 0;
+  WeaponsHook::Handle (*bot, 2000.0f, Weapon::AK47, ak_idx);
+  CHECK (!(bot->pev->button & IN_ATTACK)); // burst spent, pause lands
   bot->pev->punchangle = ystl::Vector (0.0f, 0.0f, 0.0f);
   bot->pev->button = 0;
   WeaponsHook::SetFirePause (*bot, 0.0f);

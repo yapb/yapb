@@ -537,6 +537,13 @@ TEST_CASE ("unit/combat_senses") {
   foe_near->v.takedamage = DAMAGE_YES;
   cv_check_enemy_invincibility.Set (0);
 
+  // CSDM spawn protection is checked even when the cvar is off
+  game.AddGameFlag (GameFlags::CSDM);
+  foe_near->v.flags |= FL_GODMODE;
+  CHECK (CombatHook::Invincible (*bot, foe_near));
+  foe_near->v.flags &= ~FL_GODMODE;
+  game.ClearGameFlag (GameFlags::CSDM);
+
   // no-target is a single bit
   CHECK (!CombatHook::NoTarget (*bot, nullptr));
   CHECK (!CombatHook::NoTarget (*bot, foe_near));
@@ -1685,6 +1692,12 @@ TEST_CASE ("unit/combat_retarget") {
   }
   CHECK (bot->enemy_.current == near_foe);
   CHECK (switch_steps <= 5);
+
+  // a target that changed teams is dropped on the next scan
+  bot->team_ = Team::CT;
+  clients[bot->Ent ()].team = Team::CT;
+  CombatHook::Track (*bot);
+  CHECK (bot->enemy_.current == nullptr);
 
   cv_notice_model.Revert ();
   bots.Destroy ();

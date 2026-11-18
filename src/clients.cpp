@@ -41,6 +41,10 @@ void ClientManager::Update () {
     else {
       client.flags &= ~(ClientFlags::Used | ClientFlags::Alive);
       client.ent = nullptr;
+
+      // the next occupant of this slot starts with an unknown team
+      client.team = Team::Unassigned;
+      client.team2 = Team::Unassigned;
     }
   }
 }

@@ -2060,6 +2060,7 @@ void Bot::NewRound () {
   reload_data_.Reset ();
   shoot_time_ = game.Time ();
   fire_pause_ = 0.0f;
+  long_range_burst_ = 0;
   last_fired_timer_.invalidate ();
 
   sniper_stop_timer_.invalidate ();

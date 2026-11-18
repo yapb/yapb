@@ -186,6 +186,7 @@ protected:
   bool wants_to_fire_ {}; // bot needs consider firing
   float fire_pause_ {}; // time to pause firing
   float shoot_time_ {}; // time to shoot
+  int long_range_burst_ {}; // rounds fired after recoil crossed the pause threshold
 
   // weapon switching
   bool check_knife_switch_ {}; // is time to check switch to knife

@@ -361,6 +361,7 @@ bool Bot::NeedToPauseFiring (float distance) {
 
   // close range, never pause, just spray
   if (distance < kSprayDistance) {
+    long_range_burst_ = 0;
     return false;
   }
 
@@ -402,6 +403,15 @@ bool Bot::NeedToPauseFiring (float distance) {
 
   // check if recoil has exceeded threshold
   if (recoil_deviation > threshold) {
+    // automatic weapons get a short burst before the pause, pistols keep their single-shot rhythm
+    const int max_burst = UsesPistol () ? 0 : 2;
+
+    if (long_range_burst_ < max_burst) {
+      ++long_range_burst_;
+      return false;
+    }
+    long_range_burst_ = 0;
+
     const float additional_pause = max_allowed_recoil * 0.01f * tolerance;
     const float pause_duration = rg (base_pause_time, base_pause_time + additional_pause);
 
@@ -409,6 +419,7 @@ bool Bot::NeedToPauseFiring (float distance) {
     fire_pause_ = normalize_fire_pause (game.Time () + pause_duration - frame_interval_, base_pause_time);
     return true;
   }
+  long_range_burst_ = 0;
   return false;
 }
 
@@ -502,6 +513,7 @@ void Bot::HandleWeapons (float distance, int, Weapon id, int choosen) {
 
     // reset burst fire variables
     fire_pause_ = 0.0f;
+    long_range_burst_ = 0;
     last_fired_timer_.invalidate ();
 
     // record switch time to prevent rapid switching
@@ -635,6 +647,9 @@ void Bot::HandleWeapons (float distance, int, Weapon id, int choosen) {
 
 void Bot::DoFireWeapons () {
   // the bots wants to fire at something?
+  if (!wants_to_fire_ && shoot_at_dead_timer_.elapsed ()) {
+    long_range_burst_ = 0; // a lull between engagements starts the burst over
+  }
 
   if (!shoot_at_dead_timer_.elapsed () || (wants_to_fire_ && !is_using_grenade_ && shoot_time_ <= game.Time ())) {
     FireWeapons (); // if bot didn't fire a bullet try again next frame

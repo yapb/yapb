@@ -74,7 +74,7 @@ bool Bot::IsEnemyHidden (edict_t *enemy) {
 }
 
 bool Bot::IsEnemyInvincible (edict_t *enemy) {
-  if (!cv_check_enemy_invincibility || game.IsNullEntity (enemy)) {
+  if ((!cv_check_enemy_invincibility && !game.Is (GameFlags::CSDM)) || game.IsNullEntity (enemy)) {
     return false;
   }
   const auto &v = enemy->v;
@@ -543,6 +543,16 @@ bool Bot::LookupEnemies () {
   enemy_parts_ = Visibility::None;
   enemy_origin_.clear ();
 
+  // a target that changed teams must not be engaged or remembered
+  if (!game.Is (GameFlags::FreeForAll)) {
+    if (game.IsPlayerEntity (enemy_.current) && game.GetPlayerTeam (enemy_.current) == team_) {
+      enemy_.Forget ();
+    }
+    else if (game.IsPlayerEntity (enemy_.last) && game.GetPlayerTeam (enemy_.last) == team_) {
+      enemy_.ForgetLast ();
+    }
+  }
+
   // do not search for enemies while we're blinded, or shooting disabled by user
   if (!enemy_ignore_timer_.elapsed () || !blind_.timer.elapsed () || cv_ignore_enemies) {
     return false;
@@ -578,8 +588,10 @@ bool Bot::LookupEnemies () {
     }
 
     // is player is alive; re-arming the timer here would keep the scan window from ever expiring
-    if (!enemy_update_timer_.elapsed () && player->v.origin.distance_sq (pev->origin) < nearest_distance_sq && game.IsAliveEntity (player) &&
-        SeesEnemy (player)) {
+    const bool hostile = !game.IsPlayerEntity (player) || game.Is (GameFlags::FreeForAll) || game.GetPlayerTeam (player) != team_;
+
+    if (hostile && !enemy_update_timer_.elapsed () && player->v.origin.distance_sq (pev->origin) < nearest_distance_sq &&
+        game.IsAliveEntity (player) && SeesEnemy (player)) {
 
       new_enemy = player;
     }
@@ -1793,7 +1805,7 @@ void Bot::CheckGrenadesThrow () {
 
   const auto sense_condition = is_grenade_mode ? false : !has_flag (states_, Sense::SuspectEnemy | Sense::HearingEnemy);
 
-  if (!game.IsAliveEntity (enemy_.last) || sense_condition) {
+  if (!game.IsAliveEntity (enemy_.last) || IsEnemyInvincible (enemy_.last) || sense_condition) {
     clear_throw_states (states_);
     return;
   }
@@ -2214,7 +2226,8 @@ bool Bot::GetThruWallChance (int pct) const {
 
 bool Bot::LastEnemyShootable () {
   // fire at remembered spot only if it can be penetrated
-  if (!has_flag (aim_flags_, AimFlags::LastEnemy) || enemy_.last_origin.empty () || game.IsNullEntity (enemy_.last)) {
+  if (!has_flag (aim_flags_, AimFlags::LastEnemy) || enemy_.last_origin.empty () || game.IsNullEntity (enemy_.last) ||
+      IsEnemyInvincible (enemy_.last)) {
     return false;
   }
   return util.ViewDot (Ent (), enemy_.last_origin) >= 0.90f && IsPenetrableObstacleCached (enemy_.last_origin);
