@@ -209,6 +209,14 @@ void Bot::CheckBreakable (edict_t *touch) {
     }
   }
   else {
+    // never retry a breakable that already survived a full shoot attempt
+    if (IsUnbreakableBreakable (touch)) {
+      breakable_entity_ = nullptr;
+      breakable_origin_.clear ();
+
+      return;
+    }
+
     // a touched breakable blocks us, retry it even if it was ignored as decor
     ForgetIgnoredBreakable (touch);
 
@@ -244,7 +252,7 @@ void Bot::CheckBreakablesAround () {
     const auto breakable = item.ent;
 
     // skip blacklisted ones, keep searching
-    if (IsIgnoredBreakable (breakable)) {
+    if (IsIgnoredBreakable (breakable) || IsUnbreakableBreakable (breakable)) {
       continue;
     }
 
@@ -302,6 +310,10 @@ edict_t *Bot::LookupBreakable () {
       breakable_entity_ = nullptr;
       breakable_origin_.clear ();
     }
+    else if (IsUnbreakableBreakable (breakable_entity_)) {
+      breakable_entity_ = nullptr;
+      breakable_origin_.clear ();
+    }
     else if (IsIgnoredBreakable (breakable_entity_)) {
       // lookup is for path blockers, decor-only ignores do not apply here
       ForgetIgnoredBreakable (breakable_entity_);
@@ -332,7 +344,7 @@ edict_t *Bot::LookupBreakable () {
   };
 
   auto is_good_for_us = [&] (edict_t *ent) -> bool {
-    if (game.IsNullEntity (ent)) {
+    if (game.IsNullEntity (ent) || IsUnbreakableBreakable (ent)) {
       return false;
     }
 

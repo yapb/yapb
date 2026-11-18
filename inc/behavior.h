@@ -221,6 +221,7 @@ protected:
   ystl::Vector breakable_origin_ {}; // origin of breakable
 
   ystl::Array<edict_t *> ignored_breakable_ {}; // list of ignored breakables
+  ystl::Array<edict_t *> unbreakable_breakable_ {}; // tried and failed to destroy, never retry this round
   ystl::Array<edict_t *> hostages_ {}; // pointer to used hostage entities
 
   DifficultyData *difficulty_data_ {};

@@ -2174,6 +2174,7 @@ void Bot::NewRound () {
   chat_pre_checked_ = 0;
   goal_history_.clear ();
   ignored_breakable_.clear ();
+  unbreakable_breakable_.clear ();
   dropped_dry_weapons_mask_ = 0;
 
   // ignore enemies for some time if needed

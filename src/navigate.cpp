@@ -952,7 +952,7 @@ bool Bot::DetectStuckStatus (const ystl::Vector &dir_normal) {
     blocker = IsBlockedForward (dir_normal, true);
 
     // if blocked by a breakable, schedule shooting instead of stuck
-    if (blocker != nullptr && game.IsBreakableEntity (blocker) && IsBreakableAllowed ()) {
+    if (blocker != nullptr && game.IsBreakableEntity (blocker) && !IsUnbreakableBreakable (blocker) && IsBreakableAllowed ()) {
       ForgetIgnoredBreakable (blocker);
 
       if (breakable_entity_ != blocker) {

@@ -393,6 +393,12 @@ struct BehaviorHook {
   static void IgnoreBreakable (Bot &bot, edict_t *ent) {
     bot.ignored_breakable_.push (ent);
   }
+  static void IgnoreUnbreakable (Bot &bot, edict_t *ent) {
+    bot.unbreakable_breakable_.push (ent);
+  }
+  static void ClearUnbreakable (Bot &bot) {
+    bot.unbreakable_breakable_.clear ();
+  }
   static void ClearIgnoredBreakable (Bot &bot) {
     bot.ignored_breakable_.clear ();
   }
@@ -2884,6 +2890,15 @@ TEST_CASE ("unit/behavior_breakables") {
   BehaviorHook::IgnoreBreakable (*bot, brk);
   CHECK (BehaviorHook::Lookup (*bot) == brk);
   BehaviorHook::ClearIgnoredBreakable (*bot);
+
+  // ...but a breakable that already survived a shoot attempt is never retried
+  BehaviorHook::IgnoreUnbreakable (*bot, brk);
+  BehaviorHook::SetBreakable (*bot, nullptr);
+  bot->ClearTasks ();
+  BehaviorHook::CheckBreakable (*bot, brk);
+  CHECK (BehaviorHook::Breakable (*bot) == nullptr);
+  CHECK (bot->GetTaskId () != TaskId::ShootBreakable);
+  BehaviorHook::ClearUnbreakable (*bot);
 
   BehaviorHook::SetBreakable (*bot, brk);
   CHECK (BehaviorHook::Lookup (*bot) == brk);

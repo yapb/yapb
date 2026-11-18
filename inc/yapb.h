@@ -1310,6 +1310,11 @@ public:
     }
   }
 
+  // breakables the bot already tried to destroy and failed
+  bool IsUnbreakableBreakable (edict_t *ent) {
+    return !game.IsNullEntity (ent) && unbreakable_breakable_.contains (ent);
+  }
+
   // no smashing decor while frozen or right after spawn
   bool IsBreakableAllowed () const {
     return pev->maxspeed >= 10.0f && spawn_timer_.greater_than (5.0f);

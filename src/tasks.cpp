@@ -1874,7 +1874,8 @@ void Bot::TaskShootBreakable () {
   const bool has_visible_enemy = !game.IsNullEntity (enemy_.current) && has_flag (states_, Sense::SeeingEnemy);
 
   // breakable destroyed or gave up on it?
-  if (has_visible_enemy || !game.IsBreakableEntity (breakable_entity_) || IsIgnoredBreakable (breakable_entity_)) {
+  if (has_visible_enemy || !game.IsBreakableEntity (breakable_entity_) || IsIgnoredBreakable (breakable_entity_) ||
+      IsUnbreakableBreakable (breakable_entity_)) {
     CompleteTask ();
     return;
   }
@@ -1885,6 +1886,7 @@ void Bot::TaskShootBreakable () {
   }
   else if (breakable_shoot_timer_.elapsed ()) {
     ignored_breakable_.push (breakable_entity_);
+    unbreakable_breakable_.push (breakable_entity_);
 
     breakable_entity_ = nullptr;
     breakable_origin_.clear ();
