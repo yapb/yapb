@@ -1343,6 +1343,17 @@ inline ConVar cv_grenadier_mode {
   }
 };
 
+inline ConVar cv_choose_grenade {
+  {
+    .name = "choose_grenade",
+    .value = "4",
+    .info = "Grenades bots may use: 0 none, 1 high-explosive, 2 flashbang, 3 smoke, 4 all.",
+    .bounded = true,
+    .min = 0.0f,
+    .max = 4.0f,
+  }
+};
+
 inline ConVar cv_ignore_enemies_after_spawn_time {
   {
     .name = "ignore_enemies_after_spawn_time",

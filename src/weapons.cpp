@@ -894,14 +894,29 @@ int Bot::GetBestSecondaryCarriedIndex () {
   return weapon_index;
 }
 
+bool Bot::IsGrenadeAllowed (Weapon id) const {
+  if (id != Weapon::Explosive && id != Weapon::Flashbang && id != Weapon::Smoke) {
+    return true;
+  }
+  const int choice = cv_choose_grenade.As<int> ();
+
+  if (choice <= 0) {
+    return false;
+  }
+  if (choice >= 4) {
+    return true;
+  }
+  return (choice == 1 && id == Weapon::Explosive) || (choice == 2 && id == Weapon::Flashbang) || (choice == 3 && id == Weapon::Smoke);
+}
+
 Weapon Bot::GetBestGrenadeCarriedId () const {
-  if (has_flag (pev->weapons, ystl::bit (Weapon::Explosive))) {
+  if (IsGrenadeAllowed (Weapon::Explosive) && has_flag (pev->weapons, ystl::bit (Weapon::Explosive))) {
     return Weapon::Explosive;
   }
-  else if (has_flag (pev->weapons, ystl::bit (Weapon::Smoke))) {
+  else if (IsGrenadeAllowed (Weapon::Smoke) && has_flag (pev->weapons, ystl::bit (Weapon::Smoke))) {
     return Weapon::Smoke;
   }
-  else if (has_flag (pev->weapons, ystl::bit (Weapon::Flashbang))) {
+  else if (IsGrenadeAllowed (Weapon::Flashbang) && has_flag (pev->weapons, ystl::bit (Weapon::Flashbang))) {
     return Weapon::Flashbang;
   }
   return Weapon::Invalid;

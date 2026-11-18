@@ -1946,6 +1946,23 @@ TEST_CASE ("unit/weapons_ledger") {
   CHECK (WeaponsHook::BestNade (*bot) == Weapon::Explosive);
   bot->pev->weapons = 0;
 
+  // ...the grenade choice cvar filters what bots may throw...
+  bot->pev->weapons = ystl::to_underlying (ystl::bit (Weapon::Explosive)) | ystl::to_underlying (ystl::bit (Weapon::Flashbang)) |
+                      ystl::to_underlying (ystl::bit (Weapon::Smoke));
+
+  cv_choose_grenade.Set (1);
+  CHECK (WeaponsHook::BestNade (*bot) == Weapon::Explosive);
+  cv_choose_grenade.Set (2);
+  CHECK (WeaponsHook::BestNade (*bot) == Weapon::Flashbang);
+  cv_choose_grenade.Set (3);
+  CHECK (WeaponsHook::BestNade (*bot) == Weapon::Smoke);
+  cv_choose_grenade.Set (0);
+  CHECK (WeaponsHook::BestNade (*bot) == Weapon::Invalid);
+  cv_choose_grenade.Revert ();
+  CHECK (WeaponsHook::BestNade (*bot) == Weapon::Explosive);
+
+  bot->pev->weapons = 0;
+
   // ...ground rating prefers better prefs, dry drops and empty pools...
   edict_t *ground = engine.SpawnEntity ("weaponbox");
   HOST_REQUIRE (ground != nullptr);

@@ -469,19 +469,19 @@ void Bot::BuyGrenades () {
   }
 
   // buy a he grenade
-  if (conf.ChanceToBuyGrenade (0) && money_amount_ >= 400 && !IsWeaponRestricted (Weapon::Explosive)) {
+  if (IsGrenadeAllowed (Weapon::Explosive) && conf.ChanceToBuyGrenade (0) && money_amount_ >= 400 && !IsWeaponRestricted (Weapon::Explosive)) {
     IssueCommand ("buyequip");
     IssueCommand ("menuselect 4");
   }
 
   // buy a concussion grenade, i.e., 'flashbang'
-  if (conf.ChanceToBuyGrenade (1) && money_amount_ >= 300 && !IsWeaponRestricted (Weapon::Flashbang)) {
+  if (IsGrenadeAllowed (Weapon::Flashbang) && conf.ChanceToBuyGrenade (1) && money_amount_ >= 300 && !IsWeaponRestricted (Weapon::Flashbang)) {
     IssueCommand ("buyequip");
     IssueCommand ("menuselect 3");
   }
 
   // buy a smoke grenade
-  if (conf.ChanceToBuyGrenade (2) && money_amount_ >= 400 && !IsWeaponRestricted (Weapon::Smoke)) {
+  if (IsGrenadeAllowed (Weapon::Smoke) && conf.ChanceToBuyGrenade (2) && money_amount_ >= 400 && !IsWeaponRestricted (Weapon::Smoke)) {
     IssueCommand ("buyequip");
     IssueCommand ("menuselect 5");
   }

@@ -133,6 +133,9 @@ private:
   // get weapon id of best grenade currently carried
   Weapon GetBestGrenadeCarriedId () const;
 
+  // check if bot may use this grenade type
+  bool IsGrenadeAllowed (Weapon id) const;
+
   // check if bot can replace current weapon with better one
   bool CanReplaceWeapon ();
 
