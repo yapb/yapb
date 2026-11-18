@@ -3413,6 +3413,16 @@ TEST_CASE ("unit/behavior_hearing2") {
   BehaviorHook::Rng (*bot).clear_forced ();
   CHECK (BehaviorHook::HeardEnemy (*bot) == h1);
 
+  // a heard foe never steals a tracked target
+  BehaviorHook::ClearEnemy (*bot);
+  bot->enemy_.current = h1;
+  silence (h1);
+  refresh (h2);
+  clients.Update ();
+  BehaviorHook::Hearing (*bot);
+  CHECK (bot->enemy_.current == h1);
+  CHECK (BehaviorHook::HeardEnemy (*bot) == h2);
+
   bots.Destroy ();
 }
 

@@ -79,6 +79,9 @@ struct CombatHook {
   static bool Noticeable (Bot &bot, float range) {
     return bot.IsEnemyNoticeable (range);
   }
+  static float NoticeRate (Bot &bot, edict_t *ent) {
+    return bot.NoticeRate (ent);
+  }
   static bool Threat (Bot &bot) {
     return bot.IsEnemyThreat ();
   }
@@ -560,9 +563,27 @@ TEST_CASE ("unit/combat_senses") {
   CHECK (!CombatHook::DarkArea (*bot, foe_near));
   bot->uses_nvg_ = false;
 
-  // darkness blocks acquiring a new target but never drops a tracked one
+  // darkness only lowers the noticing rate
+  foe_near->v.origin = ystl::Vector (500.0f, 0.0f, 0.0f);
+  clients.Update ();
+  HOST_REQUIRE (CombatHook::BodyParts (*bot, foe_near));
+  const float lit_rate = CombatHook::NoticeRate (*bot, foe_near);
+
+  graph.paths_[5].light = 0.0f;
+  engine.AdvanceTime (0.2f);
+  HOST_REQUIRE (CombatHook::BodyParts (*bot, foe_near));
+  const float dark_rate = CombatHook::NoticeRate (*bot, foe_near);
+
+  CHECK (dark_rate > 0.0f);
+  CHECK (dark_rate < lit_rate);
+
+  graph.paths_[5].light = kInvalidLightLevel;
+  foe_near->v.origin = ystl::Vector (200.0f, 0.0f, 0.0f);
+  clients.Update ();
+
+  // darkness slows noticing but never hides a target
   bot->enemy_.current = nullptr;
-  CHECK (!CombatHook::BodyParts (*bot, foe_near));
+  CHECK (CombatHook::BodyParts (*bot, foe_near));
   bot->enemy_.current = foe_near;
   CHECK (CombatHook::BodyParts (*bot, foe_near));
   bot->enemy_.current = nullptr;
@@ -1729,6 +1750,17 @@ TEST_CASE ("unit/combat_sweep") {
   CHECK (expert_sweep > 0.0f);
   CHECK (expert_sweep < noob_sweep);
 
+  // the sweep error is capped in world units, so distant targets stay hittable
+  float far_sweep = 0.0f;
+
+  for (int i = 1; i <= 5; ++i) {
+    engine.AdvanceTime (0.1f);
+    foe->v.origin = ystl::Vector (3000.0f, 300.0f * static_cast<float> (i), 0.0f);
+    far_sweep = CombatHook::Focus (*bot, foe, 3000.0f).length ();
+  }
+  CHECK (far_sweep > 0.0f);
+  CHECK (far_sweep <= 24.05f);
+
   bots.Destroy ();
 }
 
@@ -2130,6 +2162,23 @@ TEST_CASE ("unit/combat_siege") {
   CombatHook::CheckNades (*bot);
   CHECK (has_flag (CombatHook::States (*bot), Sense::ThrowExplosive) || !has_flag (CombatHook::States (*bot), Sense::ThrowExplosive));
   CombatHook::Rng (*bot).clear_forced ();
+
+  // a visible close foe keeps the grenade in the pocket
+  engine.AdvanceTime (1.0f);
+  bot->enemy_.current = foe;
+  bot->enemy_.last = foe;
+  foe->v.origin = ystl::Vector (300.0f, 0.0f, 0.0f);
+  bot->enemy_.last_origin = foe->v.origin;
+  clients.Update ();
+  CombatHook::BodyAngles (*bot);
+  CombatHook::SetStates (*bot, Sense::SeeingEnemy);
+  CombatHook::StartSee (*bot);
+  engine.AdvanceTime (1.0f);
+  CombatHook::Rng (*bot).force_chance (false);
+  CombatHook::CheckNades (*bot);
+  CHECK (!has_flag (CombatHook::States (*bot), Sense::ThrowExplosive));
+  CombatHook::Rng (*bot).clear_forced ();
+  bot->enemy_.current = nullptr;
 
   bots.Destroy ();
 }

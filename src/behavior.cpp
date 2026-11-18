@@ -1130,8 +1130,11 @@ void Bot::SetConditions () {
   if (heard_sound_timer_.less_than (3.0f)) {
     hearing_interval = kHearingFastInterval; // recent sound -> faster updates
   }
-  // don't listen if seeing enemy, just checked for sounds or being blinded (because its inhuman)
-  if (sound_update_timer_.elapsed () && blind_.timer.elapsed () && see_enemy_timer_.greater_than (0.5f)) {
+  if (has_flag (states_, Sense::SeeingEnemy)) {
+    hearing_interval = 0.15f; // already engaged, only watch the flanks
+  }
+  // hearing stays on in combat: a second foe behind the current one must not go silent
+  if (sound_update_timer_.elapsed () && blind_.timer.elapsed ()) {
 
     UpdateHearing ();
     sound_update_timer_.start (hearing_interval);
@@ -2369,7 +2372,7 @@ bool Bot::IsOutOfBombTimer () {
 }
 
 void Bot::UpdateHearing () {
-  if (game.Is (GameFlags::FreeForAll) || !enemy_ignore_timer_.elapsed () || cv_ignore_enemies) {
+  if (!enemy_ignore_timer_.elapsed () || cv_ignore_enemies) {
     return;
   }
   heard_enemy_ = nullptr;
@@ -2450,7 +2453,7 @@ void Bot::UpdateHearing () {
     // close movement noise means enemy is near, draw the weapon at once
     const bool close_movement_noise = nearest_distance_sq < ystl::sqrf (650.0f) && !has_flag (best_sound_type, Noise::Zoom);
 
-    if (high_priority_sound || close_movement_noise) {
+    if ((high_priority_sound || close_movement_noise) && !has_flag (states_, Sense::SeeingEnemy)) {
       if (IsOnFloor () && current_weapon_ != Weapon::C4 && current_weapon_ != Weapon::Explosive && current_weapon_ != Weapon::Smoke &&
           current_weapon_ != Weapon::Flashbang && !IsKnifeMode ()) {
 
@@ -2506,8 +2509,8 @@ void Bot::UpdateHearing () {
       }
     }
 
-    // check if heard enemy can be seen
-    if (CheckBodyPartsWithOffsets (heard_enemy_)) {
+    // check if heard enemy can be seen; never steal a target the bot already tracks
+    if (game.IsNullEntity (enemy_.current) && CheckBodyPartsWithOffsets (heard_enemy_)) {
       enemy_.current = heard_enemy_;
       enemy_.last = heard_enemy_;
       enemy_.last_origin = enemy_origin_;

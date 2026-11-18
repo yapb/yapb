@@ -147,10 +147,7 @@ bool Bot::IsEnemyInDarkAreaCached (edict_t *enemy) {
 bool Bot::CheckBodyParts (edict_t *target) {
   // this function checks visibility of a bot target
 
-  // darkness blocks acquiring a new target, never drops a tracked one
-  const bool dark_hidden = target != enemy_.current && IsEnemyInDarkAreaCached (target);
-
-  if (IsEnemyHidden (target) || IsEnemyInvincible (target) || IsEnemyNoTarget (target) || dark_hidden) {
+  if (IsEnemyHidden (target) || IsEnemyInvincible (target) || IsEnemyNoTarget (target)) {
     enemy_parts_ = Visibility::None;
     enemy_origin_.clear ();
 
@@ -383,18 +380,28 @@ float Bot::NoticeRate (edict_t *player) {
     rate *= 0.4f;
   }
 
+  // darkness makes a target harder to pick out, but never invisible
+  if (IsEnemyInDarkAreaCached (player)) {
+    rate *= 0.6f;
+  }
+
   // skill scales the whole meter, alertness speeds it up
   rate *= 0.7f + 0.6f * (static_cast<float> (Skill ()) / 100.0f);
 
   if (has_flag (states_, Sense::SuspectEnemy)) {
     rate *= 2.0f;
   }
+
+  // a foe at point-blank range is noticed fast even when standing still
+  if (distance < 300.0f) {
+    rate = ystl::max (rate, 8.0f);
+  }
   return rate;
 }
 
 bool Bot::IsEnemyNoticed (edict_t *player) {
-  constexpr float kMaxStep = 0.25f; // a long frame gap counts as this much progress at most
-  constexpr float kForgetAfter = 1.0f; // out of sight this long, the meter starts over
+  constexpr float kMaxStep = 1.0f; // one scan window counts as this much progress at most
+  constexpr float kForgetAfter = 2.5f; // out of sight this long, the meter starts over
 
   if (notice_progress_.size () >= 32) {
     notice_progress_.clear ();
@@ -924,7 +931,8 @@ ystl::Vector Bot::GetAimFocusOffset (edict_t *target, float distance) {
     aim_focus_.theta = rg (0.0f, 6.2831853f);
     aim_focus_.turn_timer.start (rg (0.4f, 0.8f));
   }
-  const float radius = distance * ystl::deg2rad (aim_focus_.deg);
+  constexpr float kMaxFocusOffset = 24.0f; // far targets must stay hittable, cap the lateral error
+  const float radius = ystl::min (distance * ystl::deg2rad (aim_focus_.deg), kMaxFocusOffset);
 
   return ystl::Vector (ystl::cosf (aim_focus_.theta) * radius, ystl::sinf (aim_focus_.theta) * radius, 0.0f);
 }
@@ -1840,6 +1848,14 @@ void Bot::CheckGrenadesThrow () {
       util.IsInViewCone (pev->origin, enemy_.current)) {
 
     // do not throw away grenades if anyone is attacking us
+    distance_sq = kInfiniteDistance;
+  }
+
+  // never swap to a grenade while a visible foe is close enough to shoot
+  if (!is_grenade_mode && has_flag (states_, Sense::SeeingEnemy) && game.IsAliveEntity (enemy_.current) &&
+      enemy_.current->v.origin.distance_sq (pev->origin) < ystl::sqrf (500.0f) && IsInViewCone (enemy_.current->v.origin) &&
+      util.IsVisible (pev->origin, enemy_.current)) {
+
     distance_sq = kInfiniteDistance;
   }
 
