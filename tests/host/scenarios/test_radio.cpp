@@ -181,6 +181,7 @@ TEST_CASE ("unit/radio_orders") {
   testhost::FakeCSApi cs {};
 
   BootRadio (engine, cs);
+  cv_individual_play.Set (0); // exercise legacy social radio-follow orders
 
   bots.Addbot ("RadB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   bots.Addbot ("RadF1", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
@@ -753,6 +754,7 @@ TEST_CASE ("unit/radio_odds") {
   testhost::FakeCSApi cs {};
 
   BootRadio (engine, cs);
+  cv_individual_play.Set (0); // exercise legacy social radio-follow odds
 
   bots.Addbot ("OddB", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
   bots.Addbot ("OddF", Difficulty::Normal, Personality::Normal, Team::Terrorist, Skin::Terror, true);
