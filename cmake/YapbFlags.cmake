@@ -173,6 +173,11 @@ if(CLANG_OR_GCC AND NOT ANDROID)
 
     list(APPEND _strict_ldflags -Werror)
     list(APPEND _ldflags -luser32 -lws2_32 -lkernel32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32)
+  elseif(CMAKE_SYSTEM_NAME MATCHES "BSD|DragonFly")
+    # hide ystl's operator new/delete overrides, other modules must not bind to them
+    if(NOT CMAKE_BUILD_TYPE MATCHES "Debug" AND NOT YAPB_STATIC_LINKENT)
+      list(APPEND _dist_ldflags -Wl,--version-script=${PROJECT_SOURCE_DIR}/ext/ldscripts/version.lds)
+    endif()
   elseif(APPLE)
     if(IS_ZIG)
       list(APPEND _cflags -mmacosx-version-min=11.0)
