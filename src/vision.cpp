@@ -453,7 +453,7 @@ void Bot::SetAimDirection () {
       const float dist_to_predict_node_sq = graph[predict_node].origin.distance_sq (pev->origin);
 
       // a nearby peek spot is fine when the enemy ducked behind the adjacent wall
-      if (dist_to_predict_node_sq >= ystl::sqrf (2048.0f) || dist_to_predict_node_sq <= ystl::sqrf (96.0f)) {
+      if (dist_to_predict_node_sq >= ystl::sqrf (kMaxPredictDistance) || dist_to_predict_node_sq <= ystl::sqrf (kMinPredictDistance)) {
         return false;
       }
 

@@ -36,16 +36,13 @@ bool Bot::ShouldRushEndgameTime () const {
 }
 
 int Bot::FindBestGoal () {
-  if (game.Is (GameFlags::ZombieMod) && is_creature_) {
-    const auto &[ts, cts] = bots.CountTeamPlayers ();
+  // goal logic specific to zombie mode. if the game is in zombie mode, it is routed to the corresponding function.
+  if (game.Is (GameFlags::ZombieMod)) {
+    const int goal = FindBestGoalWhenZombieMode ();
 
-    if (ts < graph.GetPoints (PointType::Terrorist).size<int> ()) {
-      return FindRandomNode (PointType::Terrorist);
+    if (graph.Exists (goal)) {
+      return goal;
     }
-    else if (ts < graph.GetPoints (PointType::Goal).size<int> ()) {
-      return FindRandomNode (PointType::Goal);
-    }
-    return FindRandomNode ();
   }
 
   // chooses a destination (goal) node for a bot
@@ -54,6 +51,25 @@ int Bot::FindBestGoal () {
 
     if (graph.Exists (result)) {
       return result;
+    }
+  }
+
+  // tactical: if there is a last-known enemy position and the bot has no higher-priority task,
+  // it should prioritize moving to that location. this allows the bots to behave like "hunters."
+  if (!enemy_.last_origin.empty () && !has_c4_ && !is_vip_ && !has_hostage_ && !is_creature_) {
+    bool should_investigate = !game_state.IsBombPlanted ();
+
+    // terrorists can still search for the enemy while the bomb is planted; CT's should focus on the bomb.
+    if (game_state.IsBombPlanted () && team_ == Team::Terrorist) {
+      should_investigate = true;
+    }
+
+    if (should_investigate && (emotion_.aggression > emotion_.fear || difficulty_ >= Difficulty::Hard)) {
+      const int last_enemy_node = graph.GetNearest (enemy_.last_origin, 512.0f);
+
+      if (graph.Exists (last_enemy_node) && last_enemy_node != current_node_index_) {
+        return chosen_goal_index_ = last_enemy_node;
+      }
     }
   }
 
@@ -178,11 +194,45 @@ int Bot::FindBestGoal () {
     }
   }
 
+  // when the bot's health drops low (below 45 hp), prioritize escape and defensive tactics aggressively.
+  if (health_value_ < 45.0f) {
+    const float health_panic_factor = (1.0f - (health_value_ / 45.0f)) * 100.0f;
+    defensive += 50.0f + health_panic_factor;
+    offensive -= 50.0f + health_panic_factor;
+  }
+
+  // shotgunners are more aggressive
+  if (UsesShotgun ()) {
+    offensive += 50.0f;
+    defensive -= 50.0f;
+  }
+
+  // analyze team roles: if too many bots are employing the same tactic, increase diversity.
+  int team_campers = 0;
+  int team_rushers = 0;
+
+  for (auto &other : bots) {
+    if (&other != this && other.is_alive_ && other.team_ == team_) {
+      const auto task = other.GetTaskId ();
+
+      if (task == TaskId::Camp || task == TaskId::Hide) {
+        team_campers++;
+      }
+      else if (task == TaskId::Normal || task == TaskId::MoveTo) {
+        team_rushers++;
+      }
+    }
+  }
+  const float team_size = static_cast<float> (num_friends_left_ + 1);
+
+  // when your health is low, stop avoiding crowded areas and prioritize taking shelter in safe camping spots.
+  const float crowding_penalty = (health_value_ < 40.0f) ? 0.0f : 60.0f;
+
   // use varied random ranges for nuanced tactic selection
   float goal_desire = rg (0.0f, 70.0f) + offensive;
-  float forward_desire = rg (0.0f, 50.0f) + offensive;
+  float forward_desire = rg (0.0f, 50.0f) + offensive - (static_cast<float> (team_rushers) / team_size * 40.0f);
   float backoff_desire = rg (0.0f, 50.0f) + defensive;
-  float camp_desire = rg (0.0f, 70.0f) + defensive;
+  float camp_desire = rg (0.0f, 70.0f) + defensive - (static_cast<float> (team_campers) / team_size * crowding_penalty);
 
   // personality strongly influences tactic preferences
   switch (personality_) {
@@ -246,6 +296,179 @@ int Bot::FindBestGoal () {
     tactic = GoalTactic::Goal;
   }
   return FindGoalPost (tactic, defensive_nodes, offensive_nodes);
+}
+
+int Bot::FindBestGoalWhenZombieMode () {
+  if (is_creature_) {
+    edict_t *target_human = nullptr;
+    float best_score = kInfiniteDistance;
+    float search_radius_sq = kInfiniteDistance;
+
+    // sensory range: low-difficulty zombies (unless they are a nemesis) cannot see the entire map.
+    if (difficulty_ < Difficulty::Normal && !is_nemesis_) {
+      search_radius_sq = ystl::sqrf (1024.0f + (static_cast<float> (difficulty_) * 512.0f));
+    }
+
+    // find the most suitable victim.
+    for (const auto &client : clients) {
+      if (!client.IsUsedAndAlive () || client.IsSameTeam (team_)) {
+        continue;
+      }
+      const float distance_sq = pev->origin.distance_sq (client.origin);
+
+      // skip it if it's out of range.
+      if (distance_sq > search_radius_sq) {
+        continue;
+      }
+      float current_score = distance_sq;
+
+      // target prioritization based on difficulty
+      if (difficulty_ >= Difficulty::Normal) {
+        auto other_bot = bots[client.ent];
+
+        // prioritize survivors (high-priority target)
+        if (other_bot && other_bot->is_survivor_) {
+          current_score -= ystl::sqrf (1536.02f);
+        }
+
+        // hunter instinct: skilled zombies prioritize wounded humans
+        if (difficulty_ >= Difficulty::Hard) {
+          current_score -= (100.0f - client.ent->v.health) * 20.0f;
+        }
+      }
+
+      if (current_score < best_score) {
+        best_score = current_score;
+        target_human = client.ent;
+      }
+    }
+
+    if (!game.IsNullEntity (target_human)) {
+      return graph.GetNearest (target_human->v.origin);
+    }
+    return FindRandomNode ();
+  }
+  else {
+    // 1. try to find a safe defensive position.
+    const int best_node = FindDefendNode (pev->origin);
+
+    if (graph.Exists (best_node)) {
+      return best_node;
+    }
+
+    // 2. if there is no safe defensive point, prioritize following a Survivor or Leader.
+    edict_t *target_player = nullptr;
+
+    // find survivor (highest priority)
+    for (const auto &bot : bots) {
+      if (bot.is_alive_ && bot.team_ == team_ && bot.is_survivor_) {
+        target_player = bot.Ent ();
+        break;
+      }
+    }
+
+    // if there is no survivor, find a leader (next priority)
+    if (game.IsNullEntity (target_player)) {
+      for (const auto &bot : bots) {
+        if (bot.is_alive_ && bot.team_ == team_ && bot.is_leader_) {
+          target_player = bot.Ent ();
+          break;
+        }
+      }
+    }
+
+    // if a survivor or leader is found, target them.
+    if (!game.IsNullEntity (target_player)) {
+      // bots set to a high difficulty level try to spread out a bit more around the leader.
+      ystl::Vector target_pos = target_player->v.origin;
+
+      if (difficulty_ >= Difficulty::Normal) {
+        target_pos += ystl::Vector (rg (-64.0f, 64.0f), rg (-64.0f, 64.0f), 0.0f);
+      }
+      return graph.GetNearest (target_pos);
+    }
+
+    // 3. if there is no survivor/leader, try to find a spot near the largest group of people.
+    int best_grouping_node = kInvalidNodeIndex;
+    float max_group_score = -kInfiniteDistance; // higher score is better
+
+    // visit all your living human teammates.
+    for (const auto &client : clients) {
+      if (!client.IsUsedAndAlive () || client.IsEnemyTeam (team_) || client.ent == Ent ()) {
+        continue;
+      }
+      const int teammate_node = graph.GetNearest (client.origin);
+
+      if (!graph.Exists (teammate_node)) {
+        continue;
+      }
+
+      // find a good grouping point by evaluating a radius around each teammate.
+      const float group_search_radius =
+        512.0f + (static_cast<float> (difficulty_) * 64.0f); // as the difficulty increases, the group search radius expands.
+      const auto nearby_nodes = graph.GetNearestInRadius (group_search_radius, graph[teammate_node].origin);
+
+      for (const auto &node_index : nearby_nodes) {
+        if (!graph.Exists (node_index) || IsOccupiedNode (node_index)) { // skip occupied nodes
+          continue;
+        }
+
+        float current_group_score = 0.0f;
+        int nearby_teammates = 0;
+
+        // count how many people are near this potential grouping node.
+        for (const auto &other_client : clients) {
+          if (!other_client.IsUsedAndAlive () || other_client.IsEnemyTeam (team_)) {
+            continue;
+          }
+          if (graph[node_index].origin.distance_sq (other_client.origin) < ystl::sqrf (group_search_radius * 0.75f)) {
+            nearby_teammates++;
+          }
+        }
+
+        // score calculation: based on the number of nearby teammates and the inverse distance to this node
+        current_group_score = static_cast<float> (nearby_teammates * 100) - (graph[node_index].origin.distance_sq (pev->origin) * 0.1f);
+
+        // personality modification: "careful" bots place a higher priority on grouping up.
+        if (personality_ == Personality::Careful) {
+          current_group_score *= 1.2f;
+        }
+        else if (personality_ == Personality::Rusher) {
+          current_group_score *= 0.8f; // rushers group together less tightly.
+        }
+
+        if (current_group_score > max_group_score) {
+          max_group_score = current_group_score;
+          best_grouping_node = node_index;
+        }
+      }
+    }
+
+    if (graph.Exists (best_grouping_node)) {
+      return best_grouping_node;
+    }
+
+    // 4. fallback: if no grouping point can be found, target only the nearest person (original logic)
+    edict_t *nearest_human = nullptr;
+    float nearest_human_dist_sq = kInfiniteDistance;
+
+    for (const auto &client : clients) {
+      if (!client.IsUsedAndAlive () || client.IsEnemyTeam (team_) || client.ent == Ent ()) {
+        continue;
+      }
+      const float distance_sq = pev->origin.distance_sq (client.origin);
+
+      if (distance_sq < nearest_human_dist_sq) {
+        nearest_human_dist_sq = distance_sq;
+        nearest_human = client.ent;
+      }
+    }
+
+    if (!game.IsNullEntity (nearest_human)) {
+      return graph.GetNearest (nearest_human->v.origin);
+    }
+  }
+  return kInvalidNodeIndex;
 }
 
 int Bot::FindBestGoalWhenBombAction () {
@@ -516,13 +739,11 @@ int Bot::FindGoalPost (GoalTactic tactic, ystl::SmallArray<int32_t> *defensive, 
   }
   EnsureCurrentNodeIndex ();
 
-  // rusher bots does not care any danger
-  if (personality_ == Personality::Rusher) {
-    const auto random_goal = goal_choices[rg (0, 3)];
-
-    if (graph.Exists (random_goal)) {
-      return chosen_goal_index_ = random_goal;
-    }
+  // rusher bots sometimes choose one of the top two best options at random,
+  // rather than always selecting the single best option (unpredictability).
+  if (personality_ == Personality::Rusher && rg.chance (35)) {
+    const int random_idx = graph.Exists (goal_choices[1]) ? rg (0, 1) : 0;
+    return chosen_goal_index_ = goal_choices[random_idx];
   }
 
   // count valid goals (exclude negative/invalid values)
@@ -1523,10 +1744,11 @@ void Bot::CheckFall () {
   const float vert_drop_dest = fall_down_point_[1].z - pev->origin.z;
   const float vert_drop_start = fall_down_point_[0].z - pev->origin.z;
 
-  const bool fell_far_horizontally = (base_dist >= 124.0f && now_dist > base_dist * 1.8f && now_dist > 146.0f);
-  const bool fell_short_vertically = (vert_drop_dest > 138.0f || vert_drop_start > 138.0f);
+  const bool fell_far_horizontally =
+    (now_dist > base_dist && (now_dist > base_dist * 1.2f || now_dist > base_dist + 200.0f) && base_dist >= 80.0f && now_dist > 100.0f);
+  const bool fell_short_vertically = (vert_drop_dest > 128.0f || vert_drop_start > 128.0f);
 
-  const bool missed_narrow_path = (current_node_index_ != kInvalidNodeIndex && now_dist > 32.0f && vert_drop_dest > 138.0f);
+  const bool missed_narrow_path = (graph.Exists (current_node_index_) && now_dist < 32.0f && vert_drop_dest > 64.0f);
   const bool is_significant_fall = fell_far_horizontally || fell_short_vertically || missed_narrow_path;
 
   if (is_significant_fall) {
@@ -1534,40 +1756,57 @@ void Bot::CheckFall () {
       current_node_index_ = kInvalidNodeIndex;
       FindValidNode ();
     }
-    fix_fall_timer_.start (1.0f);
+    fix_fall_timer_.start (0.5f);
   }
 }
 
 float Bot::ComputeLadderDesiredDistance () {
-  // be lenient on ladder to ladder transitions to avoid slips
-  if (path_walk_.HasNext ()) {
-    const auto next_node_index = path_walk_.Next ();
+  // ladder navigation requires specific leniency to maintain speed and avoid getting stuck
+  if (!path_walk_.HasNext ()) {
+    return ystl::sqrf (15.0f);
+  }
+  const auto next_node_index = path_walk_.Next ();
 
-    if (graph.Exists (next_node_index) && has_flag (graph[next_node_index].flags, NodeFlag::Ladder)) {
+  if (!graph.Exists (next_node_index)) {
+    return ystl::sqrf (15.0f);
+  }
+  const bool next_is_ladder = has_flag (graph[next_node_index].flags, NodeFlag::Ladder);
+  const bool on_ladder = IsOnLadder ();
 
-      // next node is also a ladder - check if we're roughly between prev and next nodes
+  // moving along a ladder toward another ladder node
+  if (next_is_ladder) {
+    if (on_ladder) {
       const float prev_z = graph.Exists (previous_nodes_[0]) ? graph[previous_nodes_[0]].origin.z : pev->origin.z;
       const float next_z = graph[next_node_index].origin.z;
       const float cur_z = pev->origin.z;
 
-      // determine direction from previous node (more stable than velocity)
-      const bool came_from_below = prev_z < cur_z;
-      const bool came_from_above = prev_z > cur_z;
+      // determine vertical direction and progress for stability
+      const bool came_from_below = prev_z < cur_z - 1.0f;
+      const bool came_from_above = prev_z > cur_z + 1.0f;
 
-      // stay lenient when moving correctly or between nodes
       const bool between_nodes = (cur_z > ystl::min (prev_z, next_z) && cur_z < ystl::max (prev_z, next_z));
       const bool progressing_correctly = (came_from_below && next_z > cur_z) || (came_from_above && next_z < cur_z);
 
       if (progressing_correctly || between_nodes) {
-        return ystl::sqrf (72.0f); // moving in correct direction or between nodes, be lenient
+        // while correctly moving along a ladder, we can be quite lenient with vertical distance
+        // but we must remain strict horizontally to avoid drifting off the ladder plane
+        if (pev->origin.distance_sq2d (path_origin_) < ystl::sqrf (24.0f)) {
+          return ystl::sqrf (72.0f); // lenient vertically when aligned horizontally
+        }
       }
+      return ystl::sqrf (32.0f); // stricter when not perfectly aligned or moving incorrectly
     }
-    else {
-      // next node is not a ladder, allow jumping off
-      return ystl::sqrf (48.0f);
-    }
+    // approaching the first ladder node - be strict to ensure we actually mount it
+    return ystl::sqrf (20.0f);
   }
-  return ystl::sqrf (15.0f);
+
+  // transitioning from ladder to non-ladder node (exiting)
+  if (on_ladder) {
+    return ystl::sqrf (48.0f);
+  }
+
+  // default strict distance for ladder-flagged nodes when not yet on ladder
+  return ystl::sqrf (24.0f);
 }
 
 void Bot::MoveToGoal () {
@@ -1749,6 +1988,16 @@ bool Bot::UpdateNavigation () {
 
   // special ladder handling
   if (has_flag (path_flags_, NodeFlag::Ladder)) {
+    if (IsOnLadder ()) {
+      if (ladder_progress_origin_.empty () || ladder_progress_origin_.distance_sq (pev->origin) > ystl::sqrf (8.0f)) {
+        ladder_progress_origin_ = pev->origin;
+        ladder_progress_timer_.start (1.5f);
+      }
+    }
+    else {
+      ladder_progress_timer_.invalidate ();
+      ladder_progress_origin_.clear ();
+    }
     const auto prev_node_index = previous_nodes_[0];
     const auto ladder_distance_sq = pev->origin.distance_sq (path_origin_);
     const bool approaching_ladder =
@@ -2696,8 +2945,8 @@ bool Bot::FindNextBestNodeEx (const ystl::Array<int32_t> &data, bool handle_fail
 }
 
 float Bot::GetEstimatedNodeReachTime () {
-  const bool long_term_reachability =
-    has_flag (path_flags_, NodeFlag::Crouch) || has_flag (path_flags_, NodeFlag::Ladder) || buttons_.IsDucking () || (pev->oldbuttons & IN_DUCK);
+  const bool long_term_reachability = has_flag (path_flags_, NodeFlag::Crouch) || has_flag (path_flags_, NodeFlag::Ladder) ||
+                                      has_flag (path_flags_, NodeFlag::Lift) || buttons_.IsDucking () || (pev->oldbuttons & IN_DUCK);
 
   float estimated_time = long_term_reachability ? 8.5f : 3.5f;
 
@@ -2715,7 +2964,7 @@ float Bot::GetEstimatedNodeReachTime () {
     const float distance_sq = graph[previous_nodes_[0]].origin.distance_sq (graph[current_node_index_].origin);
 
     // calculate estimated time
-    estimated_time = 5.0f * (distance_sq / ystl::sqrf (move_speed_ + 1.0f));
+    estimated_time = 5.0f * (distance_sq / ystl::sqrf (pev->maxspeed + 1.0f));
 
     // check for special nodes, that can slowdown our movement
     if (long_term_reachability) {
@@ -2739,7 +2988,7 @@ void Bot::FindValidNode () {
       }
       rechoice_goal_count_ = 2; // local recovery failed, escalate to a far goal below
     }
-    {
+    else {
       const int new_goal = FindBestGoal ();
 
       prev_goal_index_ = new_goal;
@@ -2827,8 +3076,8 @@ void Bot::FindValidNode () {
     }
     path_walk_.Shift ();
 
-    if (path_walk_.First () != current_node_index_) {
-      ChangeNodeIndex (path_walk_.First ());
+    if (first_node != current_node_index_) {
+      ChangeNodeIndex (first_node);
     }
   }
 }
@@ -3213,6 +3462,25 @@ int Bot::FindDefendNode (const ystl::Vector &origin) {
       continue;
     }
 
+    // check if the area is already camped by other teammates...
+    bool area_overcrowded = false;
+
+    // as difficulty increases, bots try to spread out over a wider area (expert: ~384 units)
+    const float crowding_radius_sq = ystl::sqrf (256.0f + (static_cast<float> (difficulty_) * 32.0f));
+
+    for (auto &other : bots) {
+      if (&other != this && other.is_alive_ && other.team_ == team_ && other.GetTaskId () == TaskId::Camp) {
+        if (other.pev->origin.distance_sq (path.origin) < crowding_radius_sq) {
+          area_overcrowded = true;
+          break;
+        }
+      }
+    }
+
+    if (area_overcrowded) {
+      continue;
+    }
+
     // find the first node slot where this distance is greater
     for (auto &node : nodes) {
       if (distance > node.distance) {
@@ -3229,8 +3497,12 @@ int Bot::FindDefendNode (const ystl::Vector &origin) {
       int practice_damage = practice.GetDamage (team_, node.index, node.index);
       practice_damage = (practice_damage * 100) / practice.GetTeamDamage (team_);
 
+      // weight the experience (safety) score according to the difficulty level.
+      // expert bots value safety 2.5 times more than distance.
+      const float safety_weight = 1.0f + (static_cast<float> (difficulty_) * 0.4f);
+
       node.distance = static_cast<float> ((practice_damage * 100) / 8192);
-      node.distance += static_cast<float> (practice_damage);
+      node.distance += static_cast<float> (practice_damage) * safety_weight;
     }
   }
 
@@ -3265,9 +3537,13 @@ int Bot::FindDefendNode (const ystl::Vector &origin) {
     ++valid_count;
   }
 
+  // selection pool: randomness decreases as difficulty increases.
+  // expert bots always choose one of the top 2 safest spots, whereas noobs use the entire pool.
+  const int selection_limit = ystl::clamp (static_cast<int> (valid_count - (difficulty_ * 2)), 1, valid_count - 1);
+
   // return random node from the top half of valid nodes
   if (valid_count > 0) {
-    return nodes[rg (0, (valid_count - 1) / 2)].index;
+    return nodes[rg (0, selection_limit)].index;
   }
   return FindRandomNode ();
 }
@@ -3275,16 +3551,23 @@ int Bot::FindDefendNode (const ystl::Vector &origin) {
 int Bot::FindCoverNode (float max_distance) {
   // this function tries to find a good cover node if bot wants to hide
 
+  // adjust cover search radius according to personality: careful bots search for safe spots over a wider area.
+  float dist_mod = 1.0f;
+
+  if (personality_ == Personality::Careful) {
+    dist_mod = 1.25f;
+  }
+  else if (personality_ == Personality::Rusher) {
+    dist_mod = 0.75f;
+  }
+
+  // in zombie mode, we expand the escape distance because zombies are fast and nearby cover is usually not enough.
+  // humans need to find more distant safe zones (such as high ground).
+  const float zombie_radius_boost = game.Is (GameFlags::ZombieMod) ? 1.5f : 1.0f;
   const float enemy_max_distance = enemy_.last_origin.distance (pev->origin);
 
   // do not move to a position near to the enemy
-  if (max_distance > enemy_max_distance) {
-    max_distance = enemy_max_distance;
-  }
-
-  if (max_distance < 300.0f) {
-    max_distance = 300.0f;
-  }
+  max_distance = ystl::clamp (max_distance * dist_mod * zombie_radius_boost, 300.0f, ystl::max (enemy_max_distance, 1500.0f));
 
   const int src_index = current_node_index_;
   const int enemy_index = graph.GetNearest (enemy_.last_origin);
@@ -3337,8 +3620,12 @@ int Bot::FindCoverNode (float max_distance) {
 
   // find the best node now
   for (const auto &path : graph) {
+    // the current node and nodes seen by the enemy are filtered out.
+    // ladder nodes are also filtered out, except this is allowed for human bots in zombie mode.
+    const bool is_ladder = has_flag (path.flags, NodeFlag::Ladder);
+
     // exclude ladder, current node, occupied and nodes seen by the enemy
-    if (has_flag (path.flags, NodeFlag::Ladder) || path.number == src_index || IsOccupiedNode (path.number) ||
+    if ((is_ladder && !(game.Is (GameFlags::ZombieMod) && !is_creature_)) || path.number == src_index || IsOccupiedNode (path.number) ||
         vistab.Visible (enemy_index, path.number)) {
       continue;
     }
@@ -3369,11 +3656,54 @@ int Bot::FindCoverNode (float max_distance) {
       continue;
     }
 
+    // base score used to determine candidates (distance)
+    float score = distance;
+
+    if (personality_ == Personality::Careful) {
+      score -= (enemy_distance - distance) * 0.35f; // encourage moving away from the enemy (safe distance)
+    }
+    else if (personality_ == Personality::Rusher) {
+      score += (enemy_distance - distance) * 0.15f; // stay close to the enemy to preserve counter-attack chances
+    }
+
+    // zombie mode: prioritize spots unreachable by zombies for human bots
+    if (game.Is (GameFlags::ZombieMod) && !is_creature_) {
+      const float height_diff = path.origin.z - pev->origin.z;
+
+      // high ground, ladders, and lifts are the hardest places for zombies to reach.
+      if (has_flag (path.flags, NodeFlag::Ladder | NodeFlag::Lift)) {
+        score -= 750.0f; // very strong bonus: zombies are very slow at getting to these places.
+      }
+      else if (height_diff > 45.0f) {
+        score -= 450.0f; // physical height (platforms, crate tops) is the best defense against zombies.
+      }
+
+      // calculate link count (path.links is a fixed-size array)
+      int valid_links_count = 0;
+
+      for (const auto &link : path.links) {
+        if (link.index != kInvalidNodeIndex) {
+          valid_links_count++;
+        }
+      }
+
+      // dead-end penalty: avoid nodes with only a single link.
+      // if a zombie blocks the entrance, the bot will have nowhere to escape.
+      if (valid_links_count < 2) {
+        score += 600.0f;
+      }
+
+      // fluidity bonus: nodes with many links (junctions) offer more escape options.
+      if (valid_links_count >= 4) {
+        score -= 100.0f;
+      }
+    }
+
     // find the first node slot where this distance is smaller
     for (auto &node : nodes) {
-      if (distance < node.distance) {
+      if (score < node.distance) {
         node.index = path.number;
-        node.distance = distance;
+        node.distance = score;
         break;
       }
     }
@@ -3382,11 +3712,20 @@ int Bot::FindCoverNode (float max_distance) {
   // use statistic if we have them - update distances based on practice damage
   for (auto &node : nodes) {
     if (node.index != kInvalidNodeIndex) {
+      float practice_weight = 1.0f;
+
+      if (personality_ == Personality::Careful) {
+        practice_weight = 1.6f;
+      }
+      else if (personality_ == Personality::Rusher) {
+        practice_weight = 0.6f;
+      }
+
       int practice_damage = practice.GetDamage (team_, node.index, node.index);
       practice_damage = (practice_damage * 100) / practice.GetTeamDamage (team_);
 
       node.distance = static_cast<float> ((practice_damage * 100) / 8192);
-      node.distance += static_cast<float> (practice_damage);
+      node.distance += static_cast<float> (practice_damage) * practice_weight;
     }
   }
 
@@ -3414,6 +3753,74 @@ int Bot::FindCoverNode (float max_distance) {
   return kInvalidNodeIndex; // do not use random points
 }
 
+int Bot::GetEvasionPoint () {
+  // if the bot's health is low (below 30%), expand the search scope to increase the
+  // likelihood of finding a friend and taking shelter near them
+  const bool is_low_health = health_value_ < 30.0f;
+  const float teammate_search_dist = is_low_health ? 1536.0f : 1024.0f;
+  const float cover_search_radius = is_low_health ? 768.0f : 512.0f;
+
+  // increase the fear level of a low-health bot to make it behave more defensively
+  if (is_low_health) {
+    emotion_.fear = ystl::min (emotion_.fear + 0.2f, 1.0f);
+  }
+
+  // buddy system: try to take shelter behind a nearby teammate
+  edict_t *buddy = nullptr;
+
+  // search for an alive and visible teammate (human or bot)
+  for (const auto &client : clients) {
+    if (!client.IsTeammate (team_, Ent ())) {
+      continue;
+    }
+    const float radius_sq = ystl::sqrf (teammate_search_dist);
+
+    if (client.IsInRadius (pev->origin, radius_sq)) {
+      buddy = client.ent;
+      break;
+    }
+  }
+  const int buddy_node = graph.GetNearest (buddy->v.origin);
+  const int enemy_node = graph.GetNearest (enemy_.last_origin);
+
+  if (graph.Exists (buddy_node) && graph.Exists (enemy_node)) {
+    // scan the nodes around the buddy
+    const auto nodes_near_buddy = graph.GetNearestInRadius (cover_search_radius, buddy->v.origin);
+
+    int best_buddy_cover_node = kInvalidNodeIndex;
+    float nearest_dist_sq = kInfiniteDistance;
+
+    for (const auto &node_index : nodes_near_buddy) {
+      // select the node not visible by the enemy (according to the pvs table) and closest to the bot
+      if (!vistab.Visible (enemy_node, node_index)) {
+        const float dist_sq = pev->origin.distance_sq (graph[node_index].origin);
+
+        if (dist_sq < nearest_dist_sq) {
+          nearest_dist_sq = dist_sq;
+          best_buddy_cover_node = node_index;
+        }
+      }
+    }
+
+    if (graph.Exists (best_buddy_cover_node)) {
+      return best_buddy_cover_node;
+    }
+  }
+
+  // zombie mode: if there are no teammates nearby or the situation is critical,
+  // try to flee to the best defensive spot (fortification) on the map instead of simple cover.
+  if (game.Is (GameFlags::ZombieMod) && !is_creature_) {
+    const int defend_node = FindDefendNode (enemy_.last_origin.empty () ? pev->origin : enemy_.last_origin);
+
+    if (graph.Exists (defend_node) && !IsOccupiedNode (defend_node)) {
+      return defend_node;
+    }
+  }
+
+  // if no teammate is found or there is no suitable "buddy" spot, use standard cover search logic
+  return FindCoverNode (900.0f);
+}
+
 bool Bot::SelectBestNextNode () {
   // post-process pathfinder nodes to avoid occupied nodes
 
@@ -3422,55 +3829,214 @@ bool Bot::SelectBestNextNode () {
   const auto prev_node_index = current_node_index_;
 
   // if on ladder or current node is not occupied, no alternative needed
-  if (IsOnLadder () || !IsOccupiedNode (current_node_index)) {
+  if (IsOnLadder () || path_walk_.Empty () || !path_walk_.HasNext ()) {
     return false;
+  }
+
+  // if the current target node is not occupied and no one is blocking us, no change is needed.
+  if (!IsOccupiedNode (current_node_index) && game.IsNullEntity (avoid_.hindrance)) {
+    return false;
+  }
+
+  // tactical: if the bot is stuck and performing a bypass maneuver, switch to knife to increase acceleration.
+  if (IsStuckState () && !UsesKnife () && !has_flag (states_, Sense::SeeingEnemy) && !reload_data_.is_reloading) {
+    SelectWeaponById (Weapon::Knife);
   }
 
   // validate prevnodeindex before accessing
   if (!graph.Exists (prev_node_index)) {
     return false;
   }
+  int best_alt_node = kInvalidNodeIndex;
+  float best_score = kInfiniteDistance;
 
   // check the links
   for (const auto &link : graph[prev_node_index].links) {
+    const int alt_index = link.index;
 
     // skip invalid links, or links that points to itself
-    if (!graph.Exists (link.index) || current_node_index == link.index) {
+    if (!graph.Exists (alt_index) || current_node_index == alt_index || prev_node_index == alt_index) {
       continue;
     }
 
     // skip isn't connected links
-    if (!graph.IsConnected (link.index, next_node_index) || !graph.IsConnected (link.index, prev_node_index)) {
+    if (!graph.IsConnected (alt_index, next_node_index) || !graph.IsConnected (alt_index, prev_node_index)) {
       continue;
     }
 
     // skip isn't visible nodes (check both prevnode->link and link->nextnode)
-    if (!vistab.Visible (prev_node_index, link.index) || !vistab.Visible (link.index, next_node_index)) {
+    if (!vistab.Visible (prev_node_index, alt_index) || !vistab.Visible (alt_index, next_node_index)) {
       continue;
     }
 
-    // if is placed higher or lower than the bot's origin
-    if (ystl::abs (graph[link.index].origin.z - pev->origin.z) > 60.0f) {
+    // skip if the height difference is too large
+    if (ystl::abs (graph[alt_index].origin.z - pev->origin.z) > 45.0f) {
       continue;
     }
 
     // don't use ladder/camp nodes or jump links as alternative
-    if ((has_flag (graph[link.index].flags, NodeFlag::Ladder | NodeFlag::Camp)) || has_flag (link.flags, PathFlag::Jump)) {
+    if ((has_flag (graph[alt_index].flags, NodeFlag::Ladder | NodeFlag::Camp)) || has_flag (alt_index, PathFlag::Jump)) {
       continue;
     }
 
     // ct with hostage cannot take no-hostage alternative links
-    if (game.MapIs (MapFlags::HostageRescue) && has_hostage_ && has_flag (graph[link.index].flags, NodeFlag::NoHostage)) {
+    if (game.MapIs (MapFlags::HostageRescue) && has_hostage_ && has_flag (graph[alt_index].flags, NodeFlag::NoHostage)) {
       continue;
     }
 
-    // if not occupied, just set advance
-    if (!IsOccupiedNode (link.index)) {
-      path_walk_.First () = link.index;
-      return true;
+    // the selected alternative node must not be occupied either
+    if (IsOccupiedNode (alt_index)) {
+      continue;
+    }
+
+    // score calculation: minimize total distance increase
+    const float prev_dist_sq = graph[prev_node_index].origin.distance_sq (graph[alt_index].origin);
+    const float next_dist_sq = graph[next_node_index].origin.distance_sq (graph[alt_index].origin);
+    float score = prev_dist_sq + next_dist_sq;
+
+    // tactical: account for the node's historical success/danger value.
+    // evaluate the success of transitioning from the current position (prev) to the alternative node (alt).
+    const float practice_weight = 2.0f + (static_cast<float> (difficulty_) * 2.0f);
+    score -= static_cast<float> (practice.GetValue (team_, prev_node_index, alt_index)) * practice_weight;
+
+    // tactical: account for the node's danger level (damage taken).
+    // if high damage was taken on this node in the past, reduce its appeal.
+    const float damage_weight = 5.0f + (static_cast<float> (difficulty_) * 5.0f);
+    score += static_cast<float> (practice.GetDamage (team_, alt_index, alt_index)) * damage_weight;
+
+    // tactical: apply a penalty to nodes very close to the blocking player's position
+    if (!game.IsNullEntity (avoid_.hindrance)) {
+      const float dist_to_hindrance_sq = graph[alt_index].origin.distance_sq (avoid_.hindrance->v.origin);
+
+      if (dist_to_hindrance_sq < ystl::sqrf (80.0f)) {
+        score += ystl::sqrf (400.0f); // this node is too close to the blocker, penalize the score heavily
+      }
+    }
+
+    if (score < best_score) {
+      best_score = score;
+      best_alt_node = alt_index;
     }
   }
+
+  // if we found the best alternative, update the first node in the path
+  if (graph.Exists (best_alt_node)) {
+    path_walk_.First () = best_alt_node;
+    return true;
+  }
   return false;
+}
+
+bool Bot::HandleLadderTraffic (int dest_index) {
+  // keep ladder entry decisions out of AdvanceMovement: this helper handles
+  // ladder identification, traffic priority, queue waiting and rerouting.
+  if (!graph.Exists (dest_index) || !has_flag (graph[dest_index].flags, NodeFlag::Ladder) || IsOnLadder ()) {
+    return false;
+  }
+
+  // ladder nodes can be vertically far apart, so compare their horizontal
+  // positions to distinguish one ladder from a nearby, separate ladder.
+  constexpr float kLadderQueueRadius = 96.0f;
+  const auto &ladder_origin = graph[dest_index].origin;
+  const auto distance_to_ladder_sq = pev->origin.distance_sq2d (ladder_origin);
+
+  auto is_same_ladder = [&] (int node_index) {
+    return graph.Exists (node_index) && has_flag (graph[node_index].flags, NodeFlag::Ladder) &&
+           graph[node_index].origin.distance_sq2d (ladder_origin) < ystl::sqrf (kLadderQueueRadius);
+  };
+
+  auto get_ladder_node = [&] (Bot &bot) {
+    // check the bot's current node first, then its immediate path nodes. This
+    // also catches bots that are approaching the ladder but are not on it yet.
+    if (bot.IsOnLadder () && is_same_ladder (bot.current_node_index_)) {
+      return bot.current_node_index_;
+    }
+
+    if (!bot.path_walk_.Empty () && is_same_ladder (bot.path_walk_.First ())) {
+      return bot.path_walk_.First ();
+    }
+
+    if (bot.path_walk_.HasNext () && is_same_ladder (bot.path_walk_.Next ())) {
+      return bot.path_walk_.Next ();
+    }
+    return kInvalidNodeIndex;
+  };
+
+  auto get_ladder_direction = [&] (Bot &bot, int ladder_node) {
+    // use the actual ladder direction while climbing; otherwise infer the
+    // intended direction from the height difference to the ladder entrance.
+    if (bot.IsOnLadder ()) {
+      return bot.ladder_dir_ == LadderDir::Up ? 1 : -1;
+    }
+
+    if (graph.Exists (bot.current_node_index_) && graph.Exists (ladder_node)) {
+      const auto height_delta = graph[ladder_node].origin.z - graph[bot.current_node_index_].origin.z;
+
+      if (ystl::abs (height_delta) > 8.0f) {
+        return height_delta > 0.0f ? 1 : -1;
+      }
+    }
+    return 0;
+  };
+
+  const auto direction = get_ladder_direction (*this, dest_index);
+  bool ladder_blocked = false;
+
+  for (auto &other : bots) {
+    if (&other == this || !other.is_alive_) {
+      continue;
+    }
+    const auto other_ladder_node = get_ladder_node (other);
+
+    if (!graph.Exists (other_ladder_node)) {
+      continue;
+    }
+
+    const auto other_distance_to_ladder_sq = other.pev->origin.distance_sq2d (graph[other_ladder_node].origin);
+    const auto other_direction = get_ladder_direction (other, other_ladder_node);
+    const bool approaching_from_opposite_direction = direction != 0 && other_direction != 0 && direction != other_direction;
+    const bool other_is_stuck = other.IsOnLadder () && other.ladder_progress_timer_.started () && other.ladder_progress_timer_.elapsed ();
+
+    // a stalled bot must not block the entire queue indefinitely.
+    if (other_is_stuck) {
+      continue;
+    }
+
+    // the bot that reaches the ladder first owns the entrance. an opposing
+    // bot gets the same priority rule, preventing deadlocks.
+    const bool other_is_ahead = other_distance_to_ladder_sq < distance_to_ladder_sq;
+
+    if (other.IsOnLadder () || other_is_ahead || (approaching_from_opposite_direction && other_is_ahead)) {
+      ladder_blocked = true;
+      break;
+    }
+  }
+
+  // the entrance is free, so clear any state left by a previous queue wait.
+  if (!ladder_blocked) {
+    ladder_wait_node_ = kInvalidNodeIndex;
+    ladder_wait_timer_.invalidate ();
+    return false;
+  }
+
+  if (ladder_wait_node_ != dest_index) {
+    ladder_wait_node_ = dest_index;
+    ladder_wait_timer_.start (4.0f);
+  }
+
+  // recheck frequently so the bot can enter as soon as the ladder is free.
+  if (!ladder_wait_timer_.elapsed ()) {
+    StartTask (TaskId::Pause, TaskPri::kPause, kInvalidNodeIndex, game.Time () + 0.5f, false);
+    return true;
+  }
+  const bool rerouted = SelectBestNextNode ();
+
+  // the ladder remained blocked for too long; prefer an available alternative
+  // path and reset the queue state regardless of whether one was found.
+  ladder_wait_node_ = kInvalidNodeIndex;
+  ladder_wait_timer_.invalidate ();
+
+  return rerouted;
 }
 
 bool Bot::AdvanceMovement () {
@@ -3587,6 +4153,18 @@ bool Bot::AdvanceMovement () {
           }
         }
       }
+
+      // if bomb is planted, we are CT, we are not running away, and no enemy is currently visible
+      if (game_state.IsBombPlanted () && team_ == Team::CT && tid != TaskId::EscapeFromBomb && game.IsNullEntity (enemy_.current)) {
+        const auto &bomb_origin = game_state.GetBombOrigin ();
+
+        if (!bomb_origin.empty () && !IsOnLadder () && !IsInWater () && IsOnFloor ()) {
+          // if within 1200 units (roughly just outside hearing range), start walking silently
+          if (pev->origin.distance_sq (bomb_origin) < ystl::sqrf (1200.0f)) {
+            min_speed_ = GetShiftSpeed ();
+          }
+        }
+      }
     }
 
     const bool analyzed = graph.IsAnalyzed () || analyzer.IsAnalyzed ();
@@ -3686,17 +4264,8 @@ bool Bot::AdvanceMovement () {
         }
 
         // bot not already on ladder but will be soon?
-        if (has_flag (graph[dest_index].flags, NodeFlag::Ladder) && !IsOnLadder ()) {
-
-          // get ladder nodes used by other (first moving) bots
-          for (const auto &other : bots) {
-
-            // if another bot uses this ladder, wait 3 secs
-            if (&other != this && other.is_alive_ && other.current_node_index_ == dest_index && other.IsOnLadder ()) {
-              StartTask (TaskId::Pause, TaskPri::kPause, kInvalidNodeIndex, game.Time () + 3.0f, false);
-              return true;
-            }
-          }
+        if (HandleLadderTraffic (dest_index)) {
+          return true;
         }
       }
       ChangeNodeIndex (dest_index);
@@ -3734,7 +4303,7 @@ void Bot::SetPathOrigin () {
 
       if (path_origin_.z >= pev->origin.z) {
         ladder_dir_ = LadderDir::Up;
-        path_origin_ = path_->origin - tr.plane_normal + ystl::Vector { 0.0f, 0.0f, 29.0f };
+        path_origin_ = path_->origin - tr.plane_normal;
       }
       else if (path_origin_.z < pev->origin.z) {
         ladder_dir_ = LadderDir::Down;
@@ -3874,52 +4443,6 @@ edict_t *Bot::IsBlockedForward (const ystl::Vector &normal, bool include_doors) 
   return nullptr;
 }
 
-bool Bot::CanStrafeLeft (Trace::Result *tr) {
-  // this function checks if bot can move sideways (2 tracelines)
-
-  ystl::Vector left {}, forward {};
-  pev->angles.angle_vectors (&forward, &left, nullptr);
-
-  const ystl::Vector &src = pev->origin;
-  const ystl::Vector strafe_dest = src - left * 40.0f;
-
-  // trace from the bot's waist straight left
-  trace.Line (src, strafe_dest, TraceIgnore::Monsters, Ent (), tr);
-
-  if (tr->fraction < 1.0f && !game.IsDoorEntity (tr->hit)) {
-    return false;
-  }
-
-  // trace from the strafe position straight forward
-  const ystl::Vector forward_dest = strafe_dest + forward * 40.0f;
-  trace.Line (strafe_dest, forward_dest, TraceIgnore::Monsters, Ent (), tr);
-
-  return tr->fraction >= 1.0f || game.IsDoorEntity (tr->hit);
-}
-
-bool Bot::CanStrafeRight (Trace::Result *tr) {
-  // this function checks if bot can move sideways (2 tracelines)
-
-  ystl::Vector right {}, forward {};
-  pev->angles.angle_vectors (&forward, &right, nullptr);
-
-  const ystl::Vector &src = pev->origin;
-  const ystl::Vector strafe_dest = src + right * 40.0f;
-
-  // trace from the bot's waist straight right
-  trace.Line (src, strafe_dest, TraceIgnore::Monsters, Ent (), tr);
-
-  if (tr->fraction < 1.0f && !game.IsDoorEntity (tr->hit)) {
-    return false;
-  }
-
-  // trace from the strafe position straight forward
-  const ystl::Vector forward_dest = strafe_dest + forward * 40.0f;
-  trace.Line (strafe_dest, forward_dest, TraceIgnore::Monsters, Ent (), tr);
-
-  return tr->fraction >= 1.0f || game.IsDoorEntity (tr->hit);
-}
-
 bool Bot::CanJumpUp (const ystl::Vector &normal) {
   // this function checks if bot can jump over some obstacle
 
@@ -4017,19 +4540,70 @@ bool Bot::CanDuckUnder (const ystl::Vector &normal) {
   return check_duck_clearance (ystl::Vector (-kSideOffset, 0.0f, 0.0f), normal, kDuckForwardDist);
 }
 
+bool Bot::CanStrafeLeft (Trace::Result *tr) {
+  // this function checks if bot can move sideways (2 tracelines)
+
+  const ystl::Vector forward = ystl::Vector (0.0f, pev->v_angle.y, 0.0f).forward ();
+  const ystl::Vector left = ystl::Vector (0.0f, pev->v_angle.y, 0.0f).right ();
+
+  const ystl::Vector &src = pev->origin;
+  const ystl::Vector strafe_dest = src - left * 40.0f;
+
+  // trace from the bot's waist straight left
+  trace.Line (src, strafe_dest, TraceIgnore::Monsters, Ent (), tr);
+
+  if (tr->fraction >= 1.0f || game.IsDoorEntity (tr->hit)) {
+    // trace from the strafe position straight forward
+    const ystl::Vector forward_dest = strafe_dest + forward * 40.0f;
+    trace.Line (strafe_dest, forward_dest, TraceIgnore::Monsters, Ent (), tr);
+
+    return tr->fraction >= 1.0f || game.IsDoorEntity (tr->hit);
+  }
+  return false;
+}
+
+bool Bot::CanStrafeRight (Trace::Result *tr) {
+  // this function checks if bot can move sideways (2 tracelines)
+
+  const ystl::Vector forward = ystl::Vector (0.0f, pev->v_angle.y, 0.0f).forward ();
+  const ystl::Vector right = ystl::Vector (0.0f, pev->v_angle.y, 0.0f).right ();
+
+  const ystl::Vector &src = pev->origin;
+  const ystl::Vector strafe_dest = src + right * 40.0f;
+
+  // trace from the bot's waist straight right
+  trace.Line (src, strafe_dest, TraceIgnore::Monsters, Ent (), tr);
+
+  if (tr->fraction >= 1.0f || game.IsDoorEntity (tr->hit)) {
+    // trace from the strafe position straight forward
+    const ystl::Vector forward_dest = strafe_dest + forward * 40.0f;
+    trace.Line (strafe_dest, forward_dest, TraceIgnore::Monsters, Ent (), tr);
+
+    return tr->fraction >= 1.0f || game.IsDoorEntity (tr->hit);
+  }
+  return false;
+}
+
 bool Bot::IsBlockedLeft () {
   Trace::Result tr {};
 
-  ystl::Vector left {}, forward {};
-  pev->angles.angle_vectors (&forward, &left, nullptr);
+  const ystl::Vector forward = ystl::Vector (0.0f, pev->angles.y, 0.0f).forward ();
+  const ystl::Vector left = ystl::Vector (0.0f, pev->angles.y, 0.0f).right ();
 
   const ystl::Vector test_dir = move_speed_ > 0.0f ? forward : -forward;
-  constexpr float kBlockDistance = 48.0f;
 
-  const ystl::Vector src = pev->origin - left * kBlockDistance;
-  const ystl::Vector dst = src + test_dir * kBlockDistance;
+  // corridor detection: if the bot is already in a narrow area (IsInNarrowPlace),
+  // keep the side distance check at a minimum (32 units) regardless of speed.
+  // this prevents side walls from being detected as 'obstacles' and unnecessarily slowing down the bot.
+  const float block_distance =
+    IsInNarrowPlace () ? 32.0f : ystl::clamp (ystl::abs (pev->mins.x) * 2.0f + (ystl::abs (move_speed_) * 0.1f), 32.0f, 64.0f);
 
-  trace.Hull (src, dst, TraceIgnore::Monsters, head_hull, Ent (), &tr);
+  const ystl::Vector src = pev->origin - left * block_distance;
+  const ystl::Vector dst = src + test_dir * block_distance;
+
+  const auto hull = IsDucking () ? head_hull : human_hull;
+
+  trace.Hull (src, dst, TraceIgnore::Monsters, hull, Ent (), &tr);
 
   return tr.fraction < 1.0f && !game.IsDoorEntity (tr.hit);
 }
@@ -4037,46 +4611,64 @@ bool Bot::IsBlockedLeft () {
 bool Bot::IsBlockedRight () {
   Trace::Result tr {};
 
-  ystl::Vector right {}, forward {};
-  pev->angles.angle_vectors (&forward, &right, nullptr);
+  const ystl::Vector forward = ystl::Vector (0.0f, pev->angles.y, 0.0f).forward ();
+  const ystl::Vector right = ystl::Vector (0.0f, pev->angles.y, 0.0f).right ();
 
   const ystl::Vector test_dir = move_speed_ > 0.0f ? forward : -forward;
-  constexpr float kBlockDistance = 48.0f;
 
-  const ystl::Vector src = pev->origin + right * kBlockDistance;
-  const ystl::Vector dst = src + test_dir * kBlockDistance;
+  // corridor detection: if the bot is already in a narrow area (IsInNarrowPlace),
+  // keep the side distance check at a minimum (32 units) regardless of speed.
+  // this prevents side walls from being detected as 'obstacles' and unnecessarily slowing down the bot.
+  const float block_distance =
+    IsInNarrowPlace () ? 32.0f : ystl::clamp (ystl::abs (pev->mins.x) * 2.0f + (ystl::abs (move_speed_) * 0.1f), 32.0f, 64.0f);
 
-  trace.Hull (src, dst, TraceIgnore::Monsters, head_hull, Ent (), &tr);
+  const ystl::Vector src = pev->origin + right * block_distance;
+  const ystl::Vector dst = src + test_dir * block_distance;
+
+  const auto hull = IsDucking () ? head_hull : human_hull;
+
+  trace.Hull (src, dst, TraceIgnore::Monsters, hull, Ent (), &tr);
 
   return tr.fraction < 1.0f && !game.IsDoorEntity (tr.hit);
 }
 
 bool Bot::CheckWallOnLeft (float distance) {
   Trace::Result tr {};
-  trace.Line (pev->origin, pev->origin - pev->angles.right () * distance, TraceIgnore::Monsters, Ent (), &tr);
+
+  const ystl::Vector src = pev->origin + ystl::Vector (0.0f, 0.0f, 18.0f);
+  const ystl::Vector dst = pev->origin - pev->angles.right () * distance;
+
+  // do a trace to the left
+  trace.Line (src, dst, TraceIgnore::Monsters, Ent (), &tr);
 
   // check if the trace hit something
-  return tr.fraction < 1.0f;
+  return tr.fraction < 1.0f || tr.start_solid;
 }
 
 bool Bot::CheckWallOnRight (float distance) {
   Trace::Result tr {};
 
+  const ystl::Vector src = pev->origin + ystl::Vector (0.0f, 0.0f, 18.0f);
+  const ystl::Vector dst = pev->origin + pev->angles.right () * distance;
+
   // do a trace to the right
-  trace.Line (pev->origin, pev->origin + pev->angles.right () * distance, TraceIgnore::Monsters, Ent (), &tr);
+  trace.Line (src, dst, TraceIgnore::Monsters, Ent (), &tr);
 
   // check if the trace hit something
-  return tr.fraction < 1.0f;
+  return tr.fraction < 1.0f || tr.start_solid;
 }
 
 bool Bot::CheckWallOnBehind (float distance) {
   Trace::Result tr {};
 
-  // do a trace to the right
-  trace.Line (pev->origin, pev->origin - pev->angles.forward () * distance, TraceIgnore::Monsters, Ent (), &tr);
+  const ystl::Vector src = pev->origin + ystl::Vector (0.0f, 0.0f, 18.0f);
+  const ystl::Vector dst = pev->origin - pev->angles.forward () * distance;
+
+  // do a trace to the behind
+  trace.Line (src, dst, TraceIgnore::Monsters, Ent (), &tr);
 
   // check if the trace hit something
-  return tr.fraction < 1.0f;
+  return tr.fraction < 1.0f || tr.start_solid;
 }
 
 bool Bot::IsDeadlyMove (const ystl::Vector &to) {
@@ -4086,7 +4678,11 @@ bool Bot::IsDeadlyMove (const ystl::Vector &to) {
 
   constexpr auto kUnitsDown = 1000.0f;
   constexpr auto kFallLimit = 160.0f;
+  constexpr auto kBaseStandHeight = 72.0f;
   constexpr auto kStepSize = 16.0f;
+
+  const float bot_height = IsDucking () ? (pev->maxs.z - pev->mins.z) * 2.0f : (pev->maxs.z - pev->mins.z);
+  const float fall_limit = kFallLimit * (bot_height / kBaseStandHeight);
 
   // helper lambda to get ground height at a position
   auto get_ground_height = [&] (const ystl::Vector &pos) -> float {
@@ -4109,7 +4705,7 @@ bool Bot::IsDeadlyMove (const ystl::Vector &to) {
   float distance_sq = to.distance_sq (pev->origin);
 
   // if destination itself has a deadly drop, return true
-  if (distance_sq <= ystl::sqrf (16.0f) && last_height > kFallLimit) {
+  if (distance_sq <= ystl::sqrf (16.0f) && last_height > fall_limit) {
     return true;
   }
 
@@ -4122,7 +4718,7 @@ bool Bot::IsDeadlyMove (const ystl::Vector &to) {
     float height = get_ground_height (check);
 
     // check if there's a sudden drop (ground falls away)
-    if (height > last_height + kFallLimit) {
+    if (height > last_height + fall_limit) {
       return true;
     }
 
@@ -4139,11 +4735,15 @@ bool Bot::IsNotSafeToMove (const ystl::Vector &to) {
 
   constexpr auto kUnitsDown = 1000.0f;
   constexpr auto kFallLimit = 160.0f;
+  constexpr auto kBaseStandHeight = 72.0f;
+
+  const float bot_height = IsDucking () ? (pev->maxs.z - pev->mins.z) * 2.0f : (pev->maxs.z - pev->mins.z);
+  const float fall_limit = kFallLimit * (bot_height / kBaseStandHeight);
 
   Trace::Result tr {};
   trace.Line (to, to + ystl::Vector { 0.0f, 0.0f, -kUnitsDown }, TraceIgnore::Monsters, Ent (), &tr);
 
-  return tr.start_solid || tr.fraction * kUnitsDown > kFallLimit;
+  return tr.start_solid || tr.fraction * kUnitsDown > fall_limit;
 }
 
 int Bot::GetRandomCampDir () {
@@ -4151,16 +4751,10 @@ int Bot::GetRandomCampDir () {
 
   EnsureCurrentNodeIndex ();
 
-  constexpr auto kMaxCandidates = 5;
+  constexpr auto kMaxCandidates = 128;
   constexpr auto kMinCampDistance = 192.0f;
 
-  struct CampCandidate {
-    int index { kInvalidNodeIndex };
-    float distance_sq { 0.0f };
-    uint16_t visibility { 0 };
-  };
-
-  ystl::SmallArray<CampCandidate> candidates {};
+  ystl::SmallArray<int32_t> candidates {};
   candidates.reserve (kMaxCandidates);
 
   // collect candidate nodes with visibility and distance scoring
@@ -4170,78 +4764,42 @@ int Bot::GetRandomCampDir () {
       continue;
     }
     const float distance_sq = pev->origin.distance_sq (path.origin);
+
     if (distance_sq < ystl::sqrf (kMinCampDistance)) {
       continue;
     }
-
-    const uint16_t visibility = path.vis.crouch + path.vis.stand;
-
-    // fill empty slots first
-    if (candidates.size<int> () < kMaxCandidates) {
-      candidates.emplace (CampCandidate { path.number, distance_sq, visibility });
-    }
-    // replace worse candidates when we find better ones
-    else {
-      for (auto &candidate : candidates) {
-        if (visibility >= candidate.visibility && distance_sq > candidate.distance_sq) {
-          candidate = { path.number, distance_sq, visibility };
-          break;
-        }
-      }
-    }
+    candidates.push (path.number);
   }
 
   // pick random candidate if we have any
   if (!candidates.empty ()) {
-    return candidates[rg (0, candidates.size<int> () - 1)].index;
-  }
+    candidates.shuffle (); // shuffle only the candidates
 
-  // fallback: use last enemy origin for prediction
-  if (!enemy_.last_origin.empty ()) {
-    int path_length = 0;
-    const int predict_node = FindAimingNode (enemy_.last_origin, path_length);
+    for (const auto &nodeIndex : candidates) {
+      Trace::Result tr {};
+      trace.Line (GetEyesPos (), graph[nodeIndex].origin, TraceIgnore::Monsters, Ent (), &tr);
 
-    if (IsNodeValidForPredict (predict_node) && path_length > 1 && vistab.Visible (predict_node, current_node_index_)) {
-      return predict_node;
+      if (tr.fraction >= 1.0f) {
+        return nodeIndex; // found a visible one
+      }
     }
   }
 
-  // worst case: return any random node
-  return graph.Random ();
-}
+  // if we are here, no node is visible from the bot's position, which is very unlikely.
+  // as a fallback, check neighbors.
+  for (const auto &link : path_->links) {
+    if (link.index != kInvalidNodeIndex) {
+      Trace::Result tr {};
+      trace.Line (GetEyesPos (), graph[link.index].origin, TraceIgnore::Monsters, Ent (), &tr);
 
-int Bot::FindAimingNode (const ystl::Vector &to, int &path_length) {
-  // return the most distant node which is seen from the bot to the target and is within count
-  EnsureCurrentNodeIndex ();
-
-  const int dest_index = graph.GetNearest (to);
-
-  if (dest_index == kInvalidNodeIndex) {
-    return kInvalidNodeIndex;
-  }
-
-  // context is captured by a single pointer, so the lambda stays within ystl::lambda inline storage
-  struct AimContext {
-    int path_length {};
-    int best_index {};
-    int from_index {};
-  } ctx { 0, current_node_index_, current_node_index_ };
-
-  auto result = planner.Find (dest_index, current_node_index_, [&ctx] (int index) {
-    ++ctx.path_length;
-
-    if (vistab.Visible (ctx.from_index, index)) {
-      ctx.best_index = index;
-      return false;
+      if (tr.fraction >= 1.0f) {
+        return link.index;
+      }
     }
-    return true;
-  });
-  path_length = ctx.path_length;
-
-  if (result && ctx.best_index == current_node_index_) {
-    return kInvalidNodeIndex;
   }
-  return ctx.best_index;
+
+  // if even neighbors are not visible, something is wrong, but we must return something valid.
+  return current_node_index_;
 }
 
 void Bot::SetStrafeSpeedRaw (float strafe_speed, bool allow_flip) {
@@ -4332,13 +4890,23 @@ bool Bot::IsOccupiedNode (int index, bool need_zero_velocity) {
     return false;
   }
 
+  // dynamic distance: expand the check radius as the team gets more crowded (min 256, max 512)
+  const float check_dist_sq = ystl::sqrf (ystl::clamp (256.0f + (static_cast<float> (num_friends_left_) * 10.0f), 256.0f, 512.0f));
+
+  // dynamic occupancy radius: expand the bots' 'personal space' tolerance as the team gets more crowded.
+  // this prevents large groups from getting stuck on each other in narrow passages and helps them spread out over a wider area.
+  const float expansion_factor = 1.0f + (static_cast<float> (num_friends_left_) * 0.02f);
+  const float min_radius_sq = ystl::sqrf (64.0f * expansion_factor);
+  const float max_radius_sq = ystl::sqrf (120.0f * expansion_factor);
+  const float occupancy_limit = ystl::clamp (graph[index].radius * 2.0f * expansion_factor, min_radius_sq, max_radius_sq);
+
   for (const auto &client : clients) {
     if (!client.IsTeammate (team_, Ent ())) {
       continue;
     }
 
     // do not check clients far away from us
-    if (client.IsOutsideRadius (pev->origin, ystl::sqrf (320.0f))) {
+    if (client.IsOutsideRadius (pev->origin, check_dist_sq)) {
       continue;
     }
 
@@ -4348,7 +4916,7 @@ bool Bot::IsOccupiedNode (int index, bool need_zero_velocity) {
     const auto distance_sq = client.origin.distance_sq (graph[index].origin);
 
     // special handling for zero-radius nodes (ladders, goals, vents) - use tight check
-    const float occupation_radius = graph[index].radius > 0.0f ? ystl::clamp (graph[index].radius * 2.0f, 64.0f, 120.0f) : 32.0f;
+    const float occupation_radius = graph[index].radius > 0.0f ? occupancy_limit : 32.0f;
 
     if (distance_sq < ystl::sqrf (occupation_radius)) {
       return true;
@@ -4403,19 +4971,22 @@ edict_t *Bot::LookupButton (ystl::StringRef target, bool blind_test, bool button
 }
 
 bool Bot::IsReachableNode (int index) {
-  // this function return whether bot able to reach index node or not, depending on several factors
+  // this function determines whether the bot can reach the specified node based on several factors.
 
   if (!graph.Exists (index)) {
     return false;
   }
+  const auto &path = graph[index];
   const auto &src = pev->origin;
-  const auto &dst = graph[index].origin;
+  const auto &dst = path.origin;
 
-  // recovery scan radius, matches the fallback search range
+  const float dist_sq = dst.distance_sq (src);
+
+  // recovery scan radius, matching the fallback search range.
   constexpr auto kReachableNodeDistance = 1024.0f;
 
   // is the destination close enough?
-  if (dst.distance_sq (src) > ystl::sqrf (kReachableNodeDistance)) {
+  if (dist_sq > ystl::sqrf (kReachableNodeDistance)) {
     return false;
   }
 
@@ -4423,24 +4994,55 @@ bool Bot::IsReachableNode (int index) {
   if (pev->waterlevel == 2 || pev->waterlevel == 3) {
     return true;
   }
+  const float bot_radius = ystl::abs (pev->mins.x);
+  const float bot_radius_sq = ystl::sqrf (bot_radius);
+
+  // calculate the ground-based vertical distance to check node reachability.
+  // checks based on the origin can be misleading depending on whether the bot is crouching.
+  const float src_floor_z = src.z + pev->mins.z;
+  const float dst_floor_z = dst.z - (has_flag (path.flags, NodeFlag::Crouch) ? 18.0f : 36.0f);
+  const float diff_z = dst_floor_z - src_floor_z;
   const float distance_sq2d = dst.distance_sq2d (src);
 
-  // check for ladder
-  const bool non_ladder = !has_flag (graph[index].flags, NodeFlag::Ladder) || distance_sq2d > ystl::sqrf (16.0f);
+  const bool is_ladder = has_flag (path.flags, NodeFlag::Ladder) && distance_sq2d <= ystl::sqrf (bot_radius * 3.0f);
+  const bool is_lift = has_flag (path.flags, NodeFlag::Lift);
 
-  // is dest node higher than src? (62 is max jump height)
-  if (non_ladder && dst.z > src.z + 62.0f) {
-    return false; // can't reach this one
+  // tactical: dynamically adjust vertical limits for complex 3d structures (lifts, steep slopes).
+  // the standard jump limit is 45 units. duck-jumping (62 units) is used only by sufficiently skilled bots.
+  float vertical_limit_up = (difficulty_ >= Difficulty::Normal) ? 62.0f : 45.0f;
+  float vertical_limit_down = -128.0f;
+
+  // increase vertical tolerance in lift shafts or during lift interaction.
+  if (is_lift || !game.IsNullEntity (lift_entity_)) {
+    vertical_limit_up = 250.0f;
+    vertical_limit_down = -250.0f;
+  }
+  // expand the limit if there is a jump link from the nearest source node to the destination.
+  else if (const auto source_index = graph.GetNearest (src, kReachableNodeDistance); graph.Exists (source_index)) {
+    for (const auto &link : graph[source_index].links) {
+      if (link.index == index && has_flag (link.flags, PathFlag::Jump)) {
+        vertical_limit_up = 120.0f;
+        vertical_limit_down = -200.0f;
+        break;
+      }
+    }
   }
 
-  // is dest node lower than src?
-  if (non_ladder && dst.z < src.z - 100.0f) {
-    return false; // can't reach this one
+  // ladder nodes bypass vertical distance limits.
+  if (!is_ladder) {
+    if (diff_z > vertical_limit_up || diff_z < vertical_limit_down) {
+      return false;
+    }
   }
 
-  // some one seems to camp at this node
+  // an occupied node is not reachable, even when it is nearby.
   if (IsOccupiedNode (index, true)) {
-    return false; // can't reach this one
+    return false;
+  }
+
+  // if we are already very close to the node, it is reachable.
+  if (dist_sq < bot_radius_sq * 4.0f) {
+    return true;
   }
 
   Trace::Result tr {};
@@ -4585,13 +5187,14 @@ void Bot::FindPath (int src_index, int dest_index, FindPathType path_type) {
     ApplyPathResult (staging, meta);
     return;
   }
+  const bool is_rescuing_hostage = game.MapIs (MapFlags::HostageRescue) && has_hostage_;
 
   // pick the heuristic strategy for the requested path type
   if (path_type == FindPathType::Diversity) {
     planner_->SetHeuristic (&plannerHeuristics::diversity);
   }
   else if (path_type == FindPathType::Optimal) {
-    if (game.MapIs (MapFlags::HostageRescue) && has_hostage_) {
+    if (is_rescuing_hostage) {
       planner_->SetHeuristic (&plannerHeuristics::optimal_hostage);
     }
     else {
@@ -4599,7 +5202,7 @@ void Bot::FindPath (int src_index, int dest_index, FindPathType path_type) {
     }
   }
   else if (path_type == FindPathType::Safe) {
-    if (game.MapIs (MapFlags::HostageRescue) && has_hostage_) {
+    if (is_rescuing_hostage) {
       planner_->SetHeuristic (&plannerHeuristics::safe_hostage);
     }
     else {
@@ -4607,7 +5210,7 @@ void Bot::FindPath (int src_index, int dest_index, FindPathType path_type) {
     }
   }
   else {
-    if (game.MapIs (MapFlags::HostageRescue) && has_hostage_) {
+    if (is_rescuing_hostage) {
       planner_->SetHeuristic (&plannerHeuristics::fast_hostage);
     }
     else {

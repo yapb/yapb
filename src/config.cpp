@@ -1098,6 +1098,8 @@ void Config::LoadCustomConfig () {
       { "AMXParachuteCvar",      "sv_parachute"                       },
       { "CustomCSDMSpawnPoint",  "view_spawn"                         },
       { "CSDMDetectCvar",        "csdm_active"                        },
+      { "ZMNemesisModel",        "zombie_nemesis"                     },
+      { "ZMSurvivorModel",       "survivor"                           },
       { "ZMDetectCvar",          "zp_delay,zp_on"                     },
       { "ZMDelayCvar",           "zp_delay"                           },
       { "ZMInfectedTeam",        "T"                                  },

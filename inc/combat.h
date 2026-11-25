@@ -36,6 +36,7 @@ YSTL_ENABLE_ENUM_FLAGS (Visibility);
 struct EnemyState {
   edict_t *current {}; // currently engaged enemy
   edict_t *last {}; // last enemy, kept after the current one is lost
+  ystl::Vector target_origin {}; // target origin chosen for shooting
   ystl::Vector last_origin {}; // last known position of the last enemy
   edict_t *aim_lock {}; // enemy the head/body aim lock was rolled for
 
@@ -117,7 +118,6 @@ protected:
   Visibility enemy_parts_ {}; // visibility flags
   Fight fight_style_ {}; // combat style to use
 
-  ystl::Vector enemy_origin_ {}; // target origin chosen for shooting
   ystl::CountdownTimer forget_last_victim_timer_ {}; // time to forget last victim position ?
   ystl::CountdownTimer thru_wall_hold_timer_ {}; // holds thru-wall engagement without re-rolling chance
   ystl::CountdownTimer thru_wall_reroll_timer_ {}; // backoff between discrete thru-wall chance rolls

@@ -45,6 +45,11 @@ void Bot::FilterTasks () {
     temp_fear = temp_fear * 1.5f;
     temp_agression = temp_agression * 0.5f;
   }
+  // shotgunners are more aggressive
+  else if (UsesShotgun ()) {
+    temp_fear *= 0.5f;
+    temp_agression *= 1.5f;
+  }
 
   // bot found some item to use?
   if (!game.IsNullEntity (pickup_item_) && GetTaskId () != TaskId::EscapeFromBomb) {
@@ -73,11 +78,69 @@ void Bot::FilterTasks () {
   float &hunt_enemy_desire = hunt.desire;
   float &blinded_desire = blind.desire;
 
+  const int friends = num_friends_left_;
+  const int enemies = num_enemies_left_;
+
+  // zombie mode: avoidance logic against zombies for human bots
+  if (game.Is (GameFlags::ZombieMod) && !is_creature_ && enemies > 0) {
+    float zombie_danger_limit = 512.0f; // start considering "escape" beyond this distance
+
+    // expand danger radius if ammo is critical (start escaping earlier)
+    if (IsLowOnAmmo (current_weapon_, 0.20f)) {
+      zombie_danger_limit = 900.0f;
+    }
+    edict_t *nearest_zombie = nullptr;
+
+    for (const auto &client : clients) {
+      if (!client.IsUsedAndAlive () || client.IsSameTeam (team_)) {
+        continue;
+      }
+
+      if (client.IsInRadius (pev->origin, ystl::sqrf (zombie_danger_limit))) {
+        nearest_zombie = client.ent;
+        break;
+      }
+    }
+
+    // a zombie is nearby! calculate escape desire based on distance and fear level.
+    float zombie_dist = nearest_zombie->v.origin.distance (pev->origin);
+    float escape_desire = ((zombie_danger_limit - zombie_dist) / zombie_danger_limit) * 85.0f + (emotion_.fear * 15.0f);
+
+    if (escape_desire > seek_cover_desire) {
+      seek_cover_desire = ystl::clamp (escape_desire, 40.0f, 95.0f);
+    }
+  }
+  bool consider_retreat = false;
+
+  // condition 1: bot is outnumbered
+  if (enemies > friends) {
+    consider_retreat = true;
+  }
+  // condition 2: bot has low health and is taking damage
+  else if (health_value_ < 40.0f && last_damage_timestamp_ + 1.5f > game.Time ()) {
+    consider_retreat = true;
+  }
+  // condition 3: bot is being shot from an unknown direction
+  else if (game.IsNullEntity (enemy_.current) && last_damage_timestamp_ + 2.0f > game.Time ()) {
+    consider_retreat = true;
+  }
+  // condition 4: bot is outgunned at distance
+  else if (!game.IsNullEntity (enemy_.current)) {
+    const int enemy_weapons = enemy_.current->v.weapons;
+
+    // if bot has a shotgun or pistol and enemy has a rifle/sniper at long range
+    if ((UsesShotgun () || UsesPistol ()) && has_flag (enemy_weapons, kRifleWeaponMask | kSniperWeaponMask)) {
+      if (enemy_.current->v.origin.distance_sq (pev->origin) > ystl::sqrf (1024.0f)) {
+        consider_retreat = true;
+      }
+    }
+  }
+
   // calculate desires to seek cover or hunt
   if (game.IsPlayerEntity (enemy_.last) && !enemy_.last_origin.empty () && !has_c4_) {
     const float retreat_level = (pev->max_health - health_value_) * temp_fear; // retreat level depends on bot health
 
-    if (is_creature_ || (num_friends_left_ > 0 && num_enemies_left_ > num_friends_left_ / 2)) {
+    if (is_creature_ || consider_retreat) {
       float time_seen = -see_enemy_timer_.elapsed_time ();
       float time_heard = -heard_sound_timer_.elapsed_time ();
       float ratio = 0.0f;
@@ -573,7 +636,7 @@ void Bot::TaskNormal () {
     auto dest_index =
       graph.Exists (debug_goal) ? debug_goal : (graph.Exists (curr_index) && !has_c4_ && !is_vip_ ? curr_index : FindBestGoal ());
 
-    // check for existence (this is fail over, for i.e
+    // check for existence (this is fail over, for i.e)
     if (!graph.Exists (dest_index)) {
       dest_index = FindFarestNode (pev->origin, 1024.0f);
     }
@@ -795,14 +858,15 @@ void Bot::TaskSeekCover () {
   }
   else if (!HasActiveGoal ()) {
     int dest_index = kInvalidNodeIndex;
+    const int curr_index = Task ()->data;
 
-    if (Task ()->data != kInvalidNodeIndex) {
-      dest_index = Task ()->data;
+    if (graph.Exists (curr_index)) {
+      dest_index = curr_index;
     }
     else {
-      dest_index = FindCoverNode (infected_enemy_team_ ? 2048.0f : 1024.0f);
+      dest_index = GetEvasionPoint ();
 
-      if (dest_index == kInvalidNodeIndex) {
+      if (!graph.Exists (dest_index)) {
         cover_search_timer_.start (rg (3.0f, 6.0f));
 
         prev_goal_index_ = kInvalidNodeIndex;
@@ -834,12 +898,13 @@ void Bot::TaskAttack () {
   if (!game.IsNullEntity (enemy_.current)) {
     AttackMovement ();
 
-    if (UsesKnife () && !enemy_origin_.empty ()) {
-      dest_origin_ = enemy_origin_;
+    if (UsesKnife () && !enemy_.target_origin.empty ()) {
+      dest_origin_ = enemy_.target_origin;
     }
   }
   else {
     CompleteTask ();
+    ClearSearchNodes ();
     FindNextBestNode ();
 
     if (!enemy_.last_origin.empty ()) {
@@ -1835,11 +1900,24 @@ void Bot::TaskEscapeFromBomb () {
   else if (!HasActiveGoal ()) {
     int best_index = kInvalidNodeIndex;
 
-    const float safe_radius = rg (1513.0f, 2048.0f);
+    const float safe_radius_base = rg (1513.0f, 2048.0f);
     float nearest_distance_sq = kInfiniteDistance;
 
     for (const auto &path : graph) {
-      if (path.origin.distance_sq (game_state.GetBombOrigin ()) < ystl::sqrf (safe_radius) || IsOccupiedNode (path.number)) {
+      float safe_radius = safe_radius_base;
+      const auto &bomb_origin = game_state.GetBombOrigin ();
+
+      Trace::Result tr {};
+
+      // if there is a wall (cover) between the node and the bomb, closer distances can also be considered "safe".
+      // this allows bots to prefer hiding behind a corner rather than running to the other side of the map.
+      trace.Line (bomb_origin, path.origin, TraceIgnore::Everything, nullptr, &tr);
+
+      if (tr.fraction < 1.0f) {
+        safe_radius *= 0.65f; // reduce safe distance threshold by 35% for nodes behind cover.
+      }
+
+      if (path.origin.distance_sq (bomb_origin) < ystl::sqrf (safe_radius) || IsOccupiedNode (path.number)) {
         continue;
       }
       const float distance_sq = pev->origin.distance_sq (path.origin);
@@ -1851,7 +1929,7 @@ void Bot::TaskEscapeFromBomb () {
     }
 
     if (best_index < 0) {
-      best_index = FindFarestNode (pev->origin, safe_radius);
+      best_index = FindFarestNode (pev->origin, safe_radius_base);
     }
 
     // still no luck?

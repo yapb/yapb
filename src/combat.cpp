@@ -149,7 +149,7 @@ bool Bot::CheckBodyParts (edict_t *target) {
 
   if (IsEnemyHidden (target) || IsEnemyInvincible (target) || IsEnemyNoTarget (target)) {
     enemy_parts_ = Visibility::None;
-    enemy_origin_.clear ();
+    enemy_.target_origin.clear ();
 
     return false;
   }
@@ -186,7 +186,7 @@ bool Bot::CheckBodyPartsWithOffsets (edict_t *target) {
 
   if (hits_target ()) {
     enemy_parts_ |= Visibility::Body;
-    enemy_origin_ = result.end_pos;
+    enemy_.target_origin = result.end_pos;
   }
 
   // check top of head
@@ -195,7 +195,7 @@ bool Bot::CheckBodyPartsWithOffsets (edict_t *target) {
 
   if (hits_target ()) {
     enemy_parts_ |= Visibility::Head;
-    enemy_origin_ = result.end_pos;
+    enemy_.target_origin = result.end_pos;
   }
 
   if (enemy_parts_ != Visibility::None) {
@@ -216,7 +216,7 @@ bool Bot::CheckBodyPartsWithOffsets (edict_t *target) {
 
   if (hits_target ()) {
     enemy_parts_ |= Visibility::Other;
-    enemy_origin_ = result.end_pos;
+    enemy_.target_origin = result.end_pos;
 
     return true;
   }
@@ -229,7 +229,7 @@ bool Bot::CheckBodyPartsWithOffsets (edict_t *target) {
 
   if (hits_target ()) {
     enemy_parts_ |= Visibility::Other;
-    enemy_origin_ = result.end_pos;
+    enemy_.target_origin = result.end_pos;
 
     return true;
   }
@@ -239,7 +239,7 @@ bool Bot::CheckBodyPartsWithOffsets (edict_t *target) {
 
   if (hits_target ()) {
     enemy_parts_ |= Visibility::Other;
-    enemy_origin_ = result.end_pos;
+    enemy_.target_origin = result.end_pos;
 
     return true;
   }
@@ -272,7 +272,7 @@ bool Bot::CheckBodyPartsWithHitboxes (edict_t *target) {
 
   if (hits_target ()) {
     enemy_parts_ |= Visibility::Body;
-    enemy_origin_ = result.end_pos;
+    enemy_.target_origin = result.end_pos;
   }
 
   // get the stomach hitbox
@@ -280,7 +280,7 @@ bool Bot::CheckBodyPartsWithHitboxes (edict_t *target) {
 
   if (hits_target ()) {
     enemy_parts_ |= Visibility::Head;
-    enemy_origin_ = result.end_pos;
+    enemy_.target_origin = result.end_pos;
   }
 
   if (enemy_parts_ != Visibility::None) {
@@ -292,7 +292,7 @@ bool Bot::CheckBodyPartsWithHitboxes (edict_t *target) {
 
   if (hits_target ()) {
     enemy_parts_ |= Visibility::Other;
-    enemy_origin_ = result.end_pos;
+    enemy_.target_origin = result.end_pos;
 
     return true;
   }
@@ -302,7 +302,7 @@ bool Bot::CheckBodyPartsWithHitboxes (edict_t *target) {
 
   if (hits_target ()) {
     enemy_parts_ |= Visibility::Other;
-    enemy_origin_ = result.end_pos;
+    enemy_.target_origin = result.end_pos;
 
     return true;
   }
@@ -312,7 +312,7 @@ bool Bot::CheckBodyPartsWithHitboxes (edict_t *target) {
 
   if (hits_target ()) {
     enemy_parts_ |= Visibility::Other;
-    enemy_origin_ = result.end_pos;
+    enemy_.target_origin = result.end_pos;
 
     return true;
   }
@@ -541,7 +541,7 @@ bool Bot::LookupEnemies () {
   // this function tries to find the best suitable enemy for the bot
 
   enemy_parts_ = Visibility::None;
-  enemy_origin_.clear ();
+  enemy_.target_origin.clear ();
 
   // a target that changed teams must not be engaged or remembered
   if (!game.Is (GameFlags::FreeForAll)) {
@@ -899,7 +899,24 @@ ystl::Vector Bot::GetBodyOffsetError (edict_t *target, float distance) {
     const auto &aim_error = difficulty_data_->aim_error;
     aim_last_error_ += ystl::Vector (rg (-aim_error.x, aim_error.x), rg (-aim_error.y, aim_error.y), rg (-aim_error.z, aim_error.z));
 
-    aim_error_timer_.start (rg (0.4f, 0.8f));
+    // adjust aim error based on personality
+    float personality_modifier = 1.0f;
+    float aim_error_time_min = 0.4f;
+    float aim_error_time_max = 0.8f;
+
+    if (personality_ == Personality::Rusher) {
+      personality_modifier = 1.2f; // rushers are 20% less accurate
+      aim_error_time_min = 0.3f; // and more erratic
+      aim_error_time_max = 0.7f;
+    }
+    else if (personality_ == Personality::Careful) {
+      personality_modifier = 0.8f; // careful bots are 20% more accurate
+      aim_error_time_min = 0.5f; // and more stable
+      aim_error_time_max = 0.9f;
+    }
+    aim_last_error_ *= personality_modifier;
+
+    aim_error_timer_.start (rg (aim_error_time_min, aim_error_time_max));
   }
   return aim_last_error_;
 }
@@ -953,11 +970,12 @@ ystl::Vector Bot::GetEnemyBodyOffset () {
   // the purpose of this function, is to make bot aiming not so ideal
 
   // without visibility data reuse the last known enemy origin
-  if (!enemy_parts_) {
-    if (enemy_origin_.empty () && !enemy_.last_origin.empty () && !game.IsNullEntity (enemy_.last) && has_flag (states_, Sense::SuspectEnemy)) {
+  if (has_flag (enemy_parts_, Visibility::None)) {
+    if (enemy_.target_origin.empty () && !enemy_.last_origin.empty () && !game.IsNullEntity (enemy_.last) &&
+        has_flag (states_, Sense::SuspectEnemy)) {
       return enemy_.last_origin + GetBodyOffsetError (enemy_.last, enemy_.last_origin.distance (pev->origin));
     }
-    return enemy_origin_.empty () ? enemy_.last_origin : enemy_origin_;
+    return enemy_.target_origin.empty () ? enemy_.last_origin : enemy_.target_origin;
   }
   const float distance = enemy_.current->v.origin.distance (pev->origin);
 
@@ -971,7 +989,10 @@ ystl::Vector Bot::GetEnemyBodyOffset () {
 
   // do not aim at head while close enough to enemy and having sniper
   else if (distance < 800.0f && (current_weapon_ != Weapon::Scout) && UsesSniper ()) {
-    vis_parts &= ~Visibility::Head;
+    // only disable head targeting if the body is also visible. if only the head is visible, keep it.
+    if (has_flag (vis_parts, Visibility::Body)) {
+      vis_parts &= ~Visibility::Head;
+    }
   }
 
   ystl::Vector spot = enemy_.current->v.origin;
@@ -1001,6 +1022,23 @@ ystl::Vector Bot::GetEnemyBodyOffset () {
       // with too much recoil, shotgun, or when pause is needed, reduce headshot chance
       if (recoil_high || should_pause || (UsesShotgun () && distance > kSprayDistance)) {
         headshot_pct = distance > kSprayDistance ? 6 : ystl::min (headshot_pct, 20);
+      }
+
+      // force awp to chest (0% headshot) and scout to head (100% headshot)
+      if (current_weapon_ == Weapon::AWP) {
+        headshot_pct = 0;
+      }
+      else if (current_weapon_ == Weapon::Scout) {
+        headshot_pct = 100;
+      }
+
+      // if the body is hidden (e.g., enemy on a lower ramp) and only the head is visible, force headshot aim.
+      if (!has_flag (vis_parts, Visibility::Body)) {
+        headshot_pct = 100;
+      }
+      // conversely, if only the body is visible, don't try to shoot the head through a wall.
+      else if (!has_flag (vis_parts, Visibility::Head)) {
+        headshot_pct = 0;
       }
 
       // re-roll head or body choice on a slow timer to keep aim steady
@@ -1034,7 +1072,7 @@ ystl::Vector Bot::GetEnemyBodyOffset () {
       spot = enemy_.current->v.origin;
     }
     else if (has_flag (vis_parts, Visibility::Other)) {
-      spot = enemy_origin_;
+      spot = enemy_.target_origin;
     }
     else if (has_flag (vis_parts, Visibility::Head)) {
       spot = head_origin (enemy_.current);
@@ -1044,7 +1082,7 @@ ystl::Vector Bot::GetEnemyBodyOffset () {
 
   // knife always aims center mass for skilled bots
   if (UsesKnife () && difficulty_ >= Difficulty::Normal) {
-    spot = enemy_origin_;
+    spot = enemy_.target_origin;
   }
 
   // weapon/stance bias applies to the whole enemy, not just the head
@@ -1142,7 +1180,7 @@ void Bot::FocusEnemy () {
   }
   const float distance_sq = look_.main.distance_sq2d (GetEyesPos ()); // how far away is the enemy scum?
 
-  const float dot = util.ViewDot (Ent (), enemy_origin_);
+  const float dot = util.ViewDot (Ent (), enemy_.target_origin);
   const float enemy_dot = util.ViewDot (enemy_.current, pev->origin);
 
   if (distance_sq < ystl::sqrf (128.0f) && !UsesSniper ()) {
@@ -1190,6 +1228,11 @@ void Bot::FocusEnemy () {
       wants_to_fire_ = true;
     }
   }
+
+  // sneak & surprise: if only a minor part (foot/arm) is visible and the enemy is far, hold fire to approach.
+  if (!has_flag (enemy_parts_, Visibility::Head) && !has_flag (enemy_parts_, Visibility::Body) && distance_sq > ystl::sqrf (300.0f)) {
+    wants_to_fire_ = false;
+  }
 }
 
 void Bot::AttackMovement () {
@@ -1198,17 +1241,38 @@ void Bot::AttackMovement () {
     return;
   }
 
+  // use actual distance to enemy, not to aim point (which has error/compensation offset)
+  const auto distance_sq = pev->origin.distance_sq (enemy_.current->v.origin);
+
   // use enemy as dest origin if with knife
   if (UsesKnife () || is_creature_) {
-    dest_origin_ = enemy_.current->v.origin;
+    const float enemy_dot = util.ViewDot (enemy_.current, pev->origin);
+
+    // if enemy is not looking at us, and we are at a medium distance, try to flank to get behind them
+    if (!is_creature_ && enemy_dot < 0.5f && distance_sq > ystl::sqrf (128.0f) && distance_sq < ystl::sqrf (600.0f)) {
+      // get a vector perpendicular to the direction from us to the enemy
+      const auto &to_enemy = (enemy_.current->v.origin - pev->origin).normalize2d ();
+
+      // check which side of the enemy we are on relative to their facing direction
+      const auto &from_enemy_to_bot = -to_enemy;
+      const auto &enemy_right = enemy_.current->v.v_angle.right ().normalize2d ();
+
+      // we want to move towards their back, so we move opposite to the side we are on
+      if ((from_enemy_to_bot | enemy_right) > 0.0f) { // we are on their right, so circle to their left (behind them)
+        dest_origin_ = enemy_.current->v.origin - enemy_right * 150.0f;
+      }
+      else { // we are on their left, so circle to their right (behind them)
+        dest_origin_ = enemy_.current->v.origin + enemy_right * 150.0f;
+      }
+    }
+    else {
+      dest_origin_ = enemy_.current->v.origin; // rush directly
+    }
   }
 
   if (last_used_nodes_timer_.elapsed_time () < -frame_interval_) {
     return;
   }
-
-  // use actual distance to enemy, not to aim point (which has error/compensation offset)
-  const auto distance_sq = pev->origin.distance_sq (enemy_.current->v.origin);
 
   auto approach = 0;
 
@@ -1228,6 +1292,29 @@ void Bot::AttackMovement () {
     if (UsesSniper () && approach > 49) {
       approach = 49;
     }
+
+    // adjust approach based on personality
+    if (personality_ == Personality::Rusher) {
+      approach += 30;
+    }
+    else if (personality_ == Personality::Careful) {
+      approach -= 30;
+    }
+
+    // make all snipers play carefully (peek-and-hide & distance management)
+    if (UsesSniper ()) {
+      if (shoot_time_ > game.Time () || distance_sq < ystl::sqrf (800.0f)) {
+        approach = 29; // force a retreat/seek cover state
+      }
+    }
+
+    // if the bot fired a bolt-action rifle (AWP/Scout), didn't kill the target (bolt is cycling),
+    // and the enemy is currently returning fire, force an immediate aggressive retreat.
+    if (current_weapon_ == Weapon::AWP || current_weapon_ == Weapon::Scout) {
+      if (shoot_time_ > game.Time () && (enemy_.current->v.button & (IN_ATTACK | IN_ATTACK2))) {
+        approach = 29; // drop approach score even lower to guarantee an immediate fall-back and evade
+      }
+    }
   }
   const bool is_enemy_cone = IsInViewCone (enemy_.current->v.origin);
 
@@ -1240,6 +1327,16 @@ void Bot::AttackMovement () {
 
       if (!CheckWallOnBehind ()) {
         move_speed_ = -pev->maxspeed;
+
+        // zombie mode: increase the kiting (hit-and-run) speed of humans against zombies by using diagonal movement.
+        if (game.Is (GameFlags::ZombieMod) && !is_creature_ && infected_enemy_team_) {
+          // moving straight backward is slowed down by the engine; moving diagonally (S+A/D) is faster.
+          move_speed_ *= 1.25f;
+
+          if (ystl::fzero (strafe_speed_)) {
+            strafe_speed_ = (rg.chance (50) ? 1.0f : -1.0f) * pev->maxspeed;
+          }
+        }
       }
     }
     else if (approach < 50) {
@@ -1247,19 +1344,43 @@ void Bot::AttackMovement () {
     }
     else {
       move_speed_ = pev->maxspeed;
+
+      // extra speed during an attack for knife-wielding or zombie bots
+      // dynamic increase based on aggression level and difficulty
+      if (UsesKnife () || is_creature_) {
+        const float speed_boost = 1.0f + (emotion_.aggression * 0.2f) + (static_cast<float> (difficulty_) * 0.05f);
+        move_speed_ *= ystl::clamp (speed_boost, 1.0f, 1.5f); // maximum 50% speed increase
+      }
     }
   }
   const bool is_full_view = all_flags (enemy_parts_, Visibility::Head | Visibility::Body);
 
   if (fight_style_check_timer_.elapsed ()) {
     // snipers should stay put when they have a shot lined up
-    if (UsesSniper () && !reload_data_.is_reloading && !sniper_stop_timer_.elapsed ()) {
-      fight_style_ = Fight::Stay;
+    if (UsesSniper () && !reload_data_.is_reloading && shoot_time_ - 0.4f <= game.Time () && shoot_time_ + 0.1f > game.Time () &&
+        !sniper_stop_timer_.elapsed ()) {
+      const float dot = util.ViewDot (Ent (), enemy_.target_origin);
+
+      if (dot > 0.95f) {
+        fight_style_ = Fight::Stay;
+      }
     }
     else if (UsesRifle () || UsesSubmachine () || UsesHeavy ()) {
       const auto rand = rg (1, 100);
       const bool enemy_weapon_is_sniper = has_flag (enemy_.current->v.weapons, kSniperWeaponMask);
       const auto group_of_enemies = distance_sq < ystl::sqrf (768.0f) && IsGroupOfEnemies (enemy_.current->v.origin, 384.0f);
+
+      int strafe_chance = (UsesSubmachine () ? 50 : 30);
+      int stay_chance = (UsesSubmachine () ? 80 : 90);
+
+      if (personality_ == Personality::Rusher) {
+        strafe_chance += 25;
+        stay_chance -= 20;
+      }
+      else if (personality_ == Personality::Careful) {
+        strafe_chance -= 15;
+        stay_chance += 10;
+      }
 
       if (distance_sq < ystl::sqrf (768.0f)) {
         fight_style_ = Fight::Strafe;
@@ -1268,7 +1389,7 @@ void Bot::AttackMovement () {
         if (group_of_enemies || (enemy_weapon_is_sniper && is_enemy_cone)) {
           fight_style_ = Fight::Strafe;
         }
-        else if (rand < (UsesSubmachine () ? 50 : 30)) {
+        else if (rand < strafe_chance) {
           fight_style_ = Fight::Strafe;
         }
         else {
@@ -1279,7 +1400,7 @@ void Bot::AttackMovement () {
         if (group_of_enemies || (enemy_weapon_is_sniper && is_enemy_cone)) {
           fight_style_ = Fight::Strafe;
         }
-        else if (rand < (UsesSubmachine () ? 80 : 90)) {
+        else if (rand < stay_chance) {
           fight_style_ = Fight::Stay;
         }
         else {
@@ -1301,7 +1422,7 @@ void Bot::AttackMovement () {
     const auto pistol_strafe_distance = game.Is (GameFlags::CSDM) ? kSprayDistanceX2 * 3.0f : kSprayDistanceX2;
 
     // fire hurts friend value here is from previous frame, but acceptable, and saves us alot of cpu cycles
-    if (approach < 30 || fire_hurts_friend_ ||
+    if (approach >= 30 || fire_hurts_friend_ ||
         ((UsesPistol () || UsesShotgun ()) && distance_sq < ystl::sqrf (pistol_strafe_distance) && is_enemy_cone)) {
       fight_style_ = Fight::Strafe;
     }
@@ -1330,8 +1451,16 @@ void Bot::AttackMovement () {
       last_combat_strafe_origin_ = pev->origin;
     };
 
-    auto strafe_update_delay = [] () {
-      return ystl::rg (0.3f, 0.8f);
+    auto strafe_update_delay = [this] () {
+      float base = rg (0.3f, 0.8f);
+
+      if (personality_ == Personality::Rusher) {
+        base *= 0.7f;
+      }
+      else if (personality_ == Personality::Careful) {
+        base *= 1.3f;
+      }
+      return game.Time () + base;
     };
 
     // to start strafing, we have to first figure out if the target is on the left side or right side
@@ -1417,8 +1546,18 @@ void Bot::AttackMovement () {
       move_speed_ = 0.0f;
     }
 
-    if (difficulty_ >= Difficulty::Normal && distance_sq < ystl::sqrf (kSprayDistance) && (reload_data_.is_reloading || health_value_ < 35.0f) &&
-        jump_time_ + 5.0f < game.Time () && IsOnFloor () && pev->velocity.length2d () > 150.0f && !UsesSniper () && is_enemy_cone) {
+    int jump_chance = 30;
+
+    if (personality_ == Personality::Rusher) {
+      jump_chance = 60;
+    }
+    else if (personality_ == Personality::Careful) {
+      jump_chance = 10;
+    }
+
+    if (difficulty_ >= Difficulty::Normal && distance_sq < ystl::sqrf (kSprayDistance) &&
+        (jump_time_ + 5.0f < game.Time () && IsOnFloor () && rg (0, 100) < jump_chance && pev->velocity.length2d () > 150.0f) &&
+        !UsesSniper () && is_enemy_cone) {
 
       buttons_.PressJump ();
     }
@@ -1450,6 +1589,17 @@ void Bot::AttackMovement () {
       }
       move_speed_ = 0.0f;
       strafe_speed_ = 0.0f;
+    }
+  }
+
+  // sneak & surprise override: if the bot only sees an arm/foot
+  // aggressively move closer to get a full view instead of strafing/staying.
+  if (!is_full_view && distance_sq > ystl::sqrf (300.0f)) {
+    move_speed_ = pev->maxspeed; // run straight at the target
+    strafe_speed_ = 0.0f;
+
+    if (buttons_.IsDucking ()) {
+      buttons_.ReleaseDuck (); // stand up to move faster
     }
   }
 
@@ -2142,30 +2292,39 @@ bool Bot::IsEnemyThreat () {
     return false;
   }
 
-  // if bot is camping, he should be firing anyway and not leaving his position
-  if (GetTaskId () == TaskId::Camp) {
-    return false;
-  }
+  const float distance_sq = pev->origin.distance_sq (enemy_.current->v.origin);
+  const float diff_modifier = static_cast<float> (difficulty_);
 
-  auto is_on_attack_distance = [&] (edict_t *e, const float distance) -> bool {
-    const float distance_sq = e->v.origin.distance_sq (pev->origin);
+  // health multiplier: as health decreases, the bot behaves more "cautiously" and detects threats from further away (max 1.5x)
+  const float health_modifier = ystl::clamp (2.0f - (health_value_ / 100.0f), 1.0f, 1.5f);
 
-    if (distance_sq < ystl::sqrf (distance)) {
-      return true;
-    }
+  // proximity sense: the distance at which the bot detects an enemy located behind it or in very close proximity (128.0f base)
+  const float proximity_range = (128.0f + (diff_modifier * 16.0f)) * health_modifier;
 
-    // knife users need to chase from further away to close the gap
-    if (UsesKnife () && distance_sq < ystl::sqrf (distance)) {
-      return true;
-    }
-    return false;
-  };
-
-  // if enemy is near or facing us directly
-  if (is_on_attack_distance (enemy_.current, 256.0f) || (!UsesKnife () && IsInViewCone (enemy_.current->v.origin))) {
+  if (distance_sq < ystl::sqrf (proximity_range)) {
     return true;
   }
-  return false;
+
+  // if bot is camping, he should be firing anyway and not leaving his position
+  if (GetTaskId () == TaskId::Camp && !is_nemesis_) {
+    // breaking camp: bots with low health are more inclined to abandon their ambush position sooner (detecting threats from further away) and
+    // seek out a safe zone.
+    const float camp_break_dist = (256.0f - (diff_modifier * 12.0f)) * health_modifier;
+
+    if (distance_sq > ystl::sqrf (camp_break_dist)) {
+      return false;
+    }
+  }
+
+  // threat detection: as health decreases, the area that the bot perceives as a "threat" expands.
+  const float threat_range = (256.0f + (diff_modifier * 40.0f)) * health_modifier;
+
+  if (distance_sq < ystl::sqrf (threat_range)) {
+    return true;
+  }
+
+  // or facing us directly (if not with knife)
+  return !UsesKnife () && IsInViewCone (enemy_.current->v.origin);
 }
 
 bool Bot::ReactOnEnemy () {
@@ -2183,7 +2342,16 @@ bool Bot::ReactOnEnemy () {
 
   // special case for creatures
   if (is_creature_) {
-    is_enemy_reachable_ = pev->origin.distance_sq2d (enemy_.current->v.origin) < ystl::sqrf (128.0f);
+    // reaction distance for creature (zombie) bots: the hunting range expands as the difficulty increases.
+    // as a boss-level threat, nemesis always possesses a greater range.
+    float base_reach_dist = 128.0f;
+
+    if (is_nemesis_) {
+      base_reach_dist += 128.0f;
+    }
+    const float creature_reach_dist = base_reach_dist + (static_cast<float> (difficulty_) * 64.0f);
+
+    is_enemy_reachable_ = pev->origin.distance_sq2d (enemy_.current->v.origin) < ystl::sqrf (creature_reach_dist);
 
     if (is_enemy_reachable_) {
       nav_timer_.start ();

@@ -1861,7 +1861,7 @@ void Manager::HandleDeath (edict_t *killer, edict_t *victim) {
 
       if (bot.enemy_.current == ve || bot.enemy_.last == ve) {
         bot.enemy_.Forget ();
-        bot.enemy_origin_.clear ();
+        bot.enemy_.target_origin.clear ();
       }
     }
     victim_bot->hostages_.clear ();
@@ -2511,6 +2511,46 @@ void Manager::SelectLeaders (Team team, bool reset) {
   }
 
   if (leader_choosen) {
+    return;
+  }
+
+  if (game.Is (GameFlags::ZombieMod)) {
+    static ystl::StringRef zm_infected_team (conf.FetchCustom ("ZMInfectedTeam"));
+    Team infected_team = Team::Terrorist;
+
+    if (zm_infected_team == "CT") {
+      infected_team = Team::CT;
+    }
+
+    if (team != infected_team) { // human team
+      for (auto &bot : bots_) {
+        if (bot.is_survivor_) {
+          bot.is_leader_ = true;
+
+          if (ystl::rg.chance (75)) {
+            bot.PushRadioChat (RadioChat::FollowMe);
+          }
+        }
+      }
+    }
+    else { // zombie team
+      Bot *nemesis = nullptr;
+
+      for (auto &bot : bots_) {
+        if (bot.is_nemesis_) {
+          nemesis = &bot;
+          break;
+        }
+      }
+
+      if (nemesis) {
+        nemesis->is_leader_ = true;
+      }
+      else if (auto bot = bots.FindHighestFragBot (team)) {
+        bot->is_leader_ = true;
+      }
+    }
+    leader_choosen = true;
     return;
   }
   auto &leader_choosen_t = team_data_[Team::Terrorist].leader_choosen;

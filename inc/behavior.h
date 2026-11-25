@@ -204,6 +204,8 @@ protected:
   bool is_leader_ {}; // bot is leader of his team
   bool move_to_c4_ {}; // ct is moving to bomb
   bool is_creature_ {}; // bot is not a player, but something else ? zombie ?
+  bool is_nemesis_ {}; // bot is currently a nemesis (zombie mod)
+  bool is_survivor_ {}; // bot is currently a survivor (zombie mod)
   bool is_on_infected_team_ {}; // bot is zombie (this assumes bot is a creature)
   bool infected_enemy_team_ {}; // the enemy is a zombie (assumed to be a hostile creature)
 

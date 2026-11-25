@@ -430,9 +430,6 @@ private:
   // get random direction for camping
   int GetRandomCampDir ();
 
-  // find node that provides best aim to target
-  int FindAimingNode (const ystl::Vector &to, int &path_length);
-
   // find nearest graph node to bot position
   int FindNearestNode ();
 
@@ -445,6 +442,9 @@ private:
   // find node closest to bomb site
   int FindBombNode ();
 
+  // find evasion point for fleeing or taking cover
+  int GetEvasionPoint ();
+
   // find node for taking cover
   int FindCoverNode (float max_distance);
 
@@ -453,6 +453,9 @@ private:
 
   // find best goal node for current task
   int FindBestGoal ();
+
+  // find best goal when zombie mode are needed
+  int FindBestGoalWhenZombieMode ();
 
   // find best goal when bomb actions are needed
   int FindBestGoalWhenBombAction ();
@@ -530,6 +533,9 @@ private:
 
   // select best next node in path
   bool SelectBestNextNode ();
+
+  // handle ladder traffic and waiting
+  bool HandleLadderTraffic (int dest_index);
 
   // check if move to position is deadly (fall/drown)
   bool IsDeadlyMove (const ystl::Vector &to);
