@@ -71,7 +71,7 @@ struct CombatHook {
     return static_cast<int> (bot.enemy_parts_);
   }
   static bool EnemyOriginSet (Bot &bot) {
-    return !bot.enemy_origin_.empty ();
+    return !bot.enemy_.target_origin.empty ();
   }
   static bool InSight (Bot &bot, ystl::Vector &end_pos) {
     return bot.IsEnemyInSight (end_pos);
@@ -173,7 +173,7 @@ struct CombatHook {
     bot.enemy_parts_ = parts;
   }
   static void SetEnemyOrigin (Bot &bot, const ystl::Vector &origin) {
-    bot.enemy_origin_ = origin;
+    bot.enemy_.target_origin = origin;
   }
   static void SetWantsFire (Bot &bot, bool value) {
     bot.wants_to_fire_ = value;

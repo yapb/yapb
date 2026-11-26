@@ -209,7 +209,7 @@ struct WeaponsHook {
     bot.enemy_.current = value;
   }
   static void SetEnemyOrigin (Bot &bot, const ystl::Vector &value) {
-    bot.enemy_origin_ = value;
+    bot.enemy_.target_origin = value;
   }
   static void SetAimFlags (Bot &bot, AimFlags value) {
     bot.aim_flags_ = value;

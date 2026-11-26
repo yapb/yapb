@@ -214,7 +214,7 @@ struct BehaviorHook {
   }
   static void SetEnemy (Bot &bot, edict_t *ent) {
     bot.enemy_.current = ent;
-    bot.enemy_origin_ = ent->v.origin;
+    bot.enemy_.target_origin = ent->v.origin;
     bot.aim_flags_ |= AimFlags::Enemy;
   }
   static edict_t *Enemy (Bot &bot) {
