@@ -151,7 +151,7 @@ struct TasksHook {
     return bot.IsIgnoredBreakable (ent);
   }
   static void SetEnemyOrigin (Bot &bot, const ystl::Vector &pos) {
-    bot.enemy_origin_ = pos;
+    bot.enemy_.target_origin = pos;
   }
   static void SetPredict (Bot &bot, int index, int length) {
     bot.last_predict_index_ = index;

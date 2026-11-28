@@ -71,7 +71,7 @@ struct CombatHook {
     return static_cast<int> (bot.enemy_parts_);
   }
   static bool EnemyOriginSet (Bot &bot) {
-    return !bot.enemy_origin_.empty ();
+    return !bot.enemy_.target_origin.empty ();
   }
   static bool InSight (Bot &bot, ystl::Vector &end_pos) {
     return bot.IsEnemyInSight (end_pos);
@@ -173,7 +173,13 @@ struct CombatHook {
     bot.enemy_parts_ = parts;
   }
   static void SetEnemyOrigin (Bot &bot, const ystl::Vector &origin) {
-    bot.enemy_origin_ = origin;
+    bot.enemy_.target_origin = origin;
+  }
+  static float RecoilComp (Bot &bot) {
+    return bot.recoil_compensation_;
+  }
+  static void SetFrameInterval (Bot &bot, float value) {
+    bot.frame_interval_ = value;
   }
   static void SetWantsFire (Bot &bot, bool value) {
     bot.wants_to_fire_ = value;
@@ -2703,6 +2709,22 @@ TEST_CASE ("unit/combat_aim") {
   CombatHook::Focus (*bot);
   CombatHook::Focus (*bot);
   CHECK (CombatHook::WantsFire (*bot));
+
+  // recoil compensation tracks punchangle at long range and resets on snipers/close range
+  bot->current_weapon_ = Weapon::AK47;
+  bot->weapon_type_ = WeaponType::Rifle;
+  bot->pev->v_angle = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->pev->punchangle = ystl::Vector (-10.0f, 0.0f, 0.0f);
+  foe->v.origin = ystl::Vector (1000.0f, 0.0f, 28.0f);
+  CombatHook::SetFrameInterval (*bot, 0.1f);
+  CombatHook::Focus (*bot);
+  CHECK (CombatHook::RecoilComp (*bot) < 0.0f);
+
+  bot->current_weapon_ = Weapon::AWP;
+  bot->weapon_type_ = WeaponType::Sniper;
+  CombatHook::Focus (*bot);
+  CHECK (CombatHook::RecoilComp (*bot) == 0.0f);
+  bot->pev->punchangle = ystl::Vector (0.0f, 0.0f, 0.0f);
 
   bots.Destroy ();
 }

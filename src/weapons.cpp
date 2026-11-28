@@ -349,8 +349,8 @@ bool Bot::NeedToPauseFiring (float distance) {
   };
 
   // check for shielded enemy, pause briefly to avoid wasting ammo
-  if (has_flag (aim_flags_, AimFlags::Enemy) && !enemy_origin_.empty ()) {
-    if (util.ViewDot (Ent (), enemy_origin_) > 0.92f && IsEnemyBehindShield (enemy_.current)) {
+  if (has_flag (aim_flags_, AimFlags::Enemy) && !enemy_.target_origin.empty ()) {
+    if (util.ViewDot (Ent (), enemy_.target_origin) > 0.92f && IsEnemyBehindShield (enemy_.current)) {
 
       float shield_pause_duration = rg (0.3f, 0.7f);
       fire_pause_ = normalize_fire_pause (game.Time () + shield_pause_duration - frame_interval_, 0.3f);

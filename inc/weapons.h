@@ -109,6 +109,9 @@ constexpr auto kSecondaryWeaponMask = (ystl::bit (Weapon::P228) | ystl::bit (Wea
 
 constexpr auto kSniperWeaponMask = (ystl::bit (Weapon::Scout) | ystl::bit (Weapon::SG550) | ystl::bit (Weapon::AWP) | ystl::bit (Weapon::G3SG1));
 
+constexpr auto kRifleWeaponMask = (ystl::bit (Weapon::AUG) | ystl::bit (Weapon::M4A1) | ystl::bit (Weapon::SG552) | ystl::bit (Weapon::AK47) |
+                                   ystl::bit (Weapon::Famas) | ystl::bit (Weapon::Galil));
+
 // weapons < 7 are secondary
 constexpr auto kPrimaryWeaponMinIndex = 7;
 

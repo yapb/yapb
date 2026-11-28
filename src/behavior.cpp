@@ -377,17 +377,35 @@ void Bot::SetIdealReactionTimers (bool actual) {
   if (cv_whose_your_daddy) {
     ideal_reaction_time_ = 0.05f;
     actual_reaction_time_ = 0.095f;
-
-    return; // zero out reaction times for extreme mode
-  }
-
-  if (actual) {
-    ideal_reaction_time_ = difficulty_data_->reaction[0];
-    actual_reaction_time_ = difficulty_data_->reaction[0];
-
     return;
   }
-  ideal_reaction_time_ = rg (difficulty_data_->reaction[0], difficulty_data_->reaction[1]);
+  const auto &reaction = difficulty_data_->reaction;
+
+  float aggro_weight = 0.15f;
+  float fear_weight = 0.15f;
+
+  // adjust the weights according to personality:
+  // rusher: driven more by aggression (20%), less affected by fear (10%).
+  // careful: more susceptible to fear (20%), lower aggression bonus (10%).
+  if (personality_ == Personality::Rusher) {
+    aggro_weight = 0.20f;
+    fear_weight = 0.10f;
+  }
+  else if (personality_ == Personality::Careful) {
+    aggro_weight = 0.10f;
+    fear_weight = 0.20f;
+  }
+  const float emotion_mod = (1.0f - (emotion_.aggression * aggro_weight)) + (emotion_.fear * fear_weight);
+
+  if (actual) {
+    ideal_reaction_time_ = reaction[0] * emotion_mod;
+    actual_reaction_time_ = ideal_reaction_time_;
+  }
+  else {
+    ideal_reaction_time_ = rg (reaction[0], reaction[1]) * emotion_mod;
+  }
+  // keep values within reasonable limits to prevent the formation of superhuman or paralyzed bots.
+  ideal_reaction_time_ = ystl::clamp (ideal_reaction_time_, 0.05f, 1.0f);
 }
 
 bool Bot::IsIgnoredItem (edict_t *ent) {
@@ -435,20 +453,68 @@ ystl::Vector Bot::GetCampDirection (const ystl::Vector &dest) {
       const float distance = planner.Dist (link.index, enemy_index);
 
       if (distance < best.distance) {
-        best = { link.index, distance };
+        bool is_covered = false;
+        const ystl::Vector look_dir = (graph[link.index].origin - eye_pos).normalize ();
+
+        for (auto &other : bots) {
+          if (&other != this && other.is_alive_ && other.team_ == team_ && other.GetTaskId () == TaskId::Camp) {
+            if (other.pev->origin.distance_sq (pev->origin) < ystl::sqrf (512.0f)) {
+              const ystl::Vector other_look_dir = (other.look_.main - other.GetEyesPos ()).normalize ();
+
+              if ((other_look_dir | look_dir) > 0.95f) {
+                is_covered = true;
+                break;
+              }
+            }
+          }
+        }
+
+        if (!is_covered) {
+          best = { link.index, distance };
+        }
       }
     }
 
     if (graph.Exists (best.index)) {
-      return graph[best.index].origin;
+      trace.Line (eye_pos, graph[best.index].origin, TraceIgnore::Monsters, Ent (), &tr);
+
+      if (tr.fraction >= 1.0f) { // if there's a line of sight...
+        return graph[best.index].origin;
+      }
     }
+  }
+
+  if (!graph.Exists (current_node_index_)) {
+    return {};
   }
 
   // fallback: use practice system's danger index for this position
   const int danger_index = practice.GetIndex (team_, current_node_index_, current_node_index_);
 
   if (graph.Exists (danger_index)) {
-    return graph[danger_index].origin;
+    bool is_covered = false;
+    const ystl::Vector look_dir = (graph[danger_index].origin - eye_pos).normalize ();
+
+    for (auto &other : bots) {
+      if (&other != this && other.is_alive_ && other.team_ == team_ && other.GetTaskId () == TaskId::Camp) {
+        if (other.pev->origin.distance_sq (pev->origin) < ystl::sqrf (512.0f)) {
+          const ystl::Vector other_look_dir = (other.look_.main - other.GetEyesPos ()).normalize ();
+
+          if ((other_look_dir | look_dir) > 0.95f) {
+            is_covered = true;
+            break;
+          }
+        }
+      }
+    }
+
+    if (!is_covered) {
+      trace.Line (eye_pos, graph[danger_index].origin, TraceIgnore::Monsters, Ent (), &tr);
+
+      if (tr.fraction >= 1.0f) {
+        return graph[danger_index].origin;
+      }
+    }
   }
   return {};
 }
@@ -619,24 +685,47 @@ void Bot::UpdateEmotions () {
     return;
   }
 
-  if (see_enemy_timer_.less_than (1.0f)) {
-    emotion_.aggression = ystl::min (emotion_.aggression + kEmotionUpdateStep, 1.0f);
+  if (game.Is (GameFlags::ZombieMod) && is_creature_) {
+    emotion_.aggression = 1.0f;
+    emotion_.fear = 0.0f;
+    emotion_.update_timer.start (0.5f);
+    return;
   }
-  else if (see_enemy_timer_.greater_than (5.0f)) {
-    // smoothly return aggression to base level
-    if (emotion_.aggression > emotion_.base_aggression) {
-      emotion_.aggression = ystl::max (emotion_.aggression - kEmotionUpdateStep, emotion_.base_aggression);
+
+  if (see_enemy_timer_.less_than (1.0f)) {
+    if (game.Is (GameFlags::ZombieMod) && !is_creature_ && infected_enemy_team_) {
+      auto enemy_bot = bots[enemy_.current];
+
+      if (enemy_bot && enemy_bot->is_nemesis_) {
+        emotion_.fear = 1.0f;
+      }
+      else {
+        emotion_.fear = ystl::min (emotion_.fear + kEmotionUpdateStep, 1.0f);
+      }
     }
     else {
-      emotion_.aggression = ystl::min (emotion_.aggression + kEmotionUpdateStep, emotion_.base_aggression);
+      emotion_.aggression = ystl::min (emotion_.aggression + kEmotionUpdateStep, 1.0f);
+    }
+  }
+  else if (see_enemy_timer_.greater_than (5.0f)) {
+    // calculate a recovery multiplier based on the difficulty level (higher difficulty = faster return to emotional balance)
+    const float recovery_multiplier = 1.0f + static_cast<float> (difficulty_) * 0.25f;
+    const float emotion_recovery_step = kEmotionUpdateStep * recovery_multiplier;
+
+    // smoothly return aggression to base level
+    if (emotion_.aggression > emotion_.base_aggression) {
+      emotion_.aggression = ystl::max (emotion_.aggression - emotion_recovery_step, emotion_.base_aggression);
+    }
+    else {
+      emotion_.aggression = ystl::min (emotion_.aggression + emotion_recovery_step, emotion_.base_aggression);
     }
 
     // smoothly return fear to base level
     if (emotion_.fear > emotion_.base_fear) {
-      emotion_.fear = ystl::max (emotion_.fear - kEmotionUpdateStep, emotion_.base_fear);
+      emotion_.fear = ystl::max (emotion_.fear - emotion_recovery_step, emotion_.base_fear);
     }
     else {
-      emotion_.fear = ystl::min (emotion_.fear + kEmotionUpdateStep, emotion_.base_fear);
+      emotion_.fear = ystl::min (emotion_.fear + emotion_recovery_step, emotion_.base_fear);
     }
   }
   emotion_.update_timer.start (0.5f);
@@ -936,7 +1025,7 @@ void Bot::OverrideConditions () {
   if (UsesSniper () && !reload_data_.is_reloading && has_flag (states_, Sense::SeeingEnemy | Sense::SuspectEnemy) &&
       shoot_time_ - 0.4f <= game.Time () && shoot_time_ + 0.1f > game.Time () && !sniper_stop_timer_.elapsed ()) {
 
-    const float dot = util.ViewDot (Ent (), enemy_origin_);
+    const float dot = util.ViewDot (Ent (), enemy_.target_origin);
 
     if (dot > 0.95f) {
       IgnoreCollision ();
@@ -965,13 +1054,34 @@ void Bot::OverrideConditions () {
       nav_timer_.start ();
     }
   }
+
+  // zombie mode: emergency escape reflex for human bots
+  if (game.Is (GameFlags::ZombieMod) && !is_creature_ && tid != TaskId::SeekCover) {
+    edict_t *zombie = nullptr;
+
+    for (const auto &client : clients) {
+      if (!client.IsUsedAndAlive () || client.IsSameTeam (team_)) {
+        continue;
+      }
+
+      if (client.IsInRadius (pev->origin, ystl::sqrf (256.0f))) {
+        zombie = client.ent;
+        break;
+      }
+    }
+
+    if (zombie != nullptr) {
+      // if the zombie is out of our field of vision (coming from behind), it increases panic and fear.
+      if (!IsInViewCone (zombie->v.origin)) {
+        emotion_.fear = ystl::min (emotion_.fear + 0.4f, 1.0f);
+      }
+      ClearSearchNodes ();
+      StartTask (TaskId::SeekCover, TaskPri::kSeekCover, kInvalidNodeIndex, 0.0f, true);
+    }
+  }
 }
 
 void Bot::UpdatePredictedIndex () {
-  if (!is_alive_ || enemy_.last_origin.empty () || !vistab.IsReady () || !game.IsAliveEntity (enemy_.last)) {
-    return; // do not run task if no last enemy
-  }
-
   // predict cache lives 1.5-6.0 seconds, no point in recalculating it every frame
   if (!predict_enqueue_timer_.elapsed ()) {
     return;
@@ -988,9 +1098,9 @@ void Bot::UpdatePredictedIndex () {
   const auto &last_enemy_origin = enemy_.last_origin;
   const auto current_node_index = current_node_index_;
 
-  if (last_enemy_origin.empty () || !vistab.IsReady () || !game.IsAliveEntity (enemy_.last)) {
+  if (!is_alive_ || last_enemy_origin.empty () || !vistab.IsReady () || !game.IsAliveEntity (enemy_.last)) {
     wipe_predict ();
-    return;
+    return; // do not run task if no last enemy
   }
 
   if (predict_cache_.IsStillValid (last_enemy_origin, game.Time ())) {
@@ -1032,7 +1142,8 @@ void Bot::UpdatePredictedIndex () {
       return true;
     }
 
-    if (vistab.Visible (ctx.current_node_index, index) && dist_to_bot_sq > ystl::sqrf (128.0f) && dist_to_bot_sq < ystl::sqrf (2048.0f)) {
+    if (vistab.Visible (ctx.current_node_index, index) && dist_to_bot_sq > ystl::sqrf (kMinPredictDistance) &&
+        dist_to_bot_sq < ystl::sqrf (kMaxPredictDistance)) {
       ctx.best_index = index;
       return false;
     }
@@ -1067,11 +1178,10 @@ void Bot::RefreshEnemyPredict () {
   }
 
   // watch a visible spot while the enemy is still a live suspect
-  if (has_flag (states_, Sense::SuspectEnemy) && game.IsNullEntity (enemy_.current) && !game.IsNullEntity (enemy_.last) &&
-      !enemy_.last_origin.empty ()) {
+  if (game.IsNullEntity (enemy_.current) && !game.IsNullEntity (enemy_.last) && !enemy_.last_origin.empty ()) {
     const auto distance_to_last_enemy_sq = enemy_.last_origin.distance_sq (pev->origin);
 
-    if (distance_to_last_enemy_sq < ystl::sqrf (2048.0f)) {
+    if (distance_to_last_enemy_sq < ystl::sqrf (kMaxPredictDistance)) {
       aim_flags_ |= AimFlags::PredictPath;
     }
     const bool deny_last_enemy =
@@ -1158,7 +1268,7 @@ void Bot::SetConditions () {
     if (!enemy_.last_origin.empty ()) {
       const auto distance_sq = pev->origin.distance_sq (enemy_.last_origin);
 
-      if (distance_sq >= ystl::sqrf (2048.0f) || (game.IsNullEntity (enemy_.current) && see_enemy_timer_.greater_than (10.0f))) {
+      if (distance_sq >= ystl::sqrf (kMaxPredictDistance) || (game.IsNullEntity (enemy_.current) && see_enemy_timer_.greater_than (10.0f))) {
         enemy_.ForgetLast ();
 
         aim_flags_ &= ~AimFlags::LastEnemy;
@@ -1532,7 +1642,7 @@ void Bot::LogicDuringFreezetime () {
 
       if (buying_finished_ && game.GetPlayerTeam (ent) != team_) {
         enemy_.current = ent;
-        enemy_origin_ = ent->v.origin;
+        enemy_.target_origin = ent->v.origin;
       }
     }
 
@@ -2040,7 +2150,7 @@ void Bot::TakeDamage (edict_t *inflictor, int damage, int armor, int bits) {
     if (game.IsPlayerEntity (inflictor) && game.GetRealPlayerTeam (inflictor) != team_ && game.IsNullEntity (enemy_.current)) {
       if (SeesEnemy (inflictor)) {
         enemy_.current = inflictor;
-        enemy_origin_ = inflictor->v.origin;
+        enemy_.target_origin = inflictor->v.origin;
       }
       else {
         enemy_.last = inflictor;
@@ -2066,7 +2176,7 @@ void Bot::TakeDamage (edict_t *inflictor, int damage, int armor, int bits) {
 
       enemy_.last = enemy_.current;
       enemy_.last_origin = enemy_.current->v.origin;
-      enemy_origin_ = enemy_.current->v.origin;
+      enemy_.target_origin = enemy_.current->v.origin;
 
       PushChatMessage (Chat::TeamAttack);
       PushRadioChat (RadioChat::FriendlyFire);
@@ -2076,19 +2186,15 @@ void Bot::TakeDamage (edict_t *inflictor, int damage, int armor, int bits) {
       radio_percent_ = ystl::max (radio_percent_ + 1, 90);
 
       // attacked by an enemy
-      if (health_value_ > 60.0f) {
-        emotion_.aggression += 0.1f;
+      const float damage_scale = static_cast<float> (damage);
 
-        if (emotion_.aggression > 1.0f) {
-          emotion_.aggression = 1.0f;
-        }
+      if (health_value_ > 60.0f) {
+        // if health is high, the damage boots provide a boost (25 damage = ~0.1 increase)
+        emotion_.aggression = ystl::min (emotion_.aggression + (damage_scale * 0.004f), 1.0f);
       }
       else {
-        emotion_.fear += 0.03f;
-
-        if (emotion_.fear > 1.0f) {
-          emotion_.fear = 1.0f;
-        }
+        // if health is low, taking damage triggers fear (20 damage = ~0.03 increase)
+        emotion_.fear = ystl::min (emotion_.fear + (damage_scale * 0.0015f), 1.0f);
       }
       ClearTask (TaskId::Camp);
 
@@ -2116,6 +2222,9 @@ void Bot::TakeDamage (edict_t *inflictor, int damage, int armor, int bits) {
       FindNextBestNode ();
     }
   }
+
+  // adrenaline rush: update reaction timers instantaneously as emotional levels shift upon taking damage.
+  SetIdealReactionTimers ();
 }
 
 void Bot::TakeBlind (int alpha) {
@@ -2141,7 +2250,7 @@ void Bot::TakeBlind (int alpha) {
 
     return;
   }
-  blind_.node_index = FindCoverNode (900.0f);
+  blind_.node_index = GetEvasionPoint ();
   blind_.move_speed = -pev->maxspeed;
   blind_.side_move_speed = 0.0f;
 
@@ -2341,46 +2450,68 @@ bool Bot::IsOutOfBombTimer () {
     return false;
   }
 
-  if (current_node_index_ == kInvalidNodeIndex || escaped_from_bomb_ || (has_progress_bar_ || GetTaskId () == TaskId::EscapeFromBomb)) {
-    return false; // if ct bot already start defusing, or already escaping, return false
-  }
-
-  // calculate left time
   const float time_left = game_state.GetBombTimeLeft ();
 
-  // if time left greater than 13, no need to do other checks
-  if (time_left > 13.0f) {
+  // if the bomb isn't armed, or if there's enough time, we're safe.
+  // also, do not check again if the bot is already in the process of destroying something or is in escape mode.
+  if (time_left <= 0.0f || time_left > 13.0f || escaped_from_bomb_ || has_progress_bar_ || GetTaskId () == TaskId::EscapeFromBomb) {
     return false;
   }
   const auto &bomb_origin = game_state.GetBombOrigin ();
 
-  // for terrorist, if timer is lower than 13 seconds, return true
-  if (time_left < 13.0f && team_ == Team::Terrorist && bomb_origin.distance_sq (pev->origin) < ystl::sqrf (964.0f)) {
-    return true;
+  if (bomb_origin.empty ()) {
+    return false;
   }
-  bool has_teammates_with_defuser_kit = false;
 
-  // check if our players has defusal kit
-  for (const auto &bot : bots) {
-    // search players with defuse kit
-    if (&bot != this && bot.team_ == Team::CT && bot.has_defuser_ && bomb_origin.distance_sq (bot.pev->origin) < ystl::sqrf (512.0f)) {
-      has_teammates_with_defuser_kit = true;
-      break;
+  // terrorists: if you’re within range of the blast, run.
+  if (team_ == Team::Terrorist) {
+    float escape_radius = 964.0f;
+
+    // wall check: if there is an obstacle (a wall) between the bot and the bomb, the blast effect is reduced.
+    if (!SeesEntity (bomb_origin, true)) {
+      escape_radius *= 0.65f; // reduce the danger radius by 35% while behind cover.
+    }
+
+    // personality factor: careful bots flee sooner, while rushers hold onto the bomb for longer.
+    if (personality_ == Personality::Careful) {
+      escape_radius += 150.0f;
+    }
+    else if (personality_ == Personality::Rusher) {
+      escape_radius -= 100.0f;
+    }
+
+    // the "life" factor: damaged boats are more susceptible to explosions (they require a greater distance).
+    if (health_value_ < 60.0f) {
+      escape_radius += (60.0f - health_value_) * 4.0f;
+    }
+
+    // ensure that the calculated distance remains within reasonable limits.
+    return pev->origin.distance_sq (bomb_origin) < ystl::sqrf (ystl::clamp (escape_radius, 400.0f, 2048.0f));
+  }
+
+  // CT's: if we can't get there in time to defuse, run.
+  if (team_ == Team::CT) {
+    const float reach_time = graph.CalculateTravelTime (pev->maxspeed, pev->origin, bomb_origin);
+    const float defuse_time = has_defuser_ ? 10.0f : 15.0f;
+
+    // if you don’t have a kit, check to see if there’s a teammate nearby who has one.
+    // if it exists, continue protecting it instead of running away (it needs 10 seconds).
+    if (!has_defuser_) {
+      for (const auto &other : bots) {
+        if (&other != this && other.is_alive_ && other.team_ == Team::CT && other.has_defuser_) {
+          if (other.pev->origin.distance_sq (bomb_origin) < ystl::sqrf (512.0f)) {
+            return false;
+          }
+        }
+      }
+    }
+
+    // calculate the development and destruction time (add a 0.5-second safety margin).
+    if (time_left < (reach_time + defuse_time + 0.5f)) {
+      return true;
     }
   }
-
-  // add reach time to left time
-  const float reach_time = graph.CalculateTravelTime (pev->maxspeed, path_origin_, bomb_origin);
-
-  // for counter-terrorist check alos is we have time to reach position plus average defuse time
-  if ((time_left < reach_time + 8.0f && !has_defuser_ && !has_teammates_with_defuser_kit) || (time_left < reach_time + 4.0f && has_defuser_)) {
-    return true;
-  }
-
-  if (has_progress_bar_ && IsOnFloor () && ((has_defuser_ ? 10.0f : 15.0f) > game_state.GetBombTimeLeft ())) {
-    return true;
-  }
-  return false; // return false otherwise
+  return false;
 }
 
 void Bot::UpdateHearing () {
@@ -2483,7 +2614,10 @@ void Bot::UpdateHearing () {
 
     // positional error: grows with distance, farther sounds are vaguer
     auto get_heard_origin_with_error = [&] () -> ystl::Vector {
-      const float error = ystl::min (ystl::sqrtf (nearest_distance_sq) * 0.06f, 180.0f);
+      if (nearest_distance_sq > ystl::sqrtf (384.0f)) {
+        return heard_enemy_->v.origin;
+      }
+      const float error = kSprayDistance * ystl::powf (nearest_distance_sq, 0.5f) / kMaxPredictDistance;
       auto origin = heard_enemy_->v.origin;
 
       origin.x += rg (-error, error);
@@ -2525,7 +2659,7 @@ void Bot::UpdateHearing () {
     if (game.IsNullEntity (enemy_.current) && CheckBodyPartsWithOffsets (heard_enemy_)) {
       enemy_.current = heard_enemy_;
       enemy_.last = heard_enemy_;
-      enemy_.last_origin = enemy_origin_;
+      enemy_.last_origin = enemy_.target_origin;
 
       states_ |= Sense::SeeingEnemy;
       see_enemy_timer_.start ();
@@ -2691,6 +2825,18 @@ void Bot::RefreshCreatureStatus (char *infobuffer) {
     // if bot is on infected team, and zombie mode is active, assume bot is a creature/zombie
     is_on_infected_team_ = game.GetRealPlayerTeam (Ent ()) == infected_team;
     infected_enemy_team_ = game.GetRealPlayerTeam (enemy_.current) == infected_team;
+
+    // check for nemesis/survivor
+    if (infobuffer == nullptr) {
+      infobuffer = engfuncs.pfnGetInfoKeyBuffer (Ent ());
+    }
+    ystl::StringRef model_name = engfuncs.pfnInfoKeyValue (infobuffer, "model");
+
+    static ystl::StringRef nemesis_model (conf.FetchCustom ("ZMNemesisModel"));
+    static ystl::StringRef survivor_model (conf.FetchCustom ("ZMSurvivorModel"));
+
+    is_nemesis_ = !nemesis_model.empty () && model_name == nemesis_model;
+    is_survivor_ = !survivor_model.empty () && model_name == survivor_model;
 
     // do not process next if already infected
     if (is_on_infected_team_ || infected_enemy_team_) {

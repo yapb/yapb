@@ -293,6 +293,10 @@ protected:
   ystl::CountdownTimer jump_knife_restore_timer_ {}; // earliest moment to return best weapon after the jump
   bool is_fall_down_ {}; // is it falling?
   bool bot_movement_ {}; // bot movement allowed ?
+  ystl::CountdownTimer ladder_wait_timer_ {}; // maximum time waiting for a ladder
+  ystl::CountdownTimer ladder_progress_timer_ {}; // time since last ladder progress
+  int ladder_wait_node_ {}; // ladder node currently blocking movement
+  ystl::Vector ladder_progress_origin_ {}; // last position observed on a ladder
 
   PathWalk path_walk_ {}; // pointer to current node from path
   CollisionState collision_state_ {}; // collision state

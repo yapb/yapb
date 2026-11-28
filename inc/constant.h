@@ -104,6 +104,8 @@ constexpr auto kInvalidNodeIndex = -1;
 constexpr auto kConfigExtension = "cfg";
 constexpr auto kBombHearDistance = 1536.0f;
 constexpr auto kBombPanicHearDistance = 2048.0f;
+constexpr auto kMinPredictDistance = 96.0f;
+constexpr auto kMaxPredictDistance = 2048.0f;
 constexpr auto kBombSiteGoalRadius = 1024.0f; // goals this close to a checked one belong to the same site
 constexpr auto kHostageStragglerDistance = 1500.0f; // wait for a trailed hostage up to this far
 
