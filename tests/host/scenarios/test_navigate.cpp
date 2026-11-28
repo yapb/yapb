@@ -51,9 +51,6 @@ struct NavigateHook {
   static edict_t *LookupBtn (Bot &bot, ystl::StringRef target, bool blind) {
     return bot.LookupButton (target, blind);
   }
-  static int AimingNode (Bot &bot, const ystl::Vector &to, int &length) {
-    return bot.FindAimingNode (to, length);
-  }
   static int CampDir (Bot &bot) {
     return bot.GetRandomCampDir ();
   }
@@ -94,6 +91,21 @@ struct NavigateHook {
   }
   static void SetCreature (Bot &bot, bool value) {
     bot.is_creature_ = value;
+  }
+  static void SetNemesis (Bot &bot, bool value) {
+    bot.is_nemesis_ = value;
+  }
+  static void SetSurvivor (Bot &bot, bool value) {
+    bot.is_survivor_ = value;
+  }
+  static void SetLeader (Bot &bot, bool value) {
+    bot.is_leader_ = value;
+  }
+  static int EvasionPoint (Bot &bot) {
+    return bot.GetEvasionPoint ();
+  }
+  static int ZombieGoal (Bot &bot) {
+    return bot.FindBestGoalWhenZombieMode ();
   }
   static void SetDefendedBomb (Bot &bot, bool value) {
     bot.defended_bomb_ = value;
@@ -472,6 +484,27 @@ struct NavigateHook {
   }
   static bool NextBestEx (Bot &bot, const ystl::Array<int32_t> &data, bool handle_fails) {
     return bot.FindNextBestNodeEx (data, handle_fails);
+  }
+  static bool LadderTraffic (Bot &bot, int dest_index) {
+    return bot.HandleLadderTraffic (dest_index);
+  }
+  static void StartDoorHandover (Bot &bot, float hold_time) {
+    bot.door_handover_.start (hold_time);
+  }
+  static void StartLadderHandover (Bot &bot, float hold_time) {
+    bot.ladder_handover_.start (hold_time);
+  }
+  static void SetCollisionState (Bot &bot, CollisionState state) {
+    bot.collision_state_ = state;
+  }
+  static CollisionState GetCollisionState (Bot &bot) {
+    return bot.collision_state_;
+  }
+  static void SetCurrentNode (Bot &bot, int index) {
+    bot.current_node_index_ = index;
+  }
+  static void StartLadderProgress (Bot &bot, float hold_time) {
+    bot.ladder_progress_timer_.start (hold_time);
   }
 };
 
@@ -909,10 +942,6 @@ TEST_CASE ("unit/navigate_path") {
 
   // no demolition map and no conf bomb model: no bomb goal
   CHECK (bot->GetNearestToPlantedBomb () == kInvalidNodeIndex);
-
-  // aiming needs visibility data: empty vistable resolves to invalid
-  int aim_length = 0;
-  CHECK (NavigateHook::AimingNode (*bot, ystl::Vector (300.0f, 0.0f, 0.0f), aim_length) == kInvalidNodeIndex);
 
   // camp direction without visibility falls back to a valid node
   CHECK (graph.Exists (NavigateHook::CampDir (*bot)));
@@ -2694,10 +2723,6 @@ TEST_CASE ("unit/navigate_camp_aim") {
   CHECK (graph.Exists (NavigateHook::CampDir (*bot)));
   NavigateHook::Rng (*bot).clear_forced ();
 
-  // aiming resolves along a visible path
-  int aim_length = 0;
-  CHECK (graph.Exists (NavigateHook::AimingNode (*bot, ystl::Vector (300.0f, 0.0f, 0.0f), aim_length)));
-
   // strafe speed respects walls on each side
   NavigateHook::StrafeSpeedRaw (*bot, 100.0f);
   NavigateHook::StrafeSpeedRaw (*bot, -100.0f);
@@ -4083,10 +4108,6 @@ TEST_CASE ("unit/navigate_strafe") {
   NavigateHook::SetEnemyOrigin (*bot, ystl::Vector (300.0f, 0.0f, 0.0f));
   CHECK (graph.Exists (NavigateHook::CampDir (*bot)));
 
-  // ...aiming: invalid dest, visible path, blind fallback...
-  int aim_length = 0;
-  CHECK (NavigateHook::AimingNode (*bot, ystl::Vector (300.0f, 0.0f, 0.0f), aim_length) != kInvalidNodeIndex || aim_length >= 0);
-
   // ...farest within/over range, cover blind, defend with visibility...
   CHECK (NavigateHook::FarestNode (*bot, ystl::Vector (0.0f, 0.0f, 0.0f), 1000.0f) == 4);
   CHECK (NavigateHook::FarestNode (*bot, ystl::Vector (0.0f, 0.0f, 0.0f), 10000.0f) == kInvalidNodeIndex);
@@ -4731,8 +4752,6 @@ TEST_CASE ("unit/navigate_herald") {
   CHECK (NavigateHook::BombNode (*bot) == kInvalidNodeIndex);
   CHECK (NavigateHook::CoverNode (*bot, 1000.0f) == kInvalidNodeIndex);
 
-  int aim_length = 0;
-  CHECK (NavigateHook::AimingNode (*bot, ystl::Vector (300.0f, 0.0f, 0.0f), aim_length) == kInvalidNodeIndex);
   CHECK (NavigateHook::RandomNode (*bot, PointType::Count) == kInvalidNodeIndex);
   CHECK (NavigateHook::FarestNode (*bot, ystl::Vector (0.0f, 0.0f, 0.0f), 1000.0f) == kInvalidNodeIndex);
   CHECK (NavigateHook::NearestPlanted (*bot) == kInvalidNodeIndex);
@@ -7256,6 +7275,158 @@ TEST_CASE ("unit/navigate_relay") {
   CHECK (NavigateHook::DesiredVelocity (*bot).x == 180.0f);
 
   mode_walls.Reset ();
+  table.pfnServerDeactivate ();
+  testhost::CloseFakeCs (cs);
+}
+
+TEST_CASE ("unit/navigate_handover_ladder_queue") {
+  testhost::FakeEngine engine;
+  engine.Initialise (YAPB_TEST_GAMEDIR "/cstrike");
+
+  testhost::FakeCSApi cs {};
+  HOST_REQUIRE (testhost::ResolveFakeCs (YAPB_TEST_CSDLL, cs));
+  cs.reset ();
+
+  GiveFnptrsToDll (&engine.Funcs (), &engine.Globals ());
+  HOST_REQUIRE (cs.entered () != 0);
+
+  gamefuncs_t table {};
+  HOST_REQUIRE (GetEntityAPI (&table, 140) != 0);
+
+  game.Precache ();
+  table.pfnServerActivate (engine.EdictList (), engine.EdictCount (), 16);
+
+  if (analyzer.IsAnalyzing ()) {
+    analyzer.Suspend ();
+  }
+
+  // graph: 0 (plain) -> 1 (ladder) -> 2 (ladder top), plus alt 3 (plain) -> 2
+  graph.Reset ();
+
+  const ystl::Vector spots[4] = {
+    ystl::Vector (0.0f, 0.0f, 0.0f),
+    ystl::Vector (100.0f, 0.0f, 0.0f),
+    ystl::Vector (100.0f, 0.0f, 120.0f),
+    ystl::Vector (0.0f, 100.0f, 0.0f),
+  };
+
+  for (int i = 0; i < 4; ++i) {
+    Path path {};
+    path.origin = spots[i];
+    path.number = i;
+    path.light = kInvalidLightLevel;
+
+    if (i == 1 || i == 2) {
+      path.flags = ystl::to_underlying (NodeFlag::Ladder);
+    }
+
+    for (auto &link : path.links) {
+      link.index = kInvalidNodeIndex;
+    }
+    graph.paths_.push (path);
+  }
+
+  auto link = [] (int from, int to, int distance) {
+    for (auto &slot : graph.paths_[static_cast<size_t> (from)].links) {
+      if (slot.index == kInvalidNodeIndex) {
+        slot.index = static_cast<int16_t> (to);
+        slot.distance = distance;
+        return;
+      }
+    }
+    HOST_REQUIRE (false);
+  };
+
+  link (0, 1, 100);
+  link (0, 3, 100);
+  link (1, 2, 120);
+  link (3, 2, 150);
+
+  graph.PopulateNodes ();
+  planner.Init ();
+
+  bots.InitQuota ();
+  cv_quota.Set (10);
+
+  bots.Addbot ("LadA", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
+  bots.Addbot ("LadB", Difficulty::Normal, Personality::Normal, Team::CT, Skin::Urban, true);
+
+  Bot *bot = nullptr, *other = nullptr;
+
+  for (int i = 0; i < 40 && (bot == nullptr || other == nullptr); ++i) {
+    engine.AdvanceTime (0.2f);
+    bots.MaintainQuota ();
+
+    bots.ForEach ([&] (Bot *candidate) {
+      if (ystl::StringRef (candidate->pev->netname.chars ()) == "LadA") {
+        bot = candidate;
+      }
+      else if (ystl::StringRef (candidate->pev->netname.chars ()) == "LadB") {
+        other = candidate;
+      }
+      return false;
+    });
+  }
+  HOST_REQUIRE (bot != nullptr && other != nullptr);
+
+  bot->team_ = Team::CT;
+  other->team_ = Team::CT;
+  bot->is_alive_ = true;
+  other->is_alive_ = true;
+  bot->pev->health = 100.0f;
+  other->pev->health = 100.0f;
+  bot->pev->maxspeed = 250.0f;
+  bot->pev->origin = ystl::Vector (0.0f, 0.0f, 0.0f);
+  bot->pev->flags |= FL_ONGROUND;
+  other->pev->origin = ystl::Vector (100.0f, 0.0f, 30.0f);
+
+  // handover windows (door and ladder exit) suppress CheckTerrain probing
+  const ystl::Vector forward (1.0f, 0.0f, 0.0f);
+  NavigateHook::SetCollisionState (*bot, CollisionState::Probing);
+  NavigateHook::StartDoorHandover (*bot, 1.0f);
+  NavigateHook::CheckTerr (*bot, forward);
+  CHECK (NavigateHook::GetCollisionState (*bot) == CollisionState::Undecided);
+
+  engine.AdvanceTime (1.1f);
+  NavigateHook::SetCollisionState (*bot, CollisionState::Probing);
+  NavigateHook::StartLadderHandover (*bot, 0.35f);
+  NavigateHook::CheckTerr (*bot, forward);
+  CHECK (NavigateHook::GetCollisionState (*bot) == CollisionState::Undecided);
+
+  engine.AdvanceTime (0.5f);
+
+  // invalid or non-ladder destinations, or already on ladder, skip traffic queuing
+  CHECK (!NavigateHook::LadderTraffic (*bot, kInvalidNodeIndex));
+  CHECK (!NavigateHook::LadderTraffic (*bot, 0));
+
+  bot->pev->movetype = MOVETYPE_FLY;
+  CHECK (!NavigateHook::LadderTraffic (*bot, 1));
+  bot->pev->movetype = MOVETYPE_WALK;
+
+  // active teammate on the same ladder pauses the approaching bot
+  other->pev->movetype = MOVETYPE_FLY;
+  NavigateHook::SetCurrentNode (*other, 1);
+  NavigateHook::StartLadderProgress (*other, 1.5f);
+
+  bot->ClearTasks ();
+  NavigateHook::SetCurrentNode (*bot, 0);
+  NavigateHook::SyncPath (*bot, 0, 2, FindPathType::Fast);
+  CHECK (NavigateHook::LadderTraffic (*bot, 1));
+  CHECK (bot->GetTaskId () == TaskId::Pause);
+
+  // stalled teammate on the ladder does not block the queue
+  engine.AdvanceTime (1.6f);
+  bot->ClearTasks ();
+  CHECK (!NavigateHook::LadderTraffic (*bot, 1));
+
+  // after the 4s wait window expires, HandleLadderTraffic reroutes and clears the wait state
+  NavigateHook::StartLadderProgress (*other, 10.0f);
+  CHECK (NavigateHook::LadderTraffic (*bot, 1));
+  engine.AdvanceTime (4.1f);
+  NavigateHook::LadderTraffic (*bot, 1);
+
+  cv_quota.Revert ();
+  bots.Destroy ();
   table.pfnServerDeactivate ();
   testhost::CloseFakeCs (cs);
 }
