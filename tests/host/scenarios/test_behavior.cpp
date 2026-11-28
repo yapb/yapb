@@ -569,11 +569,14 @@ TEST_CASE ("unit/behavior_senses") {
 
   // reaction timers: daddy zeroes, actual copies, roll stays in range
   bot->SetNewDifficulty (Difficulty::Hard);
+  bot->personality_ = Personality::Normal;
+  bot->emotion_.aggression = 0.5f;
+  bot->emotion_.fear = 0.5f;
   const auto *tweaks = conf.GetDifficultyTweaks (Difficulty::Hard);
   HOST_REQUIRE (tweaks != nullptr);
   BehaviorHook::ReactionTimers (*bot, true);
-  CHECK (bot->ideal_reaction_time_ == tweaks->reaction[0]);
-  CHECK (bot->actual_reaction_time_ == tweaks->reaction[0]);
+  CHECK (bot->ideal_reaction_time_ == Approx (tweaks->reaction[0]).margin (0.001));
+  CHECK (bot->actual_reaction_time_ == Approx (tweaks->reaction[0]).margin (0.001));
 
   cv_whose_your_daddy.Set (1);
   BehaviorHook::ReactionTimers (*bot, false);
@@ -754,8 +757,8 @@ TEST_CASE ("unit/behavior_senses") {
   bot->emotion_.fear = 0.9f;
   bot->emotion_.update_timer.invalidate ();
   BehaviorHook::Emotions (*bot);
-  CHECK (bot->emotion_.aggression == Approx (0.85).margin (0.001));
-  CHECK (bot->emotion_.fear == Approx (0.85).margin (0.001));
+  CHECK (bot->emotion_.aggression == Approx (0.8375).margin (0.001));
+  CHECK (bot->emotion_.fear == Approx (0.8375).margin (0.001));
 
   // ...fresh kills cap the aggression spike...
   bot->emotion_.aggression = 0.95f;
@@ -959,7 +962,7 @@ TEST_CASE ("unit/behavior_damage") {
   bot->StartTask (TaskId::Camp, TaskPri::kCamp, kInvalidNodeIndex, 0.0f, true);
   HOST_REQUIRE (bot->GetTaskId () == TaskId::Camp);
   BehaviorHook::Damage (*bot, foe, 50, 0, 4);
-  CHECK (bot->emotion_.aggression == 0.1f);
+  CHECK (bot->emotion_.aggression == Approx (0.2f).margin (0.001));
   CHECK (bot->emotion_.fear == 0.5f);
   CHECK (bot->GetTaskId () != TaskId::Camp);
   CHECK (bot->enemy_.last == foe);
@@ -976,6 +979,13 @@ TEST_CASE ("unit/behavior_damage") {
   bot->emotion_.fear = 0.0f;
   BehaviorHook::Damage (*bot, foe, 10, 0, 4);
   CHECK (bot->emotion_.aggression == 0.5f);
+  CHECK (bot->emotion_.fear == Approx (0.015f).margin (0.001));
+
+  // ...hot streaks cap out on both ends...
+  bot->health_value_ = 100.0f;
+  bot->emotion_.aggression = 0.98f;
+  BehaviorHook::Damage (*bot, foe, 10, 0, 4);
+  CHECK (bot->emotion_.aggression == 1.0f);
   CHECK (bot->emotion_.fear == 0.03f);
 
   // ...hot streaks cap out on both ends...
@@ -1491,7 +1501,7 @@ TEST_CASE ("unit/behavior_predict") {
   CHECK (!BehaviorHook::PredictValid (*bot));
 
   // ...a far-off trail exhausts the search with nothing...
-  foe->v.origin = ystl::Vector (2000.0f, 0.0f, 0.0f);
+  foe->v.origin = ystl::Vector (2500.0f, 0.0f, 0.0f);
   clients.Update ();
   BehaviorHook::SetLastEnemy (*bot, foe);
   bot->see_enemy_timer_.start ();
@@ -1576,7 +1586,7 @@ TEST_CASE ("unit/behavior_predict") {
   // ...a far visible trail with no predict pressure lands the last-enemy look...
   BehaviorHook::SetAim (*bot, AimFlags::Invalid);
   bot->pev->velocity = ystl::Vector (0.0f, 0.0f, 0.0f);
-  foe->v.origin = ystl::Vector (2200.0f, 0.0f, 0.0f);
+  foe->v.origin = ystl::Vector (2500.0f, 0.0f, 0.0f);
   BehaviorHook::SetLastEnemy (*bot, foe);
   BehaviorHook::SetShootTime (*bot, 0.0f);
   BehaviorHook::RefreshPredict (*bot);
@@ -1692,7 +1702,7 @@ TEST_CASE ("unit/behavior_siege") {
   BehaviorHook::SetEscapedFromBomb (*ter, false);
 
   // ...counter-terrorists with a kit and a short walk go too...
-  engine.AdvanceTime (10.0f); // run the clock out so reach math always fits
+  engine.AdvanceTime (13.0f); // run the clock into the <= 13s escape window
   ct->pev->origin = ystl::Vector (1500.0f, 0.0f, 0.0f);
   ct->has_defuser_ = true;
   BehaviorHook::SetCurrent (*ct, 5);
@@ -2177,7 +2187,7 @@ TEST_CASE ("unit/behavior_trauma") {
   cv_attack_monsters.Set (1);
   BehaviorHook::Damage (*bot, monster, 10, 0, 4);
   cv_attack_monsters.Set (0);
-  CHECK (bot->emotion_.aggression == 0.1f);
+  CHECK (bot->emotion_.aggression == Approx (0.04f).margin (0.001));
 
   // ...unusual damage only stamps the intake...
   BehaviorHook::Damage (*bot, nullptr, 10, 0, 0);

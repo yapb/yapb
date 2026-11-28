@@ -484,6 +484,10 @@ ystl::Vector Bot::GetCampDirection (const ystl::Vector &dest) {
     }
   }
 
+  if (!graph.Exists (current_node_index_)) {
+    return {};
+  }
+
   // fallback: use practice system's danger index for this position
   const int danger_index = practice.GetIndex (team_, current_node_index_, current_node_index_);
 
@@ -1066,12 +1070,14 @@ void Bot::OverrideConditions () {
       }
     }
 
-    // if the zombie is out of our field of vision (coming from behind), it increases panic and fear.
-    if (!IsInViewCone (zombie->v.origin)) {
-      emotion_.fear = ystl::min (emotion_.fear + 0.4f, 1.0f);
+    if (zombie != nullptr) {
+      // if the zombie is out of our field of vision (coming from behind), it increases panic and fear.
+      if (!IsInViewCone (zombie->v.origin)) {
+        emotion_.fear = ystl::min (emotion_.fear + 0.4f, 1.0f);
+      }
+      ClearSearchNodes ();
+      StartTask (TaskId::SeekCover, TaskPri::kSeekCover, kInvalidNodeIndex, 0.0f, true);
     }
-    ClearSearchNodes ();
-    StartTask (TaskId::SeekCover, TaskPri::kSeekCover, kInvalidNodeIndex, 0.0f, true);
   }
 }
 
